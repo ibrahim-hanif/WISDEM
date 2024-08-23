@@ -13,7 +13,7 @@ from wisdem.nrelcsm.nrel_csm_cost_2015 import Turbine_CostsSE_2015
 # --------------------------------------------------------------------
 class BladeMass(om.ExplicitComponent):
     """
-    Compute blade mass of the form :math:`mass = k*diameter^b`.
+    Compute blade mass of the form :math:`mass = k*(diameter/2)^b`.
     Value of :math:`k` was updated in 2015 to be 0.5.
     Value of :math:`b` was updated to be 2.47/2.54 for turbine class I blades with/without carbon or
     2.44/2.5 for other turbine classes with/without carbon.
@@ -213,7 +213,7 @@ class SpinnerMass(om.ExplicitComponent):
 # --------------------------------------------------------------------
 class LowSpeedShaftMass(om.ExplicitComponent):
     """
-    Compute low speed shaft mass in the form of :math:`mass = k*(m_{blade}*power)^b1 + b2`.
+    Compute low speed shaft mass in the form of :math:`mass = k*(m_{blade}*power)^{b1} + b2`.
     Value of :math:`k` was updated in 2015 to be 13.
     Value of :math:`b1` was updated in 2015 to be 0.65.
     Value of :math:`b2` was updated in 2015 to be 775.
@@ -840,10 +840,12 @@ class TurbineMassAdder(om.ExplicitComponent):
         self.add_input("hub_mass", 0.0, units="kg")
         self.add_input("pitch_system_mass", 0.0, units="kg")
         self.add_input("spinner_mass", 0.0, units="kg")
+        self.add_discrete_input("blade_number", 3)
 
         # nacelle
         self.add_input("lss_mass", 0.0, units="kg")
         self.add_input("main_bearing_mass", 0.0, units="kg")
+        self.add_discrete_input("main_bearing_number", 2)
         self.add_input("gearbox_mass", 0.0, units="kg")
         self.add_input("hss_mass", 0.0, units="kg")
         self.add_input("brake_mass", 0.0, units="kg")
@@ -857,9 +859,8 @@ class TurbineMassAdder(om.ExplicitComponent):
 
         # tower
         self.add_input("tower_mass", 0.0, units="kg")
-        self.add_discrete_input("blade_number", 3)
-        self.add_discrete_input("main_bearing_number", 2)
 
+        # outputs
         self.add_output("hub_system_mass", 0.0, units="kg")
         self.add_output("rotor_mass", 0.0, units="kg")
         self.add_output("nacelle_mass", 0.0, units="kg")
