@@ -13,6 +13,7 @@ opt_flag = True
 opt = {}
 opt["WISDEM"] = {}
 opt["WISDEM"]["n_dlc"] = 1
+
 opt["WISDEM"]["DriveSE"] = {}
 opt["WISDEM"]["DriveSE"]["direct"] = False
 opt["WISDEM"]["DriveSE"]["use_gb_torque_density"] = False
@@ -22,10 +23,13 @@ opt["WISDEM"]["DriveSE"]["hub"]["spinner_gamma"] = 1.5
 opt["WISDEM"]["DriveSE"]["gamma_f"] = 1.35
 opt["WISDEM"]["DriveSE"]["gamma_m"] = 1.3
 opt["WISDEM"]["DriveSE"]["gamma_n"] = 1.0
+
 opt["WISDEM"]["RotorSE"] = {}
 opt["WISDEM"]["RotorSE"]["n_pc"] = 20
+
 opt["materials"] = {}
 opt["materials"]["n_mat"] = 4
+
 opt["flags"] = {}
 opt["flags"]["generator"] = False
 # ---
@@ -41,35 +45,41 @@ if opt_flag:
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
     prob.driver.options["tol"] = 1e-2
-    prob.driver.options["maxiter"] = 5
+    prob.driver.options["maxiter"] = 5 * 4
 
     # Add objective
     prob.model.add_objective("nacelle_mass", scaler=1e-6)
 
-    # Add design variables, in this case the tower diameter and wall thicknesses
+    # Add design variables, in this case the drivetrain diameters and wall thicknesses
     prob.model.add_design_var("L_12", lower=0.1, upper=5.0)
     prob.model.add_design_var("L_h1", lower=0.1, upper=5.0)
     prob.model.add_design_var("L_hss", lower=0.1, upper=5.0)
     prob.model.add_design_var("hub_diameter", lower=2.0, upper=5.0)
     prob.model.add_design_var("lss_diameter", lower=0.5, upper=6.0)
     prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
+
     prob.model.add_design_var("hss_diameter", lower=0.5, upper=6.0)
     prob.model.add_design_var("hss_wall_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
+    
     prob.model.add_design_var("bedplate_web_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
     prob.model.add_design_var("bedplate_flange_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
     prob.model.add_design_var("bedplate_flange_width", lower=0.1, upper=2.0)
 
     # Add constraints on the tower design
+    # 1. von Mises stress util
     prob.model.add_constraint("constr_lss_vonmises", upper=1.0)
     prob.model.add_constraint("constr_hss_vonmises", upper=1.0)
     prob.model.add_constraint("constr_bedplate_vonmises", upper=1.0)
+    # 2. main bearing defl (allowed, max, as an angle)
     prob.model.add_constraint("constr_mb1_defl", upper=1.0)
     prob.model.add_constraint("constr_mb2_defl", upper=1.0)
     prob.model.add_constraint("constr_shaft_deflection", upper=1.0)
     prob.model.add_constraint("constr_shaft_angle", upper=1.0)
     prob.model.add_constraint("constr_stator_deflection", upper=1.0)
     prob.model.add_constraint("constr_stator_angle", upper=1.0)
+    # 3. hub dia to accom. blades' roots
     prob.model.add_constraint("constr_hub_diameter", lower=0.0)
+    # 4. target overhand and hub height
     prob.model.add_constraint("constr_length", lower=0.0)
     prob.model.add_constraint("constr_height", lower=0.0)
     # ---
@@ -79,7 +89,7 @@ if opt_flag:
 prob.setup()
 # ---
 
-# Set input values
+# Set the high-level input values
 prob.set_val("machine_rating", 5.0, units="MW")
 prob["upwind"] = True
 prob["n_blades"] = 3
@@ -116,6 +126,7 @@ prob["blades_I"] = np.r_[36494351.0, 17549243.0, 14423664.0, np.zeros(3)]
 # Drivetrain configuration and sizing inputs
 prob["bear1.bearing_type"] = "CARB"
 prob["bear2.bearing_type"] = "SRB"
+# - init condn for some design vars
 prob["L_12"] = 0.368
 prob["L_h1"] = 1.912
 prob["L_hss"] = 1.5
@@ -145,15 +156,17 @@ prob["stator_deflection_allowable"] = 1e-4
 prob["stator_angle_allowable"] = 1e-3
 # ---
 
-# Material properties
+# Material properties (4 materials defined, cf. "n_mat"=4)
 prob["E_mat"] = np.c_[200e9 * np.ones(3), 205e9 * np.ones(3), 118e9 * np.ones(3), [4.46e10, 1.7e10, 1.67e10]].T
 prob["G_mat"] = np.c_[79.3e9 * np.ones(3), 80e9 * np.ones(3), 47.6e9 * np.ones(3), [3.27e9, 3.48e9, 3.5e9]].T
 prob["Xt_mat"] = np.c_[450e6 * np.ones(3), 814e6 * np.ones(3), 310e6 * np.ones(3), [6.092e8, 3.81e7, 1.529e7]].T
+# - (v, note) these would be  -np.c_-> (4,3) -.T-> (3,4) array
 prob["rho_mat"] = np.r_[7800.0, 7850.0, 7200.0, 1940.0]
 prob["Xy_mat"] = np.r_[345e6, 485e6, 265e6, 18.9e6]
 prob["wohler_exp_mat"] = 1e1 * np.ones(4)
 prob["wohler_A_mat"] = 1e1 * np.ones(4)
 prob["unit_cost_mat"] = np.r_[0.7, 0.9, 0.5, 1.9]
+# - Material assignment
 prob["lss_material"] = prob["hss_material"] = "steel_drive"
 prob["bedplate_material"] = "steel"
 prob["hub_material"] = "cast_iron"
@@ -207,3 +220,51 @@ print("constr_hub_diameter:", prob["constr_hub_diameter"])
 print("constr_length:", prob["constr_length"])
 print("constr_height:", prob["constr_height"])
 # ---
+
+# OUTPUT
+"""
+Iteration limit reached    (Exit mode 9)
+            Current function value: 0.18175343269925398
+            Iterations: 20
+            Function evaluations: 115
+            Gradient evaluations: 20
+Optimization FAILED.
+Iteration limit reached
+-----------------------------------
+nacelle_mass: [181753.43269925]
+
+L_h1: [1.73351857]
+L_12: [0.2250713]
+L_lss: [2.05858987]
+L_hss: [1.18305895]
+L_generator: [2.]
+L_gearbox: [1.89]
+L_bedplate: [7.10451075]
+H_bedplate: [1.46159181]
+hub_diameter: [4.97601267]
+lss_diameter: [0.96386699 1.14977591]
+lss_wall_thickness: [0.28616748 0.2835022 ]
+hss_diameter: [0.52146311 0.75067181]
+hss_wall_thickness: [0.09569156 0.09362379]
+bedplate_web_thickness: [0.10241313]
+bedplate_flange_thickness: [0.09285283]
+bedplate_flange_width: [1.0603703]
+
+constr_lss_vonmises: [0.38038436 0.37703699 0.36635767 0.29638651]
+constr_hss_vonmises: [0.02365216 0.01459961]
+constr_bedplate_vonmises: [3.02623418e-03 1.24132921e-02 1.38752023e-02 1.62847560e-02
+ 2.13185089e-02 6.79149524e-02 6.79308198e-02 5.24794256e-02
+ 5.18051764e-02 2.61632842e-03 7.70565193e-09 3.02625826e-03
+ 2.55106972e-02 2.73473783e-02 2.96035039e-02 3.42348745e-02
+ 6.28491735e-02 6.38882320e-02 5.24835164e-02 5.18063538e-02
+ 2.61633219e-03 7.16137297e-09]
+constr_mb1_defl: [0.00093919]
+constr_mb2_defl: [0.00011686]
+constr_shaft_deflection: [0.07816449]
+constr_shaft_angle: [1.5992231e-06]
+constr_stator_deflection: [1.22586345]
+constr_stator_angle: [0.04183871]
+constr_hub_diameter: [0.0680735]
+constr_length: [2.64804947]
+constr_height: [1.46159181]
+"""

@@ -1,3 +1,4 @@
+## (v) cf. https://wisdem.readthedocs.io/en/master/examples/06_drivetrain/tutorial.html#direct-drive-design
 #!/usr/bin/env python3
 # Import needed libraries
 import numpy as np
@@ -9,10 +10,11 @@ from wisdem.drivetrainse.drivetrain import DrivetrainSE
 opt_flag = True
 # ---
 
-# Set input options
+# Set input options (modeling options dictionary)
 opt = {}
 opt["WISDEM"] = {}
 opt["WISDEM"]["n_dlc"] = 1
+
 opt["WISDEM"]["DriveSE"] = {}
 opt["WISDEM"]["DriveSE"]["direct"] = True
 opt["WISDEM"]["DriveSE"]["hub"] = {}
@@ -21,10 +23,13 @@ opt["WISDEM"]["DriveSE"]["hub"]["spinner_gamma"] = 1.5
 opt["WISDEM"]["DriveSE"]["gamma_f"] = 1.35
 opt["WISDEM"]["DriveSE"]["gamma_m"] = 1.3
 opt["WISDEM"]["DriveSE"]["gamma_n"] = 1.0
+
 opt["WISDEM"]["RotorSE"] = {}
 opt["WISDEM"]["RotorSE"]["n_pc"] = 20
+
 opt["materials"] = {}
 opt["materials"]["n_mat"] = 4
+
 opt["flags"] = {}
 opt["flags"]["generator"] = False
 # ---
@@ -37,14 +42,14 @@ prob.model = DrivetrainSE(modeling_options=opt)
 # If performing optimization, set up the optimizer and problem formulation
 if opt_flag:
     # Choose the optimizer to use
-    prob.driver = om.ScipyOptimizeDriver()
-    prob.driver.options["optimizer"] = "SLSQP"
+    prob.driver = om.ScipyOptimizeDriver() # selecting optimzer
+    prob.driver.options["optimizer"] = "SLSQP"# configuring it
     prob.driver.options["tol"] = 1e-5
 
     # Add objective
-    prob.model.add_objective("nacelle_mass", scaler=1e-6)
+    prob.model.add_objective("nacelle_mass", scaler=1e-6) #scale to order 1 for better convergence behaviour
 
-    # Add design variables, in this case the tower diameter and wall thicknesses
+    # Add design variables, in this case the drivetrain diameters and wall thicknesses
     prob.model.add_design_var("L_12", lower=0.1, upper=5.0)
     prob.model.add_design_var("L_h1", lower=0.1, upper=5.0)
     prob.model.add_design_var("hub_diameter", lower=3.0, upper=15.0)
@@ -55,21 +60,26 @@ if opt_flag:
     prob.model.add_design_var("bedplate_wall_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
 
     # Add constraints on the tower design
+    # 1. von Mises stress util
     prob.model.add_constraint("constr_lss_vonmises", upper=1.0)
     prob.model.add_constraint("constr_bedplate_vonmises", upper=1.0)
+    # 2. main bearing defl (allowed, max, as an angle) 
     prob.model.add_constraint("constr_mb1_defl", upper=1.0)
     prob.model.add_constraint("constr_mb2_defl", upper=1.0)
     prob.model.add_constraint("constr_shaft_deflection", upper=1.0)
     prob.model.add_constraint("constr_shaft_angle", upper=1.0)
     prob.model.add_constraint("constr_stator_deflection", upper=1.0)
     prob.model.add_constraint("constr_stator_angle", upper=1.0)
+    # 3. hub dia to accom. blades' root radius 
     prob.model.add_constraint("constr_hub_diameter", lower=0.0)
+    # 4. target overhand and hub height
     prob.model.add_constraint("constr_length", lower=0.0)
     prob.model.add_constraint("constr_height", lower=0.0)
-    prob.model.add_constraint("constr_access", lower=0.0)
     prob.model.add_constraint("constr_ecc", lower=0.0)
     prob.model.add_constraint("L_lss", lower=0.1)
     prob.model.add_constraint("L_nose", lower=0.1)
+    # 5. maintainance access
+    prob.model.add_constraint("constr_access", lower=0.0)
     # ---
 
 
@@ -77,7 +87,7 @@ if opt_flag:
 prob.setup()
 # ---
 
-# Set input values
+# Set high-level input values (that desc the turbine)
 prob.set_val("machine_rating", 15.0, units="MW")
 prob["upwind"] = True
 prob["n_blades"] = 3
@@ -86,7 +96,7 @@ prob["D_top"] = 6.5
 prob["minimum_rpm"] = 5.0
 prob["rated_rpm"] = 7.56
 
-# Loading from rotor
+# Loading from rotor (v: after OpenFAST...?)
 prob["F_hub"] = np.array([2517580.0, -27669.0, 3204.0]).reshape((3, 1))
 prob["M_hub"] = np.array([21030561.0, 7414045.0, 1450946.0]).reshape((3, 1))
 # ---
@@ -114,6 +124,7 @@ prob["blades_I"] = np.r_[4.12747714e08, 1.97149973e08, 1.54854398e08, np.zeros(3
 # Drivetrain configuration and sizing inputs
 prob["bear1.bearing_type"] = "CARB"
 prob["bear2.bearing_type"] = "SRB"
+# - init condn for some design vars
 prob["L_12"] = 1.2
 prob["L_h1"] = 1.0
 prob["L_generator"] = 2.15  # 2.75
@@ -136,8 +147,9 @@ prob["bear1.D_shaft"] = 2.2
 prob["bear2.D_shaft"] = 2.2
 # ---
 
-# Material properties
+# Material properties (4 materials defined, cf. "n_mat"=4)
 prob["E_mat"] = np.c_[200e9 * np.ones(3), 205e9 * np.ones(3), 118e9 * np.ones(3), [4.46e10, 1.7e10, 1.67e10]].T
+# - (v, note) these would be  -np.c_-> (4,3) -.T-> (3,4) array
 prob["G_mat"] = np.c_[79.3e9 * np.ones(3), 80e9 * np.ones(3), 47.6e9 * np.ones(3), [3.27e9, 3.48e9, 3.5e9]].T
 prob["Xt_mat"] = np.c_[450e6 * np.ones(3), 814e6 * np.ones(3), 310e6 * np.ones(3), [6.092e8, 3.81e7, 1.529e7]].T
 prob["rho_mat"] = np.r_[7800.0, 7850.0, 7200.0, 1940.0]
@@ -145,6 +157,7 @@ prob["Xy_mat"] = np.r_[345e6, 485e6, 265e6, 18.9e6]
 prob["wohler_exp_mat"] = 1e1 * np.ones(4)
 prob["wohler_A_mat"] = 1e1 * np.ones(4)
 prob["unit_cost_mat"] = np.r_[0.7, 0.9, 0.5, 1.9]
+# - Material assignment
 prob["lss_material"] = prob["hss_material"] = "steel_drive"
 prob["bedplate_material"] = "steel"
 prob["hub_material"] = "cast_iron"
@@ -196,3 +209,46 @@ print("constr_height:", prob["constr_height"])
 print("constr_access:", prob["constr_access"])
 print("constr_ecc:", prob["constr_ecc"])
 # ---
+
+# OUTPUT
+"""
+Optimization terminated successfully    (Exit mode 0)
+            Current function value: 0.4309821681486595
+            Iterations: 29
+            Function evaluations: 83
+            Gradient evaluations: 29
+Optimization Complete
+-----------------------------------
+nacelle_mass: [430982.16814866]
+
+L_h1: [0.1]
+L_12: [2.33391289]
+L_lss: [2.43391289]
+L_nose: [1.86608711]
+L_generator: [2.15]
+L_bedplate: [4.93189136]
+H_bedplate: [4.86782208]
+hub_diameter: [10.34485411]
+lss_diameter: [5.21771158 2.85819229]
+lss_wall_thickness: [0.07581998 0.08534841]
+nose_diameter: [4.56607162 2.18749548]
+nose_wall_thickness: [0.11463635 0.09374774]
+bedplate_wall_thickness: [0.20993092 0.2303988  0.2057964  0.17369912]
+
+constr_lss_vonmises: [0.0304671  0.05059108 0.08562363 0.17129318]
+constr_bedplate_vonmises: [0.01611421 0.01284121 0.01021643 0.00838265 0.00759968 0.00836453
+ 0.01045083 0.01338491 0.01705219 0.02122786 0.02555861 0.04918871
+ 0.04343451 0.03405011 0.04768574]
+constr_mb1_defl: [0.00223722]
+constr_mb2_defl: [0.00039942]
+constr_shaft_deflection: [0.04591206]
+constr_shaft_angle: [0.13721991]
+constr_stator_deflection: [1.00000038]
+constr_stator_angle: [0.04961112]
+constr_hub_diameter: [3.13952275]
+constr_length: [1.68189136]
+constr_height: [4.86782208]
+constr_access: [[-8.88178420e-16  2.33679891e+00]
+ [ 1.15463195e-14  7.54951657e-15]]
+constr_ecc: [0.06406928]
+"""
