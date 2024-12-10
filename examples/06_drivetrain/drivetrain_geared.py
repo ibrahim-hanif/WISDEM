@@ -1,3 +1,4 @@
+##(v) cf. https://wisdem.readthedocs.io/en/master/examples/06_drivetrain/tutorial.html#geared-design
 #!/usr/bin/env python3
 # Import needed libraries
 import numpy as np
@@ -45,7 +46,7 @@ if opt_flag:
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
     prob.driver.options["tol"] = 1e-2
-    prob.driver.options["maxiter"] = 5 * 4
+    prob.driver.options["maxiter"] = 5 * 1
 
     # Add objective
     prob.model.add_objective("nacelle_mass", scaler=1e-6)
@@ -94,7 +95,7 @@ prob.set_val("machine_rating", 5.0, units="MW")
 prob["upwind"] = True
 prob["n_blades"] = 3
 prob["rotor_diameter"] = 126.0
-prob["D_top"] = 3.87
+prob["D_top"] = 3.87 #tower top diameter
 prob["minimum_rpm"] = 6.9
 prob["rated_rpm"] = 12.1
 
@@ -127,8 +128,8 @@ prob["blades_I"] = np.r_[36494351.0, 17549243.0, 14423664.0, np.zeros(3)]
 prob["bear1.bearing_type"] = "CARB"
 prob["bear2.bearing_type"] = "SRB"
 # - init condn for some design vars
-prob["L_12"] = 0.368
-prob["L_h1"] = 1.912
+prob["L_12"] = 1.912 #0.368
+prob["L_h1"] = 0.368 #1.912
 prob["L_hss"] = 1.5
 prob["L_generator"] = 2.0
 prob["L_gearbox"] = 1.5
@@ -219,52 +220,110 @@ print("constr_stator_angle:", prob["constr_stator_angle"])
 print("constr_hub_diameter:", prob["constr_hub_diameter"])
 print("constr_length:", prob["constr_length"])
 print("constr_height:", prob["constr_height"])
+print("") #(v) cf. drivetrain_example.csv (in WISDEM folder)
+print("planet_numbers:", prob["planet_numbers"])
+print("stage_ratios:", prob["stage_ratios"])
 # ---
 
 # OUTPUT
+# test 1: Lh1 = 1.912, L12=0.368
 """
 Iteration limit reached    (Exit mode 9)
-            Current function value: 0.18175343269925398
-            Iterations: 20
-            Function evaluations: 115
-            Gradient evaluations: 20
+            Current function value: 0.16922729776973358
+            Iterations: 50
+            Function evaluations: 287
+            Gradient evaluations: 50
 Optimization FAILED.
 Iteration limit reached
 -----------------------------------
-nacelle_mass: [181753.43269925]
+nacelle_mass: [169227.29776973]
 
-L_h1: [1.73351857]
-L_12: [0.2250713]
-L_lss: [2.05858987]
-L_hss: [1.18305895]
+L_h1: [1.70733376]
+L_12: [0.251258]
+L_lss: [2.05859176]
+L_hss: [1.00003623]
 L_generator: [2.]
 L_gearbox: [1.89]
-L_bedplate: [7.10451075]
-H_bedplate: [1.46159181]
-hub_diameter: [4.97601267]
-lss_diameter: [0.96386699 1.14977591]
-lss_wall_thickness: [0.28616748 0.2835022 ]
-hss_diameter: [0.52146311 0.75067181]
-hss_wall_thickness: [0.09569156 0.09362379]
-bedplate_web_thickness: [0.10241313]
-bedplate_flange_thickness: [0.09285283]
-bedplate_flange_width: [1.0603703]
+L_bedplate: [6.92218637]
+H_bedplate: [1.4784902]
+hub_diameter: [4.9542797]
+lss_diameter: [1.02498861 1.25015858]
+lss_wall_thickness: [0.32975047 0.32763904]
+hss_diameter: [0.53006557 0.71300914]
+hss_wall_thickness: [0.06203973 0.09931631]
+bedplate_web_thickness: [0.09883529]
+bedplate_flange_thickness: [0.02891908]
+bedplate_flange_width: [1.07419507]
 
-constr_lss_vonmises: [0.38038436 0.37703699 0.36635767 0.29638651]
-constr_hss_vonmises: [0.02365216 0.01459961]
-constr_bedplate_vonmises: [3.02623418e-03 1.24132921e-02 1.38752023e-02 1.62847560e-02
- 2.13185089e-02 6.79149524e-02 6.79308198e-02 5.24794256e-02
- 5.18051764e-02 2.61632842e-03 7.70565193e-09 3.02625826e-03
- 2.55106972e-02 2.73473783e-02 2.96035039e-02 3.42348745e-02
- 6.28491735e-02 6.38882320e-02 5.24835164e-02 5.18063538e-02
- 2.61633219e-03 7.16137297e-09]
-constr_mb1_defl: [0.00093919]
-constr_mb2_defl: [0.00011686]
-constr_shaft_deflection: [0.07816449]
-constr_shaft_angle: [1.5992231e-06]
-constr_stator_deflection: [1.22586345]
-constr_stator_angle: [0.04183871]
-constr_hub_diameter: [0.0680735]
-constr_length: [2.64804947]
-constr_height: [1.46159181]
+constr_lss_vonmises: [0.3121217  0.30743701 0.29627995 0.23238659]
+constr_hss_vonmises: [0.02799162 0.01644432]
+constr_bedplate_vonmises: [1.95194229e-03 1.11392285e-02 1.02916886e-02 1.22462192e-02
+ 1.91713986e-02 7.42623387e-02 7.50575872e-02 5.59164734e-02
+ 5.45388789e-02 1.64972253e-03 2.50047087e-08 1.95196133e-03
+ 2.33686045e-02 2.42824588e-02 2.60635027e-02 3.22618086e-02
+ 7.74082344e-02 8.07556137e-02 5.59276880e-02 5.45420272e-02
+ 1.64973498e-03 1.89446636e-08]
+constr_mb1_defl: [0.00200438]
+constr_mb2_defl: [0.00024692]
+constr_shaft_deflection: [0.07385187]
+constr_shaft_angle: [1.45949314e-06]
+constr_stator_deflection: [1.0130119]
+constr_stator_angle: [0.03543997]
+constr_hub_diameter: [0.04634053]
+constr_length: [2.45489995]
+constr_height: [1.4784902]
+
+planet_numbers: [3 3 0]
+stage_ratios: [4.57885697 4.57885697 4.57885697]
+"""
+
+# test 2: Lh1 = 0.368, L12=1.912
+"""
+Values in x were outside bounds during a minimize step, clipping to boundsIteration limit reached    (Exit mode 9)
+            Current function value: 0.16102988038039678
+            Iterations: 50
+            Function evaluations: 392
+            Gradient evaluations: 50
+Optimization FAILED.
+Iteration limit reached
+-----------------------------------
+nacelle_mass: [161029.8803804]
+
+L_h1: [0.21991087]
+L_12: [1.0023408]
+L_lss: [1.32225167]
+L_hss: [1.72402842]
+L_generator: [2.]
+L_gearbox: [1.89]
+L_bedplate: [6.90988544]
+H_bedplate: [1.47933922]
+hub_diameter: [4.95949286]
+lss_diameter: [1.65597109 0.61935843]
+lss_wall_thickness: [0.28534298 0.28122109]
+hss_diameter: [0.62791059 0.52248553]
+hss_wall_thickness: [0.08671673 0.1061336 ]
+bedplate_web_thickness: [0.0861382]
+bedplate_flange_thickness: [0.10692674]
+bedplate_flange_width: [0.28581524]
+
+constr_lss_vonmises: [0.0964616  0.14978977 0.36995273 0.9816    ]
+constr_hss_vonmises: [0.02218026 0.02513031]
+constr_bedplate_vonmises: [1.89816775e-03 1.75669646e-02 1.29498299e-02 1.69039905e-02
+ 2.75258958e-02 7.73470406e-02 7.87371029e-02 6.39350419e-02
+ 5.57029879e-02 1.98980029e-04 1.25272740e-08 1.89824780e-03
+ 2.83397442e-02 2.86499611e-02 3.30177300e-02 4.19004748e-02
+ 8.31997010e-02 8.84133553e-02 6.40281936e-02 5.57220254e-02
+ 1.99004880e-04 3.66976014e-08]
+constr_mb1_defl: [0.00048895]
+constr_mb2_defl: [0.00034595]
+constr_shaft_deflection: [0.80148367]
+constr_shaft_angle: [4.72027239e-07]
+constr_stator_deflection: [1.78941947]
+constr_stator_angle: [0.04238008]
+constr_hub_diameter: [0.05155369]
+constr_length: [2.44519569]
+constr_height: [1.47933922]
+
+planet_numbers: [3 3 0]
+stage_ratios: [4.57885697 4.57885697 4.57885697]
 """
