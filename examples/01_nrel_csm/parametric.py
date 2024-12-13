@@ -68,14 +68,15 @@ Shear = Shear.flatten()
 WindV = WindV.flatten()
 
 # Initialize output containers
-tcc = np.zeros(Rating.shape)
-aep = np.zeros(Rating.shape)
+npts = Rating.size
+tcc = np.zeros(npts)
+aep = np.zeros(npts)
 # 5 ---------- (marker for docs)
 
 # 6 ---------- (marker for docs)
 # Calculation loop
-npts = Rating.size
 print("Running, ", npts, " points in the parametric study")
+
 for k in range(npts):
     # Populate remaining NREL CSM inputs for this iteration
     prob["machine_rating"] = Rating[k]
