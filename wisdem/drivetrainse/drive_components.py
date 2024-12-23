@@ -12,7 +12,7 @@ import wisdem.commonse.utilities as util
 class MainBearing(om.ExplicitComponent):
     """
     MainBearings class is used to represent the main bearing components of a wind turbine drivetrain.
-    This is a simple, regression-based sizing tool for the main bearings.  The same function is called once
+    This is a ´simple, regression-based sizing tool for the main bearings´!  The same function is called once
     for configurations with one main bearing or twice for configurations with two.  It handles Compact Aligning
     Roller Bearings (CARB), Cylindrical Roller Bearings (CRB), Spherical Roller Bearings (SRB), and
     Tapered Roller Bearings (TRB).

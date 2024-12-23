@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 Kr = 0.4
 
 # -----------------------------------
-
+# (v) cf. https://wisdem.readthedocs.io/en/master/wisdem/drivetrainse/components.html#gearbox
 
 def V_planetary(U, B, K):
     sunU = 0.5 * U - 1.0
@@ -36,7 +36,7 @@ def volumeEEP(x, n_planets, torque, Kr1=Kr, Kr2=Kr):
     Kgamma = [1.1 if m < 5 else 1.35 for m in n_planets]
 
     # Individual stage torques
-    Q_stage = torque / np.cumprod(x)
+    Q_stage = torque / np.cumprod(x) #(v) FIXME? wont this be stage output torques? we need input!
 
     # Volume
     V = (

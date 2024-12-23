@@ -418,6 +418,7 @@ class GearedLayout(Layout):
     """
     Calculate lengths, heights, and diameters of key drivetrain components in a
     geared drive system (valid for upwind or downwind).
+    (v) cf. https://wisdem.readthedocs.io/en/master/wisdem/drivetrainse/layout.html#geared-layout
 
     |_Lgen|_Lhss|Lgear|dl|_L12_|_Lh1_|
                       |_____Llss_____|
@@ -557,7 +558,7 @@ class GearedLayout(Layout):
         outputs["s_lss"] = s_lss
 
         # ------- Bedplate I-beam properties ----------------
-        L_bedplate = L_drive * np.cos(tilt)
+        L_bedplate = L_drive * np.cos(tilt) #(v) FIXME? L_bedplate = (L_drive + D_hub/2)*np.cos(tilt) ; or docs wrote wrong, this here should be correct (L_drive cos compn to be = L_bed)
         H_bedplate = H_drive - (L_drive + 0.5 * D_hub) * np.sin(tilt)  # Subtract thickness of platform plate
         outputs["L_bedplate"] = L_bedplate
         outputs["H_bedplate"] = H_bedplate
@@ -578,6 +579,6 @@ class GearedLayout(Layout):
         outputs["bedplate_I"] = 2 * np.r_[I_bedplate, np.zeros(3)]
 
         # ------- Constraints ----------------
-        outputs["constr_length"] = (L_drive + 0.5 * D_hub) * np.cos(tilt) - L_overhang - 0.5 * D_top  # Should be > 0
+        outputs["constr_length"] = (L_drive + 0.5 * D_hub) * np.cos(tilt) - L_overhang - 0.5 * D_top  # Should be > 0 #(v) to extend past the tower top
         outputs["constr_height"] = H_bedplate  # Should be > 0
         # ------------------------------------
