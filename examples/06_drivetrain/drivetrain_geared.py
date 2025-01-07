@@ -46,7 +46,7 @@ if opt_flag:
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
     prob.driver.options["tol"] = 1e-2
-    prob.driver.options["maxiter"] = 5 * 1
+    prob.driver.options["maxiter"] = 5 * 3
 
     # Add objective
     prob.model.add_objective("nacelle_mass", scaler=1e-6)
