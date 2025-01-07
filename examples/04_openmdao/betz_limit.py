@@ -104,7 +104,7 @@ prob.driver.options["optimizer"] = "SLSQP"
 # Assign objective and design variables
 prob.model.add_design_var("a", lower=0.0, upper=1.0)
 prob.model.add_design_var("Area", lower=0.0, upper=1.0)
-prob.model.add_objective("a_disk.Cp", scaler=-1.0)
+prob.model.add_objective("a_disk.Cp", scaler=-1.0) #(v) to max Cp, min -Cp, hence scaler=-1.0, default is 1.0, hence max Cp.
 # -----
 
 # Execute!

@@ -1,0 +1,77 @@
+General: {verbosity: false, solver_maxiter: 5}
+WISDEM:
+    n_dlc: 2
+    RotorSE: {flag: false, n_aoa: 200, n_xy: 200, n_span: 30, n_pc: 20, n_pc_spline: 200, n_pitch_perf_surfaces: 20, min_pitch_perf_surfaces: -5.0, max_pitch_perf_surfaces: 30.0, n_tsr_perf_surfaces: 20, min_tsr_perf_surfaces: 2.0, max_tsr_perf_surfaces: 12.0, n_U_perf_surfaces: 1, regulation_reg_III: true, peak_thrust_shaving: false, thrust_shaving_coeff: 1.0, fix_pitch_regI12: false, spar_cap_ss: none, spar_cap_ps: none, te_ss: none, te_ps: none, gamma_freq: 1.1, gust_std: 3.0, root_fastener_s_f: 2.5, hubloss: true, tiploss: true, wakerotation: true, usecd: true, n_sector: 4, 3d_af_correction: true, inn_af: false, inn_af_max_rthick: 0.4, inn_af_min_rthick: 0.15, rail_transport: false, bjs: false}
+    DriveSE:
+        flag: false
+        model_generator: false
+        gamma_f: 1.35
+        gamma_m: 1.3
+        gamma_n: 1.0
+        use_gb_torque_density: true
+        hub: {hub_gamma: 2.0, spinner_gamma: 1.5}
+    TowerSE:
+        flag: true
+        wind: PowerWind
+        gamma_f: 1.35
+        gamma_m: 1.3
+        gamma_n: 1.0
+        gamma_b: 1.1
+        gamma_fatigue: 1.755
+        buckling_method: eurocode
+        buckling_length: 15
+        frame3dd: {shear: true, geom: true, tol: 1e-09, modal_method: 1}
+        gamma_freq: 1.1
+        n_refine: 3
+        n_height: 3
+        n_layers: 1
+        n_height_tower: 3
+        n_layers_tower: 1
+    FixedBottomSE:
+        flag: false
+        type: monopile
+        wind: PowerWind
+        gamma_f: 1.35
+        gamma_m: 1.3
+        gamma_n: 1.0
+        gamma_b: 1.1
+        gamma_freq: 1.1
+        gamma_fatigue: 1.0
+        buckling_method: dnvgl
+        buckling_length: 10.0
+        frame3dd: {shear: true, geom: true, modal_method: 1, tol: 1e-09}
+        soil_springs: false
+        gravity_foundation: false
+        n_refine: 3
+        n_legs: 4
+        n_bays: 3
+        mud_brace: true
+        save_truss_figures: false
+    BOS: {flag: false}
+    Loading:
+        mass: 285598.8
+        center_of_mass: [-1.13197635, 0.0, 0.50875268]
+        moment_of_inertia: [114930678.0, 22035403.0, 18759742.5, 0.0, 503710.467, 0.0]
+        loads:
+           -  force: [1284744.19620519, 0.0, -2914124.84400512]
+              moment: [3963732.76208099, -2275104.79420872, -346781.68192839]
+              velocity: 11.73732
+           -  force: [930198.60063279, 0.0, -2883106.12368949]
+              moment: [-1683669.22411597, -2522475.34625363, 147301.97023764]
+              velocity: 70.0
+    FloatingSE:
+        flag: false
+        n_refine: 1
+        frame3dd: {shear: false, geom: false, modal_method: 2, shift: 10.0, tol: 1e-08}
+        gamma_f: 1.35
+        gamma_m: 1.3
+        gamma_n: 1.0
+        gamma_b: 1.1
+        gamma_freq: 1.1
+        gamma_fatigue: 1.0
+        symmetric_moorings: true
+flags: {blade: false, hub: false, nacelle: false, tower: true, monopile: false, jacket: false, floating_platform: false, mooring: false, RNA: false, assembly: true, components: true, airfoils: false, materials: true, control: false, environment: true, bos: false, costs: true, generator: false, floating: false, offshore: false}
+materials: {n_mat: 1}
+floating: {}
+mooring: {}
+assembly: {number_of_blades: 3}

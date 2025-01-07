@@ -1,0 +1,459 @@
+variables,type,units,values,description
+bear1.D_bearing,input,m,[0.],
+bear1.D_shaft,input,m,[2.2],
+bear1.bearing_type,input,n/a,CARB,
+bear2.D_bearing,input,m,[0.],
+bear2.D_shaft,input,m,[2.2],
+bear2.bearing_type,input,n/a,SRB,
+tilt,input,deg,[5.],
+D_top,input,m,[3.87],
+bedplate_flange_width,input,m,[1.07132889],
+bedplate_flange_thickness,input,m,[0.09980149],
+bedplate_web_thickness,input,m,[0.09995513],
+stator_deflection_allowable,input,m,[0.0001],
+stator_angle_allowable,input,rad,[0.001],
+upwind,input,n/a,True,
+rotor_diameter,input,m,[126.],
+rated_torque,input,N*m,[0.],
+brake_mass_user,input,kg,[0.],
+s_rotor,input,m,[0.],
+gear_ratio,input,,[96.],
+damping_ratio,input,,[0.],
+blades_I,input,kg*m**2,[36494351. 17549243. 14423664.        0.        0.        0.],
+machine_rating,input,kW,[5000.],
+converter_mass_user,input,kg,[0.],
+transformer_mass_user,input,kg,[0.],
+gearbox_mass_user,input,kg,[0.],
+gearbox_torque_density,input,N*m/kg,[0.],
+gearbox_radius_user,input,m,[0.],
+gearbox_length_user,input,m,[0.],
+gear_configuration,input,n/a,eep,
+planet_numbers,input,n/a,[3 3 0],
+L_generator,input,m,[2.],
+generator_mass_user,input,kg,[0.],
+generator_radius_user,input,m,[0.],
+generator_efficiency_user,input,,"[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]",
+hss_diameter,input,m,[0.52354154 0.52011613],
+hss_wall_thickness,input,m,[0.09999703 0.09998994],
+M_hub,input,N*m,"[[10515165.10636333]
+ [  945938.60268626]
+ [ 1042828.16100417]]",
+flange_t2shell_t,input,,[4.],
+flange_OD2hub_D,input,,[0.5],
+flange_ID2flange_OD,input,,[0.8],
+hub_stress_concentration,input,,[2.5],
+hub_diameter,input,m,[5.],
+blade_root_diameter,input,m,[3.542],
+hub_in2out_circ,input,,[1.2],
+hub_shell.n_blades,input,n/a,3,
+rated_rpm,input,rpm,[12.1],
+stop_time,input,s,[5.],
+blade_mass,input,kg,[16403.],
+pitch_system_scaling_factor,input,,[0.54],
+pitch_system.BRFM,input,N*m,[14239550.],
+n_blades,input,n/a,3,
+clearance_hub_spinner,input,m,[1.],
+spin_hole_incr,input,,[1.2],
+spinner_gust_ws,input,m/s,[70.],
+n_front_brackets,input,n/a,3,
+n_rear_brackets,input,n/a,3,
+L_12,input,m,[0.25390073],
+L_h1,input,m,[1.8072405],
+overhang,input,m,[5.],
+drive_height,input,m,[2.3],
+lss_diameter,input,m,[0.66259533 0.86702815],
+lss_wall_thickness,input,m,[0.28795658 0.28798725],
+L_hss,input,m,[1.41609231],
+F_hub,input,N,"[[1125044.07614847]
+ [  -7098.0872533 ]
+ [  -7022.79756034]]",
+shaft_deflection_allowable,input,m,[0.0001],
+shaft_angle_allowable,input,rad,[0.001],
+E_mat,input,Pa,"[[2.00e+11 2.00e+11 2.00e+11]
+ [2.05e+11 2.05e+11 2.05e+11]
+ [1.18e+11 1.18e+11 1.18e+11]
+ [4.46e+10 1.70e+10 1.67e+10]]",
+G_mat,input,Pa,"[[7.93e+10 7.93e+10 7.93e+10]
+ [8.00e+10 8.00e+10 8.00e+10]
+ [4.76e+10 4.76e+10 4.76e+10]
+ [3.27e+09 3.48e+09 3.50e+09]]",
+Xt_mat,input,Pa,"[[4.500e+08 4.500e+08 4.500e+08]
+ [8.140e+08 8.140e+08 8.140e+08]
+ [3.100e+08 3.100e+08 3.100e+08]
+ [6.092e+08 3.810e+07 1.529e+07]]",
+Xy_mat,input,Pa,[3.45e+08 4.85e+08 2.65e+08 1.89e+07],
+wohler_exp_mat,input,,[10. 10. 10. 10.],
+wohler_A_mat,input,,[10. 10. 10. 10.],
+rho_mat,input,kg/m**3,[7800. 7850. 7200. 1940.],
+unit_cost_mat,input,USD/kg,[0.7 0.9 0.5 1.9],
+material_names,input,n/a,"['steel', 'steel_drive', 'cast_iron', 'glass_uni']",
+lss_material,input,n/a,steel_drive,
+hss_material,input,n/a,steel_drive,
+hub_material,input,n/a,cast_iron,
+spinner_material,input,n/a,glass_uni,
+bedplate_material,input,n/a,steel,
+hvac_mass_coeff,input,kg/kW/m,[0.025],
+nose_mass,input,kg,[0.],
+nose_cm,input,m,[0.],
+nose_I,input,kg*m**2,[0. 0. 0.],
+x_bedplate,input,m,[0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.],
+uptower,input,n/a,True,
+blades_mass,input,kg,[49209.],
+blades_cm,input,m,[0.],
+minimum_rpm,input,rpm,[6.9],
+s_drive,output,m,"[-4.94813435 -3.94813435 -2.94813435 -2.24008819 -1.53204204 -0.58704204
+  0.35795796  0.45795796  0.58490833  0.71185869  1.61547894  2.51909919]",
+bedplate_web_height,output,m,[1.18169537],
+s_mb1,output,m,[0.71185869],
+s_mb2,output,m,[0.45795796],
+mb1_mass,intermediate,kg,[48092.00178654],
+mb1_I,intermediate,kg*m**2,[61763.00100246 32072.06011481 32072.06011481],
+mb1_max_defl_ang,intermediate,rad,[0.00872665],
+mb2_mass,intermediate,kg,[13479.28387693],
+mb2_I,intermediate,kg*m**2,[17243.10356309  8932.60847221  8932.60847221],
+mb2_max_defl_ang,intermediate,rad,[0.078],
+s_gearbox,output,m,[-0.58704204],
+s_generator,output,m,[-3.94813435],
+F_mb1,output,N,"[[1096795.37160452]
+ [  -7098.0872533 ]
+ [-329906.97091203]]",
+F_mb2,output,N,"[[-0.]
+ [-0.]
+ [-0.]]",
+F_torq,output,N,"[[-0.]
+ [-0.]
+ [-0.]]",
+F_generator,output,N,"[[ -17665.18740282]
+ [     -0.        ]
+ [-201914.01654187]]",
+M_mb1,output,N*m,"[[-0.]
+ [-0.]
+ [-0.]]",
+M_mb2,output,N*m,"[[     -0.        ]
+ [ 990760.4110198 ]
+ [1056408.83598111]]",
+M_torq,output,N*m,"[[10515165.10636333]
+ [      -0.        ]
+ [      -0.        ]]",
+M_generator,output,N*m,"[[ 109532.96985795]
+ [-442895.3220977 ]
+ [     -0.        ]]",
+other_mass,output,kg,[43037.20347854],
+bedplate_E,output,Pa,[2.e+11],
+bedplate_G,output,Pa,[7.93e+10],
+bedplate_rho,output,kg/m**3,[7800.],
+bedplate_Xy,output,Pa,[3.45e+08],
+lss_spring_constant,output,N*m/rad,[1.20225548e+09],
+hss_spring_constant,output,N*m/rad,[3.51739366e+08],
+hub_system_I,output,kg*m**2,"[104840.43520222  79876.97771695  79876.97771695      0.
+      0.              0.        ]",
+lss_rpm,output,rpm,"[ 6.9         7.17368421  7.44736842  7.72105263  7.99473684  8.26842105
+  8.54210526  8.81578947  9.08947368  9.36315789  9.63684211  9.91052632
+ 10.18421053 10.45789474 10.73157895 11.00526316 11.27894737 11.55263158
+ 11.82631579 12.1       ]",
+s_hss,output,m,[-2.94813435 -2.24008819 -1.53204204],
+generator_mass,output,kg,[19195.74437204],
+generator_I,output,kg*m**2,[ 8571.13980892 10684.15136181 10684.15136181],
+brake_mass,output,kg,[0.],
+brake_I,output,kg*m**2,[0. 0. 0.],
+hss_E,output,Pa,[2.05e+11],
+hss_G,output,Pa,[8.e+10],
+hss_rho,output,kg/m**3,[7850.],
+hss_Xy,output,Pa,[4.85e+08],
+pitch_mass,output,kg,[8036.49298539],
+pitch_cost,output,USD,[0.],
+pitch_I,output,kg*m**2,"[50228.0811587  25114.04057935 25114.04057935     0.
+     0.             0.        ]",
+hub_mass,output,kg,[2741.7867241],
+hub_cost,output,USD,[1370.89336205],
+hub_cm,output,m,[2.29397709],
+hub_I,output,kg*m**2,"[11424.11135042 11424.11135042 11424.11135042     0.
+     0.             0.        ]",
+spinner_mass,output,kg,[5288.35624813],
+spinner_cost,output,kg,[8116.07395946],
+spinner_cm,output,m,[2.5],
+spinner_I,output,kg*m**2,"[43188.2426931 43188.2426931 43188.2426931     0.            0.
+     0.       ]",
+hub_shell.rho,intermediate,kg/m**3,[7200.],
+max_torque,output,N*m,[9248464.3899296],
+hub_shell.Xy,intermediate,Pa,[2.65e+08],
+hub_shell.metal_cost,intermediate,USD/kg,[0.5],
+pitch_system.rho,intermediate,kg/m**3,[7800.],
+pitch_system.Xy,intermediate,Pa,[3.45e+08],
+spinner.composite_Xt,intermediate,Pa,[38100000.],
+spinner.composite_rho,intermediate,kg/m**3,[1940.],
+spinner.Xy,intermediate,Pa,[3.45e+08],
+spinner.metal_rho,intermediate,kg/m**3,[7800.],
+spinner.composite_cost,intermediate,USD/kg,[1.9],
+spinner.metal_cost,intermediate,USD/kg,[0.7],
+lss_rho,output,kg/m**3,[7850.],
+L_gearbox,output,m,[1.89],
+s_lss,output,m,[0.35795796 0.45795796 0.58490833 0.71185869 2.51909919],
+hub_system_mass,output,kg,[16066.63595763],
+hub_system_cm,output,m,[2.36178983],
+generator_rotor_mass,output,kg,[9597.87218602],
+generator_rotor_I,output,kg*m**2,[4285.56990446 5342.0756809  5342.0756809 ],
+gearbox_mass,output,kg,[9666.66666667],
+gearbox_I,output,kg*m**2,[2762.424 4258.737 4258.737],
+carrier_mass,output,kg,[9666.66666667],
+carrier_I,output,kg*m**2,[2762.424 1381.212 1381.212],
+lss_E,output,Pa,[2.05e+11],
+lss_G,output,Pa,[8.e+10],
+lss_Xy,output,Pa,[4.85e+08],
+H_bedplate,output,m,[1.43129836],
+L_bedplate,output,m,[7.43881846],
+R_generator,output,m,[0.945],
+generator_cm,intermediate,m,[-3.94813435],
+rho_fiberglass,intermediate,kg/m**3,[1940.],
+rho_castiron,intermediate,kg/m**3,[7200.],
+mb1_cm,intermediate,m,[0.71185869],
+mb2_cm,intermediate,m,[0.45795796],
+gearbox_cm,intermediate,m,[-0.58704204],
+hss_mass,output,kg,[1473.07820415],
+hss_cm,output,m,[-2.24153514],
+hss_I,output,kg*m**2,[ 69.21396344 280.77276446 280.77276446],
+brake_cm,output,m,[-0.29352102],
+generator_stator_mass,output,kg,[9597.87218602],
+generator_stator_I,output,kg*m**2,[4285.56990446 5342.0756809  5342.0756809 ],
+lss_mass,output,kg,[7318.61530318],
+lss_cm,output,m,[1.60613937],
+lss_I,output,kg*m**2,[ 487.50888241 3092.23965772 3092.23965772],
+converter_mass,output,kg,[4196.35],
+converter_cm,output,m,[0.    2.88  0.945],
+converter_I,output,kg*m**2,[2498.2969725 2498.2969725 2498.2969725],
+transformer_mass,output,kg,[11485.],
+transformer_cm,output,m,[ 0.    -2.88   0.945],
+transformer_I,output,kg*m**2,[6837.59475 6837.59475 6837.59475],
+yaw_mass,output,kg,[6144.20363265],
+yaw_cm,output,m,[0. 0. 0.],
+yaw_I,output,kg*m**2,[0. 0. 0.],
+bedplate_mass,output,kg,[38522.13427693],
+bedplate_cm,output,m,[-1.28059077  0.          0.69064918],
+bedplate_I,output,kg*m**2,"[ 36466.13057916 189442.20148896 216085.88159139      0.
+      0.              0.        ]",
+hvac_mass,output,kg,[556.65094831],
+hvac_cm,output,m,[-3.94813435],
+hvac_I,output,m,[279.62055738 139.81027869 139.81027869],
+platform_mass,output,kg,[17253.3888],
+platform_cm,output,m,[0. 0. 0.],
+platform_I,output,m,[ 86136.39335808  86136.39335808 172268.18581248],
+cover_mass,output,kg,[3401.61009758],
+cover_cm,output,m,[-0.37194092  0.          1.3069641 ],
+cover_I,output,m,[ 52.98493243 122.19296104 116.12757056],
+constr_height,output,m,[1.43129836],
+L_drive,output,m,[7.46723354],
+shaft_start,output,m,[0.         0.         1.43129836],
+nacelle_mass,output,kg,[180784.72796497],
+nacelle_cm,output,m,[-0.08811184 -0.1161122   1.02693873],
+nacelle_I_TT,output,kg*m**2,"[5.89455394e+05 1.00653837e+06 1.01314874e+06 2.21155768e+00
+ 1.49971784e+04 1.98110143e+04]",
+yaw.rho,intermediate,kg/m**3,[7800.],
+bear1.mb_max_defl_ang,output,rad,[0.00872665],
+bear1.mb_mass,output,kg,[48092.00178654],
+bear1.mb_I,output,kg*m**2,[61763.00100246 32072.06011481 32072.06011481],
+bear2.mb_max_defl_ang,output,rad,[0.078],
+bear2.mb_mass,output,kg,[13479.28387693],
+bear2.mb_I,output,kg*m**2,[17243.10356309  8932.60847221  8932.60847221],
+mb1_deflection,output,m,[1.35824867e-05],
+mb2_deflection,output,m,[4.2984145e-06],
+stator_deflection,output,m,[0.00027102],
+mb1_angle,output,rad,[8.30143141e-07],
+mb2_angle,output,rad,[1.96935378e-06],
+stator_angle,output,rad,[0.00054616],
+base_F,output,N,"[[ 1121375.01579002]
+ [   -7098.09170125]
+ [-1839328.45394204]]",
+base_M,output,N*m,"[[ 288189.44025946]
+ [1747033.91979386]
+ [ 123394.00712502]]",
+bedplate_axial_stress,output,Pa,"[[8.55379729e+04]
+ [6.83067245e+05]
+ [1.84846005e+05]
+ [1.04114969e+06]
+ [2.27376028e+06]
+ [1.52473946e+07]
+ [3.40788951e+06]
+ [2.31443309e+06]
+ [1.97326888e+06]
+ [6.98524313e+04]
+ [1.08640972e-01]
+ [8.55482463e+04]
+ [3.12132423e+05]
+ [4.47645957e+05]
+ [1.30395632e+06]
+ [2.62436807e+06]
+ [2.29579263e+07]
+ [6.45602867e+06]
+ [2.31836591e+06]
+ [1.97457991e+06]
+ [6.98522571e+04]
+ [7.47332186e-02]]",
+bedplate_shear_stress,output,Pa,"[[3.66376728e+05]
+ [1.46122264e+06]
+ [1.71903839e+06]
+ [1.97845017e+06]
+ [2.32592995e+06]
+ [7.89369357e+07]
+ [7.57217933e+06]
+ [5.85294492e+06]
+ [5.80642957e+06]
+ [3.31094034e+05]
+ [9.23731861e-02]
+ [3.66420759e+05]
+ [3.04997428e+06]
+ [3.30876469e+06]
+ [3.56821668e+06]
+ [3.91501826e+06]
+ [8.57613071e+07]
+ [6.23009167e+06]
+ [5.85294594e+06]
+ [5.80643031e+06]
+ [3.31094517e+05]
+ [5.52459800e-01]]",
+bedplate_bending_stress,output,Pa,"[[0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]
+ [0.]]",
+constr_bedplate_vonmises,output,,"[[3.25729097e-03]
+ [1.33352949e-02]
+ [1.51753786e-02]
+ [1.82186831e-02]
+ [2.35322390e-02]
+ [6.99814413e-01]
+ [6.89329366e-02]
+ [5.28963972e-02]
+ [5.21351409e-02]
+ [2.93878696e-03]
+ [9.83787370e-10]
+ [3.25768243e-03]
+ [2.69197855e-02]
+ [2.92418855e-02]
+ [3.21312135e-02]
+ [3.69879503e-02]
+ [7.64603101e-01]
+ [6.39668212e-02]
+ [5.29008624e-02]
+ [5.21364317e-02]
+ [2.93879108e-03]
+ [4.88247281e-09]]",
+constr_mb1_defl,output,,[9.51273967e-05],
+constr_mb2_defl,output,,[2.52481254e-05],
+constr_stator_deflection,output,,[4.75634646],
+constr_stator_angle,output,,[0.95851202],
+drivetrain_spring_constant,output,N*m/rad,[1.20180976e+09],
+drivetrain_damping_coefficient,output,N*m*s/rad,[0.],
+stage_ratios,output,,[4.57885697 4.57885697 4.57885697],
+D_gearbox,output,m,[1.512],
+generator_efficiency,output,,"[0.8922958  0.89315817 0.89395717 0.89469952 0.89539104 0.89603679
+ 0.89664115 0.89720799 0.8977407  0.89824227 0.89871534 0.89916229
+ 0.89958521 0.899986   0.90036635 0.90072778 0.90107167 0.90139927
+ 0.9017117  0.90201   ]",
+hss_axial_stress,output,Pa,"[[2.16882551e+05]
+ [1.33000333e-03]]",
+hss_shear_stress,output,Pa,"[[4725067.59362631]
+ [4609501.69910274]]",
+hss_bending_stress,output,Pa,"[[0.]
+ [0.]]",
+constr_hss_vonmises,output,,"[[0.02962487]
+ [0.02889016]]",
+hub_system_cost,output,USD,[9486.96732151],
+constr_hub_diameter,output,m,[0.09206083],
+spinner.spinner_diameter,output,m,[7.],
+L_lss,output,m,[2.16114123],
+constr_length,output,m,[2.9943052],
+torq_deflection,output,m,[2.22208164e-05],
+torq_angle,output,rad,[2.19880615e-09],
+lss_axial_stress,output,Pa,"[[5.18292660e+03]
+ [4.70884439e+07]
+ [4.44118047e+07]
+ [3.84982140e+07]]",
+lss_shear_stress,output,Pa,"[[1.80289038e+08]
+ [1.72530830e+08]
+ [1.63757058e+08]
+ [1.13607925e+08]]",
+constr_lss_vonmises,output,,"[[1.12996588]
+ [1.09468358]
+ [1.03885688]
+ [0.72553997]]",
+lss_axial_load2stress,output,m**2,[ 2.91381247  0.          0.          0.         34.2878853  34.2878853 ],
+lss_shear_load2stress,output,m**2,[ 0.          3.35327167  3.35327167 17.14394265  0.          0.        ],
+constr_shaft_deflection,output,,[0.38997533],
+constr_shaft_angle,output,,[3.8589048e-06],
+hub_E,output,Pa,[1.18e+11],
+hub_G,output,Pa,[4.76e+10],
+hub_rho,output,kg/m**3,[7200.],
+hub_Xy,output,Pa,[2.65e+08],
+hub_wohler_exp,output,,[10.],
+hub_wohler_A,output,,[10.],
+hub_mat_cost,output,USD/kg,[0.5],
+spinner_rho,output,kg/m**3,[1940.],
+spinner_Xt,output,Pa,[38100000.],
+spinner_mat_cost,output,USD/kg,[1.9],
+lss_Xt,output,Pa,[8.14e+08],
+lss_wohler_exp,output,,[10.],
+lss_wohler_A,output,,[10.],
+lss_cost,output,USD/kg,[0.9],
+hss_Xt,output,Pa,[8.14e+08],
+hss_wohler_exp,output,,[10.],
+hss_wohler_A,output,,[10.],
+hss_cost,output,USD/kg,[0.9],
+bedplate_mat_cost,output,USD/kg,[0.7],
+cover_length,output,m,[8.1827003],
+cover_height,output,m,[2.61392819],
+cover_width,output,m,[2.079],
+mean_bearing_mass,output,kg,[30785.64283173],
+total_bedplate_mass,output,kg,[38522.13427693],
+above_yaw_mass,output,kg,[174640.52433232],
+above_yaw_cm,output,m,[-0.09121179 -0.12019726  1.0630685 ],
+nacelle_I,output,kg*m**2,"[ 396361.90101598  814478.6627477  1009307.83672532    1851.79460045
+   -1361.21037354   -1745.77709115]",
+above_yaw_I,output,kg*m**2,"[ 389799.36803013  807951.26444839 1009177.29858458    1914.65508086
+   -1917.17144912   -2478.41262502]",
+above_yaw_I_TT,output,kg*m**2,"[ 5.89686277e+05  1.00676801e+06  1.01315333e+06 -4.54747351e-13
+  1.50167382e+04  1.98367898e+04]",
+rotor_mass,output,kg,[65275.63595763],
+rna_mass,output,kg,[246060.3639226],
+rna_cm,output,m,[-2.66228802 -0.0853096   1.36146472],
+rna_I_TT,output,kg*m**2,"[ 3.73625062e+07  2.52357155e+07  2.19428875e+07  2.21155768e+00
+ -4.41081814e+05  1.98110143e+04]",
+hss_rpm,output,rpm,"[ 662.4         688.67368421  714.94736842  741.22105263  767.49473684
+  793.76842105  820.04210526  846.31578947  872.58947368  898.86315789
+  925.13684211  951.41052632  977.68421053 1003.95789474 1030.23157895
+ 1056.50526316 1082.77894737 1109.05263158 1135.32631579 1161.6       ]",

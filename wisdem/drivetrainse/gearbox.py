@@ -36,7 +36,7 @@ def volumeEEP(x, n_planets, torque, Kr1=Kr, Kr2=Kr):
     Kgamma = [1.1 if m < 5 else 1.35 for m in n_planets]
 
     # Individual stage torques
-    Q_stage = torque / np.cumprod(x) #(v) FIXME? wont this be stage output torques? we need input!
+    Q_stage = torque / np.cumprod(x) #(v) NOTE: stage input torques, coz 'torque' is the rated torque :)
 
     # Volume
     V = (
@@ -171,7 +171,7 @@ class Gearbox(om.ExplicitComponent):
                 def constr2(x, ratio):
                     return ratio - np.prod(x)
 
-                x0 = gear_ratio ** (1.0 / n_stage) * np.ones(n_stage)
+                x0 = gear_ratio ** (1.0 / n_stage) * np.ones(n_stage) #(v) NOTE: equal stage ratios (cube root of overall GR)
                 bounds = [[2.01, 20.0], [2.01, 20.0], [2.01, 20.0]]
                 const = [{}, {}]
                 const[0]["type"] = "ineq"

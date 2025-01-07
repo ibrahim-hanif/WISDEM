@@ -52,13 +52,14 @@ if opt_flag:
     prob.model.add_objective("nacelle_mass", scaler=1e-6)
 
     # Add design variables, in this case the drivetrain diameters and wall thicknesses
-    prob.model.add_design_var("L_12", lower=0.1, upper=5.0)
-    prob.model.add_design_var("L_h1", lower=0.1, upper=5.0)
-    prob.model.add_design_var("L_hss", lower=0.1, upper=5.0)
     prob.model.add_design_var("hub_diameter", lower=2.0, upper=5.0)
+
+    prob.model.add_design_var("L_h1", lower=0.1, upper=5.0)
+    prob.model.add_design_var("L_12", lower=0.1, upper=5.0)
     prob.model.add_design_var("lss_diameter", lower=0.5, upper=6.0)
     prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
-
+    
+    prob.model.add_design_var("L_hss", lower=0.1, upper=5.0)
     prob.model.add_design_var("hss_diameter", lower=0.5, upper=6.0)
     prob.model.add_design_var("hss_wall_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
     
@@ -125,32 +126,35 @@ prob["blades_I"] = np.r_[36494351.0, 17549243.0, 14423664.0, np.zeros(3)]
 # ---
 
 # Drivetrain configuration and sizing inputs
-prob["bear1.bearing_type"] = "CARB"
-prob["bear2.bearing_type"] = "SRB"
+prob["bear1.bearing_type"] = "CARB" # 1. fixed MB
+prob["bear2.bearing_type"] = "SRB" # 2. floating MB
 # - init condn for some design vars
-prob["L_12"] = 1.912 #0.368
-prob["L_h1"] = 0.368 #1.912
-prob["L_hss"] = 1.5
-prob["L_generator"] = 2.0
-prob["L_gearbox"] = 1.5
-prob["overhang"] = 5.0
-prob["drive_height"] = 2.3
-prob["tilt"] = 5.0
+prob["bear1.D_shaft"] = 2.2
+prob["bear2.D_shaft"] = 2.2
 
+prob["L_h1"] = 1.912
+prob["L_12"] = 0.368
+myones = np.ones(2)
+prob["lss_diameter"] = 1.0 * myones
+prob["lss_wall_thickness"] = 0.288 * myones
+
+prob["L_gearbox"] = 1.5
 prob["planet_numbers"] = np.array([3, 3, 0])
 prob["gear_configuration"] = "eep"
 prob["gear_ratio"] = 96.0
 
-myones = np.ones(2)
-prob["lss_diameter"] = 1.0 * myones
+prob["L_hss"] = 1.5
+prob["L_generator"] = 2.0
 prob["hss_diameter"] = 0.5 * myones
-prob["lss_wall_thickness"] = 0.288 * myones
 prob["hss_wall_thickness"] = 0.1 * myones
+
+prob["overhang"] = 5.0
+prob["drive_height"] = 2.3
+prob["tilt"] = 5.0
+
 prob["bedplate_web_thickness"] = 0.1
 prob["bedplate_flange_thickness"] = 0.1
 prob["bedplate_flange_width"] = 1.0
-prob["bear1.D_shaft"] = 2.2
-prob["bear2.D_shaft"] = 2.2
 prob["shaft_deflection_allowable"] = 1e-4
 prob["shaft_angle_allowable"] = 1e-3
 prob["stator_deflection_allowable"] = 1e-4
