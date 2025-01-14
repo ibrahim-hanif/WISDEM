@@ -180,7 +180,7 @@ def TubevonMisesStressUtilization(axial_stress, hoop_stress, shear_stress, gamma
     a = ((axial_stress + hoop_stress) / 2.0) ** 2
     b = ((axial_stress - hoop_stress) / 2.0) ** 2
     c = shear_stress**2
-    von_mises = np.sqrt(a + 3.0 * (b + c))
+    von_mises = np.sqrt(a + 3.0 * (b + c)) #(v) TODO: check this: sqrt( (a+b) + 3c ) ?
 
     # stress margin
     stress_utilization = gamma * von_mises / sigma_y
