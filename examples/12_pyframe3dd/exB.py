@@ -171,6 +171,7 @@ displacements, forces, reactions, internalForces, mass, modal = frame.run()
 nC = len(frame.loadCases)  # number of load cases
 nN = len(nodes.node)  # number of nodes
 nE = len(elements.element)  # number of elements
+print(f"no of load cases {nC}, nodes {nN} and elements {nE}. \n")
 
 # mass data
 print("total_mass =", mass.total_mass)

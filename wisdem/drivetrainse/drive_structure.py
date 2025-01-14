@@ -84,7 +84,7 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
     Returns
     -------
     lss_spring_constant : float, [N*m/rad]
-        Equivalent spring constant for the low speed shaft froom T=(G*J/L)*theta
+        Equivalent spring constant for the low speed shaft from T=(G*J/L)*theta
     torq_deflection : float, [m]
         Maximum deflection distance at rotor (direct) or gearbox (geared) attachment
     torq_angle : float, [rad]
@@ -272,10 +272,10 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         myones = np.ones(n - 1)
         Ax = lsscyl.Area
         As = lsscyl.Asx
-        S = lsscyl.S
-        C = lsscyl.C
-        J0 = lsscyl.J0
-        Jx = lsscyl.Ixx
+        S = lsscyl.S    #(v) bending modulus for tubular sections: line 114, cross_sections.py
+        C = lsscyl.C    #(v) torsional shear constant for tubular sections: line 122, cross_sections.py
+        J0 = lsscyl.J0  #(v) polar moment of inertia w.r.t. x-x axis (torsional)
+        Jx = lsscyl.Ixx #(v) 2nd area moment of inertia w.r.t. y-y axis (Iyy=Izz for tubes)
 
         elements = frame3dd.ElementData(
             ielement, N1, N2, Ax, As, As, J0, Jx, Jx, E * myones, G * myones, roll, rho * myones
@@ -338,7 +338,7 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         # myframe.write('myframe1.3dd') # Debugging
         displacements, forces, reactions, internalForces, mass3dd, modal = myframe.run()
 
-        # Loop over DLCs and append to outputs
+        # ------------ Loop over DLCs and append to outputs ------------
         rotor_gearbox_deflection = np.zeros(n_dlcs)
         rotor_gearbox_angle = np.zeros(n_dlcs)
         outputs["F_mb1"] = np.zeros((3, n_dlcs))
