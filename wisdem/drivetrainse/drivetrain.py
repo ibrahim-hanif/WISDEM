@@ -147,7 +147,7 @@ class DriveMaterials(om.ExplicitComponent):
 # ----------------------------------------------------------------------------------------------
 class DrivetrainSE(om.Group):
     """
-    DirectDriveSE defines an OpenMDAO group that represents a wind turbine drivetrain without a gearbox and two main bearings.
+    DrivetrainSE defines an OpenMDAO group that represents a wind turbine drivetrain with a gearbox and two main bearings.
     """
 
     def initialize(self):

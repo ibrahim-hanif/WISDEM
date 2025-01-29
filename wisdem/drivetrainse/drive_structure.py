@@ -40,46 +40,67 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
     ----------
     tilt : float, [deg]
         Shaft tilt
+        = input from: user
     s_lss : numpy array[5], [m]
         Discretized s-coordinates along drivetrain, measured from bedplate (direct) or tower center (geared)
+        = input from: layout.py, GearedLayout
     lss_diameter : numpy array[2], [m]
         LSS outer diameter from hub to bearing 2
+        = input from: layout.py, GearedLayout
     lss_wall_thickness : numpy array[2], [m]
         LSS wall thickness
+        = input from: layout.py, GearedLayout
     hub_system_mass : float, [kg]
         Hub system mass
+        = input from: hub.py
     hub_system_cm : float, [m]
         Hub system center of mass distance from hub flange
+        = input from: hub.py
     hub_system_I : numpy array[6], [kg*m**2]
         Hub system moment of inertia
+        = input from: hub.py
     F_aero_hub : numpy array[3, n_dlcs], [N]
         Aero-only force vector applied to the hub
+        = input from: user
     M_aero_hub : numpy array[3, n_dlcs], [N*m]
         Aero-only moment vector applied to the hub
+        = input from: user
     blades_mass : float, [kg]
         Mass of all blades
+        = input from: TODO
     s_mb1 : float, [m]
         Bearing 1 s-coordinate along drivetrain, measured from bedplate (direct) or tower center (geared)
+        = input from: layout.py, GearedLayout
     s_mb2 : float, [m]
         Bearing 2 s-coordinate along drivetrain, measured from bedplate (direct) or tower center (geared)
+        = input from: layout.py, GearedLayout
     s_rotor : float, [m]
         Generator rotor attachment to lss s-coordinate measured from bedplate (direct) or tower center (geared)
+        = input from: layout.py, DirectLayout
     generator_rotor_mass : float, [kg]
         Generator rotor mass
+        = input from: generator.py / drive_components.py, GeneratorSimple
     generator_rotor_I : numpy array[3], [kg*m**2]
         Generator rotor moment of inertia (measured about its cm)
+        = input from: generator.py / drive_components.py, GeneratorSimple
     gearbox_mass : float, [kg]
         Gearbox rotor mass
+        = input from: gearbox.py
     gearbox_I : numpy array[3], [kg*m**2]
         Gearbox moment of inertia (measured about its cm)
+        = input from: gearbox.py
     lss_E : float, [Pa]
         modulus of elasticity
+        = input from: user (used in drivetrain.py, DriveMaterials)
     lss_G : float, [Pa]
         shear modulus
+        = input from: user (used in drivetrain.py, DriveMaterials)
     lss_rho : float, [kg/m**3]
         material density
+        = input from: user (used in drivetrain.py, DriveMaterials)
     lss_Xy : float, [Pa]
         yield stress
+        = input from: user (used in drivetrain.py, DriveMaterials)
 
     Returns
     -------
@@ -294,7 +315,7 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         # initialize frameDD3 object
         myframe = frame3dd.Frame(nodes, reactions, elements, options)
 
-        # ------ add hub and generator rotor (direct) or gearbox (geared) extra mass ------------
+        # ------ add extra mass: hub and generator rotor (direct) or gearbox (geared) ------------
         three0 = np.zeros(3).tolist()
         myframe.changeExtraNodeMass(
             np.r_[inode[-1], itorq, iadd],
@@ -335,7 +356,7 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
             # Put all together and run
             myframe.addLoadCase(load)
 
-        # myframe.write('myframe1.3dd') # Debugging
+        myframe.write('myframe_made4wind.3dd') # Debugging
         displacements, forces, reactions, internalForces, mass3dd, modal = myframe.run()
 
         # ------------ Loop over DLCs and append to outputs ------------
