@@ -6,13 +6,15 @@ from scipy.optimize import minimize
 Kr = 0.4
 
 # -----------------------------------
-# (v) cf. https://wisdem.readthedocs.io/en/master/wisdem/drivetrainse/components.html#gearbox
+# (v) cf.
+# 1. https://wisdem.readthedocs.io/en/master/wisdem/drivetrainse/components.html#gearbox
+# 2. 2015_Guo - analytical formulation for sizing
 
 def V_planetary(U, B, K):
     sunU = 0.5 * U - 1.0
     V = (
-        1.0 / U
-        + 1.0 / U / B
+        1.0 / U         # (v) ref.1
+        + 1.0 / U / B   # (v) ref.1
         + 1.0 / B / sunU
         + sunU
         + sunU**2
@@ -26,7 +28,7 @@ def V_planetary(U, B, K):
 
 
 def V_parallel(U):
-    V = 1.0 + 1.0 / U + U + U**2
+    V = 1.0 + 1.0 / U + U + U**2 # (v) ref.1 (division by overall GR later, line 47
     return V
 
 
@@ -67,6 +69,23 @@ def volumeEPP(x, n_planets, torque, Kr1=Kr):
 
 # -----------------------------------
 
+# (v) All epicyclic stages
+def volumeEEE(x, n_planets, torque, Kr1=Kr, Kr2=Kr, Kr3=Kr):
+    # Safety factor?
+    Kgamma = [1.1 if m < 5 else 1.35 for m in n_planets]
+
+    # Individual stage torques
+    Q_stage = torque / np.cumprod(x)
+
+    V = (
+        Q_stage[0] * Kgamma[0] * V_planetary(x[0], n_planets[0], Kr1)
+        + Q_stage[1] * Kgamma[1] * V_planetary(x[1], n_planets[1], Kr2)
+        + Q_stage[2] * Kgamma[2] * V_planetary(x[2], n_planets[2], Kr3)
+    )
+    return 2 * V
+
+# -----------------------------------
+
 
 class Gearbox(om.ExplicitComponent):
     """
@@ -83,7 +102,7 @@ class Gearbox(om.ExplicitComponent):
     ----------
     gear_configuration : string
         3-letter string of Es or Ps to denote epicyclic or parallel gear configuration
-    n_planets : numpy array[3]
+    planet_numbers : numpy array[3]
         number of planets in each stage
     gear_ratio : float
         overall gearbox speedup ratio
@@ -96,21 +115,24 @@ class Gearbox(om.ExplicitComponent):
 
     Returns
     -------
-    stage_masses : numpy array[3], [kg]
-        individual gearbox stage gearbox_masses
+    stage_ratios : numpy array[3], [-]
+        individual gearbox stage (optimized) ratios
     gearbox_mass : float, [kg]
         overall component mass
-    gearbox_cm : numpy array[3], [m]
+    [x] gearbox_cm : numpy array[3], [m]
         Gearbox center of mass [x,y,z] measure along shaft from bedplate
     gearbox_I : numpy array[3], [kg*m**2]
         Gearbox mass moments of inertia [Ixx, Iyy, Izz] around its center of mass
     L_gearbox : float, [m]
         length of gearbox
-    H_gearbox : float, [m]
+    [x] H_gearbox : float, [m]
         height of gearbox
     D_gearbox : float, [m]
         diameter of gearbox
-
+    carrier_mass    : float, [kg]
+        mass of carrier
+    carrier_I       : numpy array[3], [kg*m**2]
+        mass moments of inertia of carrier
     """
 
     def initialize(self):
@@ -159,7 +181,7 @@ class Gearbox(om.ExplicitComponent):
         m_carrier = 8e3
         outputs["carrier_mass"] = m_shrink_disc + m_carrier
         
-        # calculate mass properties
+        # calculate mass properties + radius and length based on regression
         D_rotor = float(inputs["rotor_diameter"][0])
         
         R_gearbox = float(inputs["gearbox_radius_user"][0])
@@ -190,8 +212,8 @@ class Gearbox(om.ExplicitComponent):
         if m_gearbox == 0.0:
 
             # Known configuration checks
-            if config.lower() not in ["eep", "eep_2", "eep_3", "epp"]:
-                raise ValueError("Invalid value for gearbox_configuration.  Must be one of: eep, eep_2, eep_3, epp")
+            if config.lower() not in ["eep", "eep_2", "eep_3", "epp", "eee"]: # (v)
+                raise ValueError("Invalid value for gearbox_configuration.  Must be one of: eep, eep_2, eep_3, epp, eee")
 
             # Optimize stage ratios
             # Use double sided constraints to hack inequality constraints as COBYLA seems to work better than SLSQP here
@@ -266,9 +288,22 @@ class Gearbox(om.ExplicitComponent):
                 )
                 ratio_stage = result.x
 
+            elif config == "eee": # (v)
+                result = minimize(
+                    lambda x: volumeEEE(x, n_planets, torque),
+                    x0,
+                    method=method,  # bounds=bounds,
+                    tol=tol,
+                    constraints=const,
+                    options={"maxiter": 100, "disp": False},
+                )
+                ratio_stage = result.x
+
             # Get final volume
             if config.lower().find("eep") >= 0:
                 vol = volumeEEP(ratio_stage, n_planets, torque)
+            elif config.lower().find("eee") >= 0: # (v)
+                vol = volumeEEE(ratio_stage, n_planets, torque)
             else:
                 vol = volumeEPP(ratio_stage, n_planets, torque)
             outputs["stage_ratios"] = ratio_stage
