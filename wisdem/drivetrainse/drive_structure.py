@@ -52,13 +52,13 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         = input from: layout.py, GearedLayout
     hub_system_mass : float, [kg]
         Hub system mass
-        = input from: hub.py
+        = input from: hub.py, TODO: user rn
     hub_system_cm : float, [m]
         Hub system center of mass distance from hub flange
-        = input from: hub.py
+        = input from: hub.py, TODO: user rn
     hub_system_I : numpy array[6], [kg*m**2]
         Hub system moment of inertia
-        = input from: hub.py
+        = input from: hub.py, TODO: user rn
     F_aero_hub : numpy array[3, n_dlcs], [N]
         Aero-only force vector applied to the hub
         = input from: user
@@ -67,7 +67,13 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         = input from: user
     blades_mass : float, [kg]
         Mass of all blades
-        = input from: TODO
+        = input from: user ( = prob["n_blades"] * prob["blade_mass"] )
+    blades_cm   : float, [m]
+        Center of mass of all blades
+        = input from: user
+    blades_I    : numpy array[6], [kg*m**2]
+        Moment of inertia of all blades
+        = input from: user
     s_mb1 : float, [m]
         Bearing 1 s-coordinate along drivetrain, measured from bedplate (direct) or tower center (geared)
         = input from: layout.py, GearedLayout
@@ -89,6 +95,18 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
     gearbox_I : numpy array[3], [kg*m**2]
         Gearbox moment of inertia (measured about its cm)
         = input from: gearbox.py
+    brake_mass  : float, [kg]
+        Mass of brake system
+        = input from: drive_components.py, Brake
+    brake_I     : numpy array[6], [kg*m**2]
+        Moment of inertia of brake system
+        = input from: drive_components.py, Brake
+    carrier_mass    : float, [kg]
+        Mass of carrier
+        = input from: gearbox.py
+    carrier_I    : numpy array[6], [kg*m**2]
+        Moment of inertia of carrier
+        = input from: gearbox.py
     lss_E : float, [Pa]
         modulus of elasticity
         = input from: user (used in drivetrain.py, DriveMaterials)
@@ -101,6 +119,12 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
     lss_Xy : float, [Pa]
         yield stress
         = input from: user (used in drivetrain.py, DriveMaterials)
+    shaft_deflection_allowable : float, [m]
+        Allowable deflection of the shaft at gearbox attachment
+        = input from: user
+    shaft_angle_allowable : float, [rad]
+        Allowable rotation angle of the shaft at gearbox attachment
+        = input from: user
 
     Returns
     -------
@@ -110,12 +134,10 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         Maximum deflection distance at rotor (direct) or gearbox (geared) attachment
     torq_angle : float, [rad]
         Maximum rotation angle at rotor (direct) or gearbox (geared) attachment
-    torq_axial_stress : numpy array[5, n_dlcs], [Pa]
+    lss_axial_stress : numpy array[5, n_dlcs], [Pa]
         Axial stress in Curved_beam structure
-    torq_shear_stress : numpy array[5, n_dlcs], [Pa]
+    lss_shear_stress : numpy array[5, n_dlcs], [Pa]
         Shear stress in Curved_beam structure
-    torq_bending_stress : numpy array[5, n_dlcs], [Pa]
-        Hoop stress in Curved_beam structure calculated with Roarks formulae
     constr_lss_vonmises : numpy array[5, n_dlcs]
         Sigma_y/Von_Mises
     F_mb1 : numpy array[3, n_dlcs], [N]
@@ -131,9 +153,13 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
     M_torq : numpy array[3, n_dlcs], [N*m]
         Moment vector applied to generator rotor (direct) or gearbox (geared) in hub c.s.
     lss_axial_load2stress : numpy array[nFull-1,6], [m**2]
-        Linear conversion factors between loads [Fx-z; Mx-z] and axial stress
+        Linear conversion factors between loads [Fx-z; Mx-z] and axial stress; for fatigue
     lss_shear_load2stress : numpy array[nFull-1,6], [m**2]
-        Linear conversion factors between loads [Fx-z; Mx-z] and shear stress
+        Linear conversion factors between loads [Fx-z; Mx-z] and shear stress; for fatigue
+    constr_shaft_deflection : float
+        Constraint on LSS translational deflection: maximum along the shaft
+    constr_shaft_angle : float
+        Constraint on LSS anglular deflection: maximum along the shaft
 
     """
 
@@ -275,9 +301,9 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         # ------ reaction data ------------
         # Reactions at main bearings
         rnode = np.r_[i1, i2, itorq]
-        Rx = np.array([RIGID, FREE, FREE])  # Upwind bearing restricts translational
-        Ry = np.array([RIGID, FREE, FREE])  # Upwind bearing restricts translational
-        Rz = np.array([RIGID, FREE, FREE])  # Upwind bearing restricts translational
+        Rx = np.array([RIGID, FREE, FREE])  # UW MB restricts translational
+        Ry = np.array([RIGID, FREE, FREE])  # Both MB restricts radial
+        Rz = np.array([RIGID, FREE, FREE])  # Both MB restricts radial
         Rxx = np.array([FREE, FREE, RIGID])  # Torque is absorbed by stator, so this is the best way to capture that
         Ryy = np.array([FREE, RIGID, FREE])  # downwind bearing carry moments
         Rzz = np.array([FREE, RIGID, FREE])  # downwind bearing carry moments
@@ -732,6 +758,12 @@ class Nose_Stator_Bedplate_Frame(om.ExplicitComponent):
         material density
     bedplate_Xy : float, [Pa]
         yield stress
+    stator_deflection_allowable : float, [m]
+        Maximum allowable deflection at generator stator attachment
+        = input from: user
+    stator_angle_allowable : float, [rad]
+        Maximum allowable rotation at generator stator attachment
+        = input from: user
 
     Returns
     -------
@@ -1079,6 +1111,10 @@ class Bedplate_IBeam_Frame(om.ExplicitComponent):
         Flag whether the design is upwind or downwind
     tilt : float, [deg]
         Lss tilt
+    D_top : float, [m]
+        Diameter tower top
+    s_drive : numpy array[?], [m]
+        Discretized s-coordinates along drivetrain
     bedplate_flange_width : float, [m]
         Bedplate is two parallel I beams, this is the flange width
     bedplate_flange_thickness : float, [m]
@@ -1093,6 +1129,7 @@ class Bedplate_IBeam_Frame(om.ExplicitComponent):
         Bearing 2 s-coordinate along drivetrain, measured from bedplate
     mb1_mass : float, [kg]
         component mass
+        = input from: MainBearing.mb_mass, user must 'connect'; (all below)
     mb1_I : numpy array[3], [kg*m**2]
         component I
     mb1_max_defl_ang : float, [rad]
@@ -1103,23 +1140,39 @@ class Bedplate_IBeam_Frame(om.ExplicitComponent):
         component I
     mb2_max_defl_ang : float, [rad]
         Maximum allowable deflection angle
+    s_gearbox : float, [m]
+        Gearbox attachment to lss s-coordinate
+    s_generator : float, [m]
+        Generator attachment to lss s-coordinate
     F_mb1 : numpy array[3, n_dlcs], [N]
         Force vector applied to bearing 1 in hub c.s.
     F_mb2 : numpy array[3, n_dlcs], [N]
         Force vector applied to bearing 2 in hub c.s.
+    F_torq : numpy array[3, n_dlcs], [N]
+        Force vector applied to generator rotor (direct) or gearbox (geared) in hub c.s.
+    F_generator : numpy array[3, n_dlcs], [N]
+        Force vector applied to generator in hub c.s.
+        = input from: HSS_Frame, TODO: user rn
     M_mb1 : numpy array[3, n_dlcs], [N*m]
         Moment vector applied to bearing 1 in hub c.s.
+        = input from: Hub_Rotor_LSS_Frame (all below)
     M_mb2 : numpy array[3, n_dlcs], [N*m]
         Moment vector applied to bearing 2 in hub c.s.
+    M_torq : numpy array[3, n_dlcs], [N*m]
+        Moment vector applied to generator rotor (direct) or gearbox (geared) in hub c.s.
+    M_generator : numpy array[3, n_dlcs], [N]
+        Moment vector applied to generator in hub c.s.
+        = input from: HSS_Frame, TODO: user rn
     other_mass : float, [kg]
         Mass of other nacelle components that rest on mainplate
-    E : float, [Pa]
+    bedplate_E : float, [Pa]
         modulus of elasticity
-    G : float, [Pa]
+        = input from: DriveMaterials (all below)
+    bedplate_G : float, [Pa]
         shear modulus
-    rho : float, [kg/m**3]
+    bedplate_rho : float, [kg/m**3]
         material density
-    sigma_y : float, [Pa]
+    bedplate_Xy : float, [Pa]
         yield stress
 
     Returns
@@ -1391,7 +1444,7 @@ class Bedplate_IBeam_Frame(om.ExplicitComponent):
         outputs["bedplate_bending_stress"] = np.zeros((2 * n - 2, n_dlcs))
         outputs["constr_bedplate_vonmises"] = np.zeros((2 * n - 2, n_dlcs))
         for k in range(n_dlcs):
-            # Deflections and rotations at bearings- how to sum up rotation angles?
+            # Deflections and rotations at bearings- how to sum up rotation angles? TODO
             outputs["mb1_deflection"][k] = np.sqrt(
                 displacements.dx[k, i1 - 1] ** 2 + displacements.dy[k, i1 - 1] ** 2 + displacements.dz[k, i1 - 1] ** 2
             )

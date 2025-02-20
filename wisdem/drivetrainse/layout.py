@@ -433,8 +433,12 @@ class GearedLayout(Layout):
 
     Parameters
     ----------
+    L_gearbox : float, [m]
+        length of gearbox
+    L_hss     : float, [m]
+        length of high speed shaft (HSS)
     hss_diameter : numpy array[2], [m]
-        HSS outer diameter from hub to bearing 2
+        HSS outer diameter from gearbox to generator
     hss_wall_thickness : numpy array[2], [m]
         HSS wall thickness
     bedplate_flange_width : float, [m]
