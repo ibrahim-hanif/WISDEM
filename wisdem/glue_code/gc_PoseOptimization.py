@@ -161,16 +161,21 @@ class PoseOptimization(object):
                     wt_opt.driver.opt_settings["Major feasibility tolerance"] = float(opt_options["tol"])
                     if "time_limit" in opt_options:
                         wt_opt.driver.opt_settings["Time limit"] = int(opt_options["time_limit"])
-                    wt_opt.driver.opt_settings["Summary file"] = os.path.join(folder_output, "SNOPT_Summary_file.txt")
-                    wt_opt.driver.opt_settings["Print file"] = os.path.join(folder_output, "SNOPT_Print_file.txt")
-                    if "hist_file_name" in opt_options:
-                        wt_opt.driver.hist_file = opt_options["hist_file_name"]
+                    if "major_step_limit" in opt_options:
+                        wt_opt.driver.opt_settings["Major step limit"] = float(opt_options["major_step_limit"])
+                    if "function_precision" in opt_options:
+                        wt_opt.driver.opt_settings["Function precision"] = float(opt_options["function_precision"])
                     if "verify_level" in opt_options:
                         wt_opt.driver.opt_settings["Verify level"] = opt_options["verify_level"]
                     else:
                         wt_opt.driver.opt_settings["Verify level"] = -1
+                        
+                # below are pyoptsparse options
+                wt_opt.driver.options["output_dir"] = folder_output # Directory location of pyopt_sparse output files.Default is {prob_name}_out/reports. OpenMDAO overwrties SNOPT output file locations.
+                if "hist_file_name" in opt_options:
+                    wt_opt.driver.options["hist_file"] = os.path.join(folder_output, opt_options["hist_file_name"]) # File location for saving pyopt_sparse optimization history. Default is None for no output.
                 if "hotstart_file" in opt_options:
-                    wt_opt.driver.hotstart_file = opt_options["hotstart_file"]
+                    wt_opt.driver.options["hotstart_file"] = opt_options["hotstart_file"] # File location of a pyopt_sparse optimization history to use to hot start the optimization. Default is None.
 
             elif opt_options["solver"] == "GA":
                 wt_opt.driver = om.SimpleGADriver()
@@ -524,6 +529,8 @@ class PoseOptimization(object):
             )
 
         if "structure" in blade_opt and len(blade_opt["structure"]) > 0:
+            if self.modeling["user_elastic"]["blade"]:
+                raise Exception("Blade structural design variables not available for user-defined blade elastic model. Please modify the modeling or optimization options.")
             layers = wt_init["components"]["blade"]["internal_structure_2d_fem"]["layers"]
             for i in range(len(blade_opt["structure"])):
                 k = blade_opt["layer_index_opt"][i]
@@ -962,6 +969,13 @@ class PoseOptimization(object):
                 print(
                     "WARNING: the slope of the chord is set to be constrained, but chord is not an active design variable. The constraint is not enforced."
                 )
+        if blade_constr["twist_slope"]["flag"]:
+            if blade_opt["aero_shape"]["twist"]["flag"]:
+                wt_opt.model.add_constraint("blade.pa.slope_twist_constr", upper=0.0)
+            else:
+                print(
+                    "WARNING: the slope of the twist is set to be constrained, but twist is not an active design variable. The constraint is not enforced."
+                )
 
         if blade_constr["root_circle_diameter"]["flag"]:
             if blade_opt["aero_shape"]["chord"]["flag"] and blade_opt["aero_shape"]["chord"]["index_start"] == 0.0:
@@ -1327,11 +1341,16 @@ class PoseOptimization(object):
                 idx_k = user_constr[k]["indices"]
             else:
                 idx_k = None
+            
+            if "ref" in user_constr[k]:
+                ref_k = user_constr[k]["ref"]
+            else:
+                ref_k = None
 
             if lower_k is None and upper_k is None:
                 raise Exception(f"Must include a lower_bound and/or an upper bound for {var_k}")
 
-            wt_opt.model.add_constraint(var_k, lower=lower_k, upper=upper_k, indices=idx_k)
+            wt_opt.model.add_constraint(var_k, lower=lower_k, upper=upper_k, indices=idx_k, ref=ref_k)
 
         return wt_opt
 
@@ -1405,33 +1424,35 @@ class PoseOptimization(object):
                 )
                 init_stall_margin_opt = stall_margin_interpolator(wt_opt["inn_af.s_opt_stall_margin"])
                 wt_opt["inn_af.stall_margin_opt"] = init_stall_margin_opt
-
-            layers = wt_init["components"]["blade"]["internal_structure_2d_fem"]["layers"]
-            for i in range(self.modeling["WISDEM"]["RotorSE"]["n_layers"]):
-                wt_opt["blade.opt_var.s_opt_layer_%d"%i] = np.linspace(
-                    0.0, 1.0, blade_opt["n_opt_struct"][i]
-                )
-                thick_interp = PchipInterpolator(
-                            layers[i]["thickness"]["grid"],
-                            layers[i]["thickness"]["values"],
-                            extrapolate=False)
-                init_opt = thick_interp(wt_opt["blade.opt_var.s_opt_layer_%d"%i])
-                wt_opt["blade.opt_var.layer_%d_opt"%i] = np.nan_to_num(init_opt, nan=0.)
-
-            if self.modeling["WISDEM"]["RotorSE"]["flag"]:
-                blade_constr = self.opt["constraints"]["blade"]
-                wt_opt["rotorse.rs.constr.max_strainU_spar"] = blade_constr["strains_spar_cap_ss"]["max"]
-                wt_opt["rotorse.rs.constr.max_strainL_spar"] = blade_constr["strains_spar_cap_ps"]["max"]
-                if blade_constr["rail_transport"]["flag"]:
-                    wt_opt["rotorse.re.rail.max_strains"] = min(
-                        blade_constr["strains_spar_cap_ss"]["max"], blade_constr["strains_spar_cap_ps"]["max"]
+            
+            if not self.modeling["user_elastic"]["blade"]:
+                # YL: no internal structure optimization when using user-defined blade elastic properties
+                layers = wt_init["components"]["blade"]["internal_structure_2d_fem"]["layers"]
+                for i in range(self.modeling["WISDEM"]["RotorSE"]["n_layers"]):
+                    wt_opt["blade.opt_var.s_opt_layer_%d"%i] = np.linspace(
+                        0.0, 1.0, blade_opt["n_opt_struct"][i]
                     )
+                    thick_interp = PchipInterpolator(
+                                layers[i]["thickness"]["grid"],
+                                layers[i]["thickness"]["values"],
+                                extrapolate=False)
+                    init_opt = thick_interp(wt_opt["blade.opt_var.s_opt_layer_%d"%i])
+                    wt_opt["blade.opt_var.layer_%d_opt"%i] = np.nan_to_num(init_opt, nan=0.)
 
-                wt_opt["rotorse.rs.constr.max_strainU_te"] = blade_constr["strains_te_ss"]["max"]
-                wt_opt["rotorse.rs.constr.max_strainL_te"] = blade_constr["strains_te_ps"]["max"]
-                wt_opt["rotorse.stall_check.stall_margin"] = blade_constr["stall"]["margin"] * 180.0 / np.pi
-                if self.modeling["flags"]["tower"]:
-                    wt_opt["tcons.max_allowable_td_ratio"] = blade_constr["tip_deflection"]["margin"]
+                if self.modeling["WISDEM"]["RotorSE"]["flag"]:
+                    blade_constr = self.opt["constraints"]["blade"]
+                    wt_opt["rotorse.rs.constr.max_strainU_spar"] = blade_constr["strains_spar_cap_ss"]["max"]
+                    wt_opt["rotorse.rs.constr.max_strainL_spar"] = blade_constr["strains_spar_cap_ps"]["max"]
+                    if blade_constr["rail_transport"]["flag"]:
+                        wt_opt["rotorse.re.rail.max_strains"] = min(
+                            blade_constr["strains_spar_cap_ss"]["max"], blade_constr["strains_spar_cap_ps"]["max"]
+                        )
+
+                    wt_opt["rotorse.rs.constr.max_strainU_te"] = blade_constr["strains_te_ss"]["max"]
+                    wt_opt["rotorse.rs.constr.max_strainL_te"] = blade_constr["strains_te_ps"]["max"]
+                    wt_opt["rotorse.stall_check.stall_margin"] = blade_constr["stall"]["margin"] * 180.0 / np.pi
+                    if self.modeling["flags"]["tower"]:
+                        wt_opt["tcons.max_allowable_td_ratio"] = blade_constr["tip_deflection"]["margin"]
 
         if self.modeling["flags"]["nacelle"]:
             drive_constr = self.opt["constraints"]["drivetrain"]
