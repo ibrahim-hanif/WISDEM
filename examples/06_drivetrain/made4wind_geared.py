@@ -13,7 +13,7 @@ import openmdao.api as om
 from wisdem.commonse.fileIO import save_data
 from wisdem.drivetrainse.drivetrain import DrivetrainSE
 
-opt_flag = True
+opt_flag = False
 # ---
 
 # Set input options
@@ -52,7 +52,7 @@ if opt_flag:
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
     prob.driver.options["tol"] = 1e-2
-    prob.driver.options["maxiter"] = 5 * 2
+    prob.driver.options["maxiter"] = 5 * 1
 
     # Add objective
     prob.model.add_objective("nacelle_mass", scaler=1e-6)
@@ -62,10 +62,10 @@ if opt_flag:
 
     prob.model.add_design_var("L_12", lower=0.1, upper=5.0)
     prob.model.add_design_var("L_h1", lower=0.1, upper=5.0)
-    prob.model.add_design_var("L_hss", lower=0.1, upper=5.0)
     prob.model.add_design_var("lss_diameter", lower=0.5, upper=6.0)
     prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
 
+    prob.model.add_design_var("L_hss", lower=0.1, upper=5.0)
     prob.model.add_design_var("hss_diameter", lower=0.5, upper=6.0)
     prob.model.add_design_var("hss_wall_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
     
@@ -108,15 +108,17 @@ prob["minimum_rpm"] = 5.0
 prob["rated_rpm"] = 7.56 
 
 # Loading from rotor
-# - from Felix (teams chat, 4.8 13:37)
-prob["F_hub"] = np.array([3.1299e3, 0.3217e3, -2.2181e3]).reshape((3, 1))
-prob["M_hub"] = np.array([2.0154e4, 4.7742e4, 3.6097e4]).reshape((3, 1))
+#(v) TODO: actual ULS loads, not copied from drivetrain_direct
+prob["F_aero_hub"] = np.array([2517580.0, -27669.0, 3204.0]).reshape((3, 1))
+prob["M_aero_hub"] = np.array([21030561.0, 7414045.0, 1450946.0]).reshape((3, 1))
 # ---
 
 # Blade properties and hub design options
 # -(v) copied from drivetrain_direct (IEA-15MW = ref)
+prob["blades_cm"] = 2.46175
 prob["blade_mass"] = 65252.0
 prob["blades_mass"] = 3 * prob["blade_mass"]
+prob["blades_I"] = np.r_[3.48453857e+08, 1.74226928e+08, 1.74226928e+08, np.zeros(3)]
 prob["pitch_system.BRFM"] = 26648449.0
 prob["pitch_system_scaling_factor"] = 0.75
 prob["blade_root_diameter"] = 5.2
@@ -131,36 +133,43 @@ prob["clearance_hub_spinner"] = 0.5
 prob["spin_hole_incr"] = 1.2
 prob["spinner_gust_ws"] = 70.0
 prob["hub_diameter"] = 7.94
-prob["blades_I"] = np.r_[4.12747714e08, 1.97149973e08, 1.54854398e08, np.zeros(3)]
 # ---
 
 # Drivetrain configuration and sizing inputs
-prob["bear1.bearing_type"] = "CARB" #CARB
-prob["bear2.bearing_type"] = "SRB" #SRB
+#(v) notes: 1. hub flange length = 0.358m, 
+
+prob["bear1.bearing_type"] = "SRB" # 1. fixed MB; default "CARB"
+prob["bear2.bearing_type"] = "CARB" # 2. floating MB; default "SRB"
 # - init condn for some design vars
-prob["L_12"] = 1.2
+prob["bear1.D_shaft"] = 2.2
+prob["bear2.D_shaft"] = 2.2
+
 prob["L_h1"] = 1.0
-prob["L_hss"] = 1.5
-prob["L_generator"] = 2.15
-prob["L_gearbox"] = 1.5
-prob["overhang"] = 11.35 #ref.2
-prob["drive_height"] = 5.614 #ref.2
-prob["tilt"] = 5.0 #ref.3
-
-prob["planet_numbers"] = np.array([5, 3, 0]) #ref.1
-prob["gear_configuration"] = "eep"
-prob["gear_ratio"] = 50.039
-
+prob["L_12"] = 1.2
 myones = np.ones(2)
 prob["lss_diameter"] = 1.0 * myones
-prob["hss_diameter"] = 0.5 * myones
 prob["lss_wall_thickness"] = 0.288 * myones
+
+prob["L_gearbox"] = 1.5
+prob["planet_numbers"] = np.array([5, 3, 0]) #ref.1
+prob["gear_configuration"] = "eep"
+prob["gear_ratio"] = 50 #.039
+
+prob["L_hss"] = 1.5
+prob["hss_diameter"] = 0.5 * myones
 prob["hss_wall_thickness"] = 0.1 * myones
+prob["L_generator"] = 2.15
+
+prob["overhang"] = 11.35 #ref.2
+prob["tilt"] = 5.0 #ref.3
+D_hub2flange = 0.358 #ref.2: derive hub height = 5.95522 m
+L2n = 0.9
+prob["drive_height"] = 4.875 + ( np.sin(prob["tilt"]*np.pi/180)*( L2n+prob["L_12"]+prob["L_h1"]+D_hub2flange+(prob["hub_diameter"]*np.sqrt(3/4)) ) ) # = 5.95522 m
+
 prob["bedplate_web_thickness"] = 0.1
 prob["bedplate_flange_thickness"] = 0.1
 prob["bedplate_flange_width"] = 1.0
-prob["bear1.D_shaft"] = 2.2
-prob["bear2.D_shaft"] = 2.2
+
 prob["shaft_deflection_allowable"] = 1e-4
 prob["shaft_angle_allowable"] = 1e-3
 prob["stator_deflection_allowable"] = 1e-4
@@ -202,6 +211,9 @@ save_data("drivetrain_example", prob)
 print("nacelle_mass:", prob["nacelle_mass"])
 print("")
 print("hub_diameter:", prob["hub_diameter"])
+print("hub_system_mass:", prob["hub_system_mass"])
+print("hub_system_cm:", prob["hub_system_cm"])
+print("hub_system_I:", prob["hub_system_I"])
 
 print("L_h1:", prob["L_h1"])
 print("L_12:", prob["L_12"])
@@ -240,49 +252,50 @@ print("stage_ratios:", prob["stage_ratios"])
 
 # OUTPUT
 """
-            Current function value: 0.46374694976863196
-            Iterations: 10
-            Function evaluations: 30
-            Gradient evaluations: 10
+Iteration limit reached    (Exit mode 9)
+            Current function value: 0.3937423644722116
+            Iterations: 5
+            Function evaluations: 25
+            Gradient evaluations: 5
 Optimization FAILED.
 Iteration limit reached
 -----------------------------------
-nacelle_mass: [463746.94976863]
+nacelle_mass: [393742.36447221]
 
 hub_diameter: [7.94]
-L_h1: [2.84910014]
-L_12: [1.81901512]
-L_lss: [4.76811526]
-lss_diameter: [1.4038415  0.51923522]
-lss_wall_thickness: [0.2877764  0.27345184]
-L_hss: [0.19230563]
-hss_diameter: [0.5007887 0.5000503]
-hss_wall_thickness: [0.09999254 0.09999279]
+L_h1: [0.1048798]
+L_12: [0.74098698]
+L_lss: [0.94586677]
+lss_diameter: [0.64090397 1.87807032]
+lss_wall_thickness: [0.28772139 0.28798542]
+L_hss: [3.98990285]
+hss_diameter: [0.5 0.5]
+hss_wall_thickness: [0.0999969 0.0999969]
 L_generator: [2.15]
 L_gearbox: [3.6]
-L_bedplate: [10.65174808]
-H_bedplate: [4.07947817]
-bedplate_web_thickness: [0.28427259]
-bedplate_flange_thickness: [0.16877758]
-bedplate_flange_width: [0.10022954]
+L_bedplate: [14.6]
+H_bedplate: [4.33666551]
+bedplate_web_thickness: [0.10138695]
+bedplate_flange_thickness: [0.10080672]
+bedplate_flange_width: [0.52487507]
 
-constr_lss_vonmises: [0.00040448 0.00921844 0.00893501 0.1741033 ]
-constr_hss_vonmises: [0.00024905 0.00011802]
-constr_bedplate_vonmises: [1.41173081e-03 6.81530721e-03 6.99505973e-03 7.18874845e-03
- 1.29755894e-02 2.44667073e-02 2.37782051e-02 1.88903939e-02
- 1.52804435e-02 1.91827144e-03 2.57425592e-09 1.41173110e-03
- 6.81909408e-03 6.99867947e-03 7.19233734e-03 1.29793689e-02
- 2.44614559e-02 2.37625862e-02 1.88897466e-02 1.52803702e-02
- 1.91827008e-03 1.78246635e-09]
-constr_mb1_defl: [-0.00353294]
-constr_mb2_defl: [-0.00028466]
-constr_shaft_deflection: [0.74928925]
-constr_shaft_angle: [6.68083192e-07]
-constr_stator_deflection: [3.7656156]
-constr_stator_angle: [0.00785735]
+constr_lss_vonmises: [0.00194033 0.08606653 0.03097886 0.03872102]
+constr_hss_vonmises: [0.0071324  0.00011819]
+constr_bedplate_vonmises: [1.74351020e-03 1.73956959e-02 1.79675656e-02 1.20682608e-01
+ 9.40095833e-02 7.48137812e-02 7.40222255e-02 6.67264544e-02
+ 6.58290779e-02 8.42461461e-05 2.43365707e-08 1.74350991e-03
+ 1.74034081e-02 1.79773974e-02 1.20886902e-01 9.42931242e-02
+ 7.47588820e-02 7.39599094e-02 6.67264041e-02 6.58291202e-02
+ 8.42235064e-05 4.86680463e-08]
+constr_mb1_defl: [-0.02343549]
+constr_mb2_defl: [-0.00259453]
+constr_shaft_deflection: [0.84049439]
+constr_shaft_angle: [3.39296474e-06]
+constr_stator_deflection: [21.40211536]
+constr_stator_angle: [-0.01783059]
 constr_hub_diameter: [0.73466864]
-constr_length: [6.63114008e-12]
-constr_height: [4.07947817]
+constr_length: [-8.24980972e-10]
+constr_height: [4.33666551]
 
 planet_numbers: [5 3 0]
 stage_ratios: [3.6849891 3.6849891 3.6849891]

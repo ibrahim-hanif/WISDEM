@@ -91,7 +91,7 @@ class Gearbox(om.ExplicitComponent):
     """
     The gearbox design follows the general approach of the previous DriveSE implementation, however
     with code improvements, the results will likely be different than prior versions.  The gearbox is
-    assumed to have 3 stages, with the user specifying a configuration code of either "EEP" or "EPP",
+    assumed to have 3 stages, with the user specifying a configuration code of either "EEP", "EPP" or "EEE",
     with the "E" representing epicyclic (planetary) gear stages and "P" representing parallel gear stages.
     For the epicyclic stages, the user also has to specify the number of planets, so the EEP input would
     require something like [3, 3, 0] and EPP would require [3, 0, 0].  The user also specifies the overall
@@ -170,7 +170,7 @@ class Gearbox(om.ExplicitComponent):
         # Unpack inputs
         config = discrete_inputs["gear_configuration"]
         # shaft_factor = discrete_inputs['shaft_factor']
-        n_planets = np.maximum(1.0, np.array(discrete_inputs["planet_numbers"]))
+        n_planets = np.maximum(1.0, np.array(discrete_inputs["planet_numbers"])) #(v)  change 0 to 1 - planet per parallel stage 
         gear_ratio = float(inputs["gear_ratio"][0])
         torque = float(inputs["rated_torque"][0])
         rating = float(inputs["machine_rating"][0])
@@ -203,13 +203,13 @@ class Gearbox(om.ExplicitComponent):
         outputs["carrier_I"] = outputs["carrier_mass"] * I[0] * np.array([1.0, 0.5, 0.5])  # Solid disk
 
         # Now determine gearbox mass
-        m_gearbox = float(inputs["gearbox_mass_user"][0])
+        m_gearbox = float(inputs["gearbox_mass_user"][0]) # (v) user input mass, default 0.0  (line 150)
         
         if m_gearbox == 0.0 and self.options["use_gb_torque_density"]:
             # NOTE THIS IS DEFAULT BECAUSE WE TRUST IT MORE AND IT IS MUCH QUICKER
             m_gearbox = torque / float(inputs["gearbox_torque_density"][0])
 
-        if m_gearbox == 0.0:
+        if m_gearbox == 0.0: # (v) TODO: needs update from currently incapable implementation (github issue 593) 
 
             # Known configuration checks
             if config.lower() not in ["eep", "eep_2", "eep_3", "epp", "eee"]: # (v)

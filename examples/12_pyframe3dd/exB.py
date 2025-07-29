@@ -200,7 +200,7 @@ for iCase in range(nC):
     print()
     print("element =", forces.element[iCase, :])
     print("node =", forces.node[iCase, :])
-    print("Nx =", forces.Nx[iCase, :])
+    print("Nx =", forces.Nx[iCase, :]) #(v) [ 113.54329507 -110.77202635  185.88564988 -188.6569186  -14.41034593 11.6390772   -86.75270073   89.52396946]
     print("Vy =", forces.Vy[iCase, :])
     print("Vz =", forces.Vz[iCase, :])
     print("Txx =", forces.Txx[iCase, :])
@@ -208,7 +208,7 @@ for iCase in range(nC):
     print("Mzz =", forces.Mzz[iCase, :])
     print()
     print("nodesR =", reactions.node[iCase, :])
-    print("RFx =", reactions.Fx[iCase, :])
+    print("RFx =", reactions.Fx[iCase, :]) #(v) RFx = [  74.65333098 -124.65319573    8.66721895  -58.6673542 ]
     print("RFy =", reactions.Fy[iCase, :])
     print("RFz =", reactions.Fz[iCase, :])
     print("RMxx =", reactions.Mxx[iCase, :])

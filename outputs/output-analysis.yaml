@@ -1,11 +1,5 @@
-general: {folder_output: outputs, fname_output: tower_output}
+general: {folder_output: outputs, fname_output: output}
 design_variables:
-    tower:
-        outer_diameter: {flag: true, lower_bound: 3.87, upper_bound: 8.0}
-        layer_thickness: {flag: true, lower_bound: 0.004, upper_bound: 0.2}
-        section_height: {flag: false, lower_bound: 5.0, upper_bound: 5.0}
-        E: {flag: false, lower_bound: 200000000000.0, upper_bound: 200000000000.0}
-        rho: {flag: false, lower_bound: 7800, upper_bound: 7800}
     rotor_diameter: {flag: false, minimum: 0.0, maximum: 0.0}
     blade:
         aero_shape:
@@ -18,6 +12,8 @@ design_variables:
             stall_margin: {flag: false, n_opt: 8, max_decrease: 0.5, max_increase: 1.5, index_start: 0, index_end: 8}
             z: {flag: false, n_opt: 3, lower_bound: -1.0, upper_bound: 1.0}
         structure: []
+        n_opt_struct: [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+        layer_index_opt: []
     control:
         tsr: {flag: false, minimum: 0.0, maximum: 0.0}
     hub:
@@ -41,6 +37,12 @@ design_variables:
         bedplate_web_thickness: {flag: false, lower_bound: 0.001, upper_bound: 1.0}
         bedplate_flange_thickness: {flag: false, lower_bound: 0.001, upper_bound: 1.0}
         bedplate_flange_width: {flag: false, lower_bound: 0.001, upper_bound: 1.0}
+    tower:
+        outer_diameter: {flag: false, lower_bound: 5.0, upper_bound: 5.0}
+        layer_thickness: {flag: false, lower_bound: 0.01, upper_bound: 0.01}
+        section_height: {flag: false, lower_bound: 5.0, upper_bound: 5.0}
+        E: {flag: false, lower_bound: 200000000000.0, upper_bound: 200000000000.0}
+        rho: {flag: false, lower_bound: 7800, upper_bound: 7800}
     monopile:
         outer_diameter: {flag: false, lower_bound: 5.0, upper_bound: 5.0}
         layer_thickness: {flag: false, lower_bound: 0.01, upper_bound: 0.01}
@@ -70,20 +72,7 @@ design_variables:
         line_mass_density_coeff: {flag: false, lower_bound: 0.0}
         line_stiffness_coeff: {flag: false, lower_bound: 0.0}
     user: []
-merit_figure: tower_mass
 constraints:
-    tower:
-        height_constraint: {flag: false, lower_bound: 0.01, upper_bound: 0.01}
-        stress: {flag: true}
-        global_buckling: {flag: true}
-        shell_buckling: {flag: true}
-        d_to_t: {flag: true, lower_bound: 120.0, upper_bound: 500.0}
-        taper: {flag: true, lower_bound: 0.2}
-        slope: {flag: true}
-        frequency_1: {flag: true, lower_bound: 0.13, upper_bound: 0.4}
-        thickness_slope: {flag: false}
-        frequency: {flag: false}
-        mass: {flag: false, target: 0.0, acceptable_error: 0.0}
     blade:
         strains_spar_cap_ss: {flag: false, max: 0.004, index_start: 0, index_end: 8}
         strains_spar_cap_ps: {flag: false, max: 0.004, index_start: 0, index_end: 8}
@@ -109,6 +98,18 @@ constraints:
         match_L_D: {flag_L: false, flag_D: false, filename: ''}
         AEP: {flag: false, min: 1.0}
         thrust_coeff: {flag: false}
+    tower:
+        height_constraint: {flag: false, lower_bound: 0.01, upper_bound: 0.01}
+        stress: {flag: false}
+        global_buckling: {flag: false}
+        shell_buckling: {flag: false}
+        slope: {flag: false}
+        thickness_slope: {flag: false}
+        d_to_t: {flag: false, lower_bound: 50.0, upper_bound: 50.0}
+        taper: {flag: false, lower_bound: 0.5}
+        frequency: {flag: false}
+        frequency_1: {flag: false, lower_bound: 0.1, upper_bound: 0.1}
+        mass: {flag: false, target: 0.0, acceptable_error: 0.0}
     monopile:
         stress: {flag: false}
         global_buckling: {flag: false}
@@ -176,21 +177,22 @@ constraints:
         pitch_period: {flag: false, lower_bound: 1.0, upper_bound: 1.0}
         yaw_period: {flag: false, lower_bound: 1.0, upper_bound: 1.0}
     user: []
+merit_figure: LCOE
+merit_figure_user: {name: '', ref: 1, max_flag: false}
+inverse_design: {}
 driver:
+    optimization: {flag: false, tol: 1e-06, max_iter: 100, max_major_iter: 10, max_minor_iter: 100, time_limit: 0, max_function_calls: 100000, solver: SLSQP, step_size: 0.001, form: central, step_calc: None, debug_print: false}
+    design_of_experiments: {flag: false, run_parallel: true, generator: Uniform, num_samples: 5, seed: 2, levels: 2, criterion: center, iterations: 2, debug_print: false}
     step_size_study:
-        flag: true
+        flag: false
         step_sizes: [0.01, 0.005, 0.001, 0.0005, 0.0001, 5e-05, 1e-05, 5e-06, 1e-06, 5e-07, 1e-07, 5e-08, 1e-08]
-        form: forward
+        form: central
         of: []
         wrt: []
         driver_scaling: false
-    optimization: {flag: false, tol: 1e-06, max_iter: 100, max_major_iter: 10, max_minor_iter: 100, time_limit: 0, max_function_calls: 100000, solver: SLSQP, step_size: 0.001, form: central, step_calc: None, debug_print: false}
-    design_of_experiments: {flag: false, run_parallel: true, generator: Uniform, num_samples: 5, seed: 2, levels: 2, criterion: center, iterations: 2, debug_print: false}
 recorder:
     flag: false
     file_name: log_opt.sql
     just_dvs: false
     includes: []
-merit_figure_user: {name: '', ref: 1, max_flag: false}
-inverse_design: {}
-opt_flag: true
+opt_flag: false
