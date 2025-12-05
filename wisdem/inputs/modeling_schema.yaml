@@ -381,12 +381,12 @@ properties:
                                 maximum: 1e-1
                                 default: 1e-8
                                 description: Convergence tolerance for modal eigenvalue solution
-                    gamma_f: *gamma_f
-                    gamma_m: *gamma_m
-                    gamma_n: *gamma_n
-                    gamma_b: *gamma_b
-                    gamma_freq: *gamma_freq
-                    gamma_fatigue: *gamma_fatigue
+                    gamma_f: *gamma_f               #(v) Partial safety factor for loads
+                    gamma_m: *gamma_m               #(v) Partial safety factor for materials
+                    gamma_n: *gamma_n               #(v) Partial safety factor for consequence of failure
+                    gamma_b: *gamma_b               #(v) Partial safety factor for buckling
+                    gamma_freq: *gamma_freq         #(v) Partial safety factor on modal frequencies
+                    gamma_fatigue: *gamma_fatigue   #(v) Partial safety factor for fatigue failure
                     symmetric_moorings:
                         type: boolean
                         default: True

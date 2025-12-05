@@ -100,18 +100,29 @@ class Gearbox(om.ExplicitComponent):
 
     Parameters
     ----------
+    machine_rating : float, [kW]
+        rated power of the machine
+    rotor_diameter : float, [m]
+        rotor diameter
+    rated_torque : float, [N*m]
+        rotor torque at rated power
+
     gear_configuration : string
         3-letter string of Es or Ps to denote epicyclic or parallel gear configuration
     planet_numbers : numpy array[3]
         number of planets in each stage
     gear_ratio : float
         overall gearbox speedup ratio
-    D_rotor : float, [m]
-        rotor diameter
-    Q_rotor : float, [N*m]
-        rotor torque at rated power
     s_gearbox : float, [m]
-        gearbox position along x-axis
+        gearbox position along x-axis #(v) output of layout.py (GearedLayout)
+    gearbox_mass_user : float, [kg]
+        user-defined gearbox mass (overrides model if > 0; GB sizing model is bypassed)
+    gearbox_torque_density : float, [N*m/kg]
+        gearbox torque density (iff gearbox_mass_user = 0 & use_gb_torque_density = True)
+    gearbox_radius_user : float, [m]
+        user-defined gearbox radius (overrides model if > 0; scaled using rotor_diameter)
+    gearbox_length_user : float, [m]
+        user-defined gearbox length (overrides model if > 0; scaled using rotor_diameter)
 
     Returns
     -------
@@ -148,7 +159,7 @@ class Gearbox(om.ExplicitComponent):
         self.add_input("rated_torque", val=0.0, units="N*m")
         self.add_input("machine_rating", val=0.0, units="kW")
         self.add_input("gearbox_mass_user", val=0.0, units="kg")
-        self.add_input("gearbox_torque_density", val=0.0, units="N*m/kg")
+        self.add_input("gearbox_torque_density", val=200.0, units="N*m/kg") # (v) default changed from 0.0 to 200.0, if using in 'opt' (use_gb_torque_density)
         self.add_input("gearbox_radius_user", val=0.0, units="m")
         self.add_input("gearbox_length_user", val=0.0, units="m")
 
@@ -209,7 +220,7 @@ class Gearbox(om.ExplicitComponent):
             # NOTE THIS IS DEFAULT BECAUSE WE TRUST IT MORE AND IT IS MUCH QUICKER
             m_gearbox = torque / float(inputs["gearbox_torque_density"][0])
 
-        if m_gearbox == 0.0: # (v) TODO: needs update from currently incapable implementation (github issue 593) 
+        if m_gearbox == 0.0: # (v) TODO: needs update from currently incapable implementation (github issue WISDEM #593) 
 
             # Known configuration checks
             if config.lower() not in ["eep", "eep_2", "eep_3", "epp", "eee"]: # (v)

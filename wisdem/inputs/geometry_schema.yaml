@@ -2,7 +2,7 @@
 # Organization: National Renewable Energy Laboratory, Golden, CO
 # Date: 2020-04-28
 
-
+#(v) defines the template (or skeleton) of variables (by name) needed, whose values are def in geo.yaml file
 
 $schema: "http://json-schema.org/draft-07/schema#"
 $id: WISDEM_ontology_v00

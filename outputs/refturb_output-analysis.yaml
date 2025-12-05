@@ -1,26 +1,5 @@
 general: {folder_output: outputs, fname_output: refturb_output}
 design_variables:
-    floating:
-        joints:
-            flag: true
-            z_coordinate:
-               -  names: [spar_keel]
-                  lower_bound: -40.0
-                  upper_bound: -15.0
-               -  names: [spar_freeboard]
-                  lower_bound: -40.0
-                  upper_bound: -15.0
-            r_coordinate: []
-        members:
-            flag: true
-            groups:
-               -  names: [spar]
-                  ballast: {lower_bound: 1.0, upper_bound: 10000.0}
-    mooring:
-        line_length: {flag: true, lower_bound: 100.0, upper_bound: 1000.0}
-        line_diameter: {flag: false, lower_bound: 0.0}
-        line_mass_density_coeff: {flag: false, lower_bound: 0.0}
-        line_stiffness_coeff: {flag: false, lower_bound: 0.0}
     rotor_diameter: {flag: false, minimum: 0.0, maximum: 0.0}
     blade:
         aero_shape:
@@ -33,6 +12,8 @@ design_variables:
             stall_margin: {flag: false, n_opt: 8, max_decrease: 0.5, max_increase: 1.5, index_start: 0, index_end: 8}
             z: {flag: false, n_opt: 3, lower_bound: -1.0, upper_bound: 1.0}
         structure: []
+        n_opt_struct: [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+        layer_index_opt: []
     control:
         tsr: {flag: false, minimum: 0.0, maximum: 0.0}
     hub:
@@ -77,31 +58,20 @@ design_variables:
         brace_diameters: {flag: false, lower_bound: 0.1, upper_bound: 0.1}
         brace_thicknesses: {flag: false, lower_bound: 0.1, upper_bound: 0.1}
         bay_spacing: {flag: false, lower_bound: 0.1, upper_bound: 0.1}
+    floating:
+        joints:
+            flag: false
+            z_coordinate: []
+            r_coordinate: []
+        members:
+            flag: false
+            groups: []
+    mooring:
+        line_length: {flag: false, lower_bound: 0.0}
+        line_diameter: {flag: false, lower_bound: 0.0}
+        line_mass_density_coeff: {flag: false, lower_bound: 0.0}
+        line_stiffness_coeff: {flag: false, lower_bound: 0.0}
     user: []
-merit_figure: inverse_design
-inverse_design:
-    floatingse.platform_hull_mass:
-        ref_value: 2500000.0
-        units: kg
-        indices: [0]
-    floatingse.mooring_mass:
-        ref_value: 450000.0
-        units: kg
-        indices: [0]
-    floatingse.system_structural_center_of_mass:
-        ref_value: [0.0, -90.0]
-        indices: [1, 2]
-        units: m
-driver:
-    optimization: {flag: true, tol: 0.0001, solver: SLSQP, step_size: 1e-06, form: forward, max_iter: 1, max_major_iter: 10, max_minor_iter: 100, time_limit: 0, max_function_calls: 100000, step_calc: None, debug_print: false}
-    design_of_experiments: {flag: false, run_parallel: true, generator: Uniform, num_samples: 5, seed: 2, levels: 2, criterion: center, iterations: 2, debug_print: false}
-    step_size_study:
-        flag: false
-        step_sizes: [0.01, 0.005, 0.001, 0.0005, 0.0001, 5e-05, 1e-05, 5e-06, 1e-06, 5e-07, 1e-07, 5e-08, 1e-08]
-        form: central
-        of: []
-        wrt: []
-        driver_scaling: false
 constraints:
     blade:
         strains_spar_cap_ss: {flag: false, max: 0.004, index_start: 0, index_end: 8}
@@ -114,6 +84,7 @@ constraints:
         stall: {flag: false, margin: 0.05233}
         chord: {flag: false, max: 4.75}
         chord_slope: {flag: false}
+        twist_slope: {flag: false}
         root_circle_diameter: {flag: false, max_ratio: 1.0}
         frequency:
             flap_3P: false
@@ -207,10 +178,22 @@ constraints:
         pitch_period: {flag: false, lower_bound: 1.0, upper_bound: 1.0}
         yaw_period: {flag: false, lower_bound: 1.0, upper_bound: 1.0}
     user: []
+merit_figure: LCOE
 merit_figure_user: {name: '', ref: 1, max_flag: false}
+inverse_design: {}
+driver:
+    optimization: {flag: false, tol: 1e-06, max_iter: 100, max_major_iter: 10, max_minor_iter: 100, time_limit: 0, major_step_limit: 2.0, function_precision: 3.7e-11, max_function_calls: 100000, hist_file: None, hotstart_file: None, solver: SLSQP, step_size: 0.001, form: central, step_calc: None, debug_print: false}
+    design_of_experiments: {flag: false, run_parallel: true, generator: Uniform, num_samples: 5, seed: 2, levels: 2, criterion: center, iterations: 2, debug_print: false}
+    step_size_study:
+        flag: false
+        step_sizes: [0.01, 0.005, 0.001, 0.0005, 0.0001, 5e-05, 1e-05, 5e-06, 1e-06, 5e-07, 1e-07, 5e-08, 1e-08]
+        form: central
+        of: []
+        wrt: []
+        driver_scaling: false
 recorder:
     flag: false
     file_name: log_opt.sql
     just_dvs: false
     includes: []
-opt_flag: true
+opt_flag: false

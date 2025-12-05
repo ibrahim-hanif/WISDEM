@@ -1,0 +1,36 @@
+# Generic modeling options file to run standard WISDEM case
+General:
+    verbosity: True  # When set to True, the code prints to screen many infos
+WISDEM:
+    RotorSE:
+        flag: True
+        spar_cap_ss: Spar_Cap_SS # Name in the yaml of the spar cap laminate on the suction side
+        spar_cap_ps: Spar_Cap_PS # Name in the yaml of the spar cap laminate on the pressure side
+        te_ss: TE_reinforcement_SS # Name in the yaml of the trailing edge reinforcement on the suction side
+        te_ps: TE_reinforcement_PS # Name in the yaml of the trailing edge reinforcement on the pressure side
+    DriveSE:
+        flag: True
+    TowerSE:             # Options of TowerSE module
+        flag: True
+    FixedBottomSE:
+        flag: True
+        soil_springs: True
+    BOS:
+        flag: True
+
+#(v) -------------- NEW! TODO: MB FLS options --------------
+# ref to WEIS schema
+# - inputs needed:
+# -- loads (F*, M*), omega (rot_speed)
+# -- mean_wind_speed, time step, probabilities
+
+OpenFAST: 
+    simulation:
+        DT: 0.05 # DONE: time step (for integration)
+    openfast_dir: 'M:\\Vasudev_Gupta\\outputs_mainshaft_loads\\mainshaft_loads.mat' # DONE: loads dir
+
+DLC_driver: #(v) https://weis.readthedocs.io/en/latest/dlc_generator.html#design-load-cases-in-weis
+    DLCs:
+        - DLC: "1.2"
+          wind_speed: [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23., 25.] # DONE: mean_wind_speed
+          probabilities: [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332 , 0.05894909, 0.03942148, 0.02472593, 0.01457773, 0.00466888] # DONE: probab

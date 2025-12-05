@@ -28,6 +28,8 @@ class MainBearing(om.ExplicitComponent):
     mb_mass_user : float, [kg]
         user override of component mass
 
+    ----- extended by Vasudev Gupta (v) -----
+
     Returns
     -------
     mb_max_defl_ang : float, [rad]
@@ -36,7 +38,21 @@ class MainBearing(om.ExplicitComponent):
         overall component mass
     mb_I : numpy array[3], [kg*m**2]
         moments of Inertia for the component [Ixx, Iyy, Izz] around its center of mass
+    
+    ----- extended by Vasudev Gupta (v) -----
+    mb_Cr : float, [N]
+        Dynamic load rating, for bearing FLS calculations
+            based on 2015_Guo-Analy... paper (SKF 2014 catalogue)
+    mb_cm : float, [m] TODO
+        Bearing center of mass (from?)
+    mb_Reactions : numpy array[6] of int
+        Bearing reaction constraints: [Rx,Ry,Rz,Rxx,Ryy,Rzz]
 
+    Internal Progress
+    --------------
+    - NOTE: some Cr here emperical on VERY small bearings (<=2 m), may need update for large bearings: eg. CRB, TRB1, SRB, CARB
+    - DONE: connect D_shaft(s) to lss_diameter[]
+    - TODO: add reactions for each bearing type (Fa,Fr,M), which inputs to Hub_*
     """
 
     def setup(self):
@@ -44,33 +60,73 @@ class MainBearing(om.ExplicitComponent):
         self.add_input("D_bearing", 0.0, units="m")
         self.add_input("D_shaft", 0.0, units="m")
         self.add_input("mb_mass_user", 0.0, units="kg")
+        self.add_input("mb_e", 4.0, desc="ISO 281: limiting value of Fa/Fr for the applicability of different values of factors X and Y") #(v)
 
         self.add_output("mb_max_defl_ang", 0.0, units="rad")
         self.add_output("mb_mass", 0.0, units="kg")
         self.add_output("mb_I", np.zeros(3), units="kg*m**2")
+        #(v)
+        self.add_output("face_width", val=0.0, units="m", desc="face width of the bearing")
+        self.add_output("mb_Cr", val=0.0, units='N', desc='Dynamic load rating of the bearing')
+        self.add_output('mb_p', val=10/3, desc='Bearing life exponent')
+        self.add_output('mb_X1', val=0.0, desc='Bearing light coefficient for P calculation')
+        self.add_output('mb_Y1', val=0.0, desc='Bearing light coefficient for P calculation')
+        self.add_output('mb_X2', val=0.0, desc='Bearing heavy coefficient for P calculation')
+        self.add_output('mb_Y2', val=0.0, desc='Bearing heavy coefficient for P calculation')
+        self.add_output('mb_Reactions', val=np.zeros(6,dtype=int), desc='Bearing reaction constraints: [Rx,Ry,Rz,Rxx,Ryy,Rzz]')
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        
         if type(discrete_inputs["bearing_type"]) != type(""):
             raise ValueError("Bearing type input must be a string")
+        
         btype = discrete_inputs["bearing_type"].upper()
         D_shaft = inputs["D_shaft"]
         mass_user = float(inputs["mb_mass_user"][0])
+        
+        # ----- (v) below -----
+        e = inputs["mb_e"] #(v) ISO 281 parameters, Tab.8
+        alpha = np.arctan(e / 1.5)
+        # - light
+        outputs['mb_X1'] = 1.0
+        outputs['mb_Y1'] = 0.45 / np.tan(alpha)
+        # - heavy
+        outputs['mb_X2'] = 0.67
+        outputs['mb_Y2'] = outputs['mb_X2'] / np.tan(alpha)
+        outputs['mb_p'] = 10/3 #(v) p same for all defined below (all roller bearings) 
+        
+        # reactions the bearings take
+        FREE, RIGID = 0, 1
+        mb_Reactions = np.array([FREE]*6) # ([ Rx, Ry, Rz, Rxx, Ryy, Rzz ])
+        # note: mb_Reactions[4] = FREE always !
+        # ----- (v) above -----
 
         # assume low load rating for bearing
         if btype == "CARB":  # p = Fr, so X=1, Y=0
             face_width = 0.2663 * D_shaft + 0.0435
             mass = 1561.4 * D_shaft**2.6007
             max_ang = np.deg2rad(0.5)
+            Cr_rating = (16676 * D_shaft**1.4746) * 1e3 #(v) kN !!!
+            mb_Reactions[:] = [FREE, RIGID, RIGID, FREE, FREE, FREE] #(v) axial free, radial rigid
 
-        elif btype == "CRB":
-            face_width = 0.1136 * D_shaft
-            mass = 304.19 * D_shaft**1.8885
-            max_ang = np.deg2rad(4.0 / 60.0)
+        # elif btype == "CRB": #(v) original commented here
+        #     face_width = 0.1136 * D_shaft
+        #     mass = 304.19 * D_shaft**1.8885
+        #     max_ang = np.deg2rad(4.0 / 60.0)
+
+        elif btype == "CRB":  #(v) high load, revised to match 2015_Guo-Analytical, fig.22
+            face_width = 0.157 * D_shaft + 0.0849
+            mass = 1070.8 * D_shaft**1.8278
+            max_ang = np.deg2rad(4.0 / 60.0) # 0.0667
+            Cr_rating = (4526.5 * D_shaft ** 0.9556) * 1e3 #(v) kN -> N !!!
+            mb_Reactions[:] = [FREE, RIGID, RIGID, FREE, FREE, FREE] #(v) axial free, radial rigid
 
         elif btype == "SRB":
             face_width = 0.2762 * D_shaft
             mass = 876.7 * D_shaft**1.7195
             max_ang = 0.078
+            Cr_rating = (13878 * D_shaft**1.0796) * 1e3 #(v) kN -> N !!!
+            mb_Reactions[:] = [RIGID, RIGID, RIGID, FREE, FREE, FREE] #(v) axial, radial rigid
 
         # elif btype == 'RB':  # factors depend on ratio Fa/C0, C0 depends on bearing... TODO: add this functionality
         #    face_width = 0.0839
@@ -85,12 +141,21 @@ class MainBearing(om.ExplicitComponent):
         elif btype == "TRB":
             face_width = 0.1499 * D_shaft
             mass = 543.01 * D_shaft**1.9043
-            max_ang = np.deg2rad(3.0 / 60.0)
+            max_ang = np.deg2rad(3.0 / 60.0) # 0.05
+            Cr_rating = (1993.8 * D_shaft**0.318) * 1e3 #(v) kN -> N !!!
+            mb_Reactions[:] = [RIGID, RIGID, RIGID, FREE, RIGID, RIGID] #(v) all rigid except torque TODO: check
+
+        elif btype == "TRB2":  #(v) 2-row TRB, high load; cf. 2015_Guo-Analytical, fig.26
+            face_width = 0.1541 * D_shaft + 0.2087
+            mass = 1442.6 * D_shaft**1.8932
+            max_ang = np.deg2rad( (0.06+0.02)/2 )
+            Cr_rating = (6579.9 * D_shaft**0.8592) * 1e3 #(v) kN -> N !!!
+            mb_Reactions[:] = [RIGID, RIGID, RIGID, FREE, RIGID, RIGID] #(v) all rigid except torque
 
         else:
-            raise ValueError("Bearing type must be CARB / CRB / SRB / TRB")
+            raise ValueError("Bearing type must be: CARB / CRB / SRB / TRB / TRB2")
 
-        # add housing weight, but pg 23 of report says factor is 2.92 whereas this is 2.963
+        # add housing weight, but pg 23 of report says factor is 2.92 whereas this is 2.963 (cf. 2015_Guo-Analytical, eq.23 pdf)
         mass *= 1 + 80.0 / 27.0
 
         if mass_user > 0.0:
@@ -98,12 +163,17 @@ class MainBearing(om.ExplicitComponent):
 
         # Consider the bearings a torus for MoI (https://en.wikipedia.org/wiki/List_of_moments_of_inertia)
         D_bearing = inputs["D_bearing"] if inputs["D_bearing"] > 0.0 else face_width
-        I0 = 0.25 * mass * (4 * (0.5 * D_shaft) ** 2 + 3 * (0.5 * D_bearing) ** 2)
-        I1 = 0.125 * mass * (4 * (0.5 * D_shaft) ** 2 + 5 * (0.5 * D_bearing) ** 2)
+        I0 = (1/4) * mass * (4 * (0.5 * D_shaft) ** 2 + 3 * (0.5 * D_bearing) ** 2)
+        I1 = (1/8) * mass * (4 * (0.5 * D_shaft) ** 2 + 5 * (0.5 * D_bearing) ** 2)
         I = np.r_[I0, I1, I1]
         outputs["mb_mass"] = mass
         outputs["mb_I"] = I
         outputs["mb_max_defl_ang"] = max_ang
+        # ----- (v) below -----
+        outputs["mb_Cr"] = Cr_rating
+        outputs["face_width"] = face_width
+        if mb_Reactions[3] == RIGID: mb_Reactions[3] = FREE  # force allow bearing to not resist torque (captured by GB, in `Hub_*`)
+        outputs["mb_Reactions"] = mb_Reactions
 
 
 # -------------------------------------------------------------------
@@ -126,13 +196,13 @@ class Brake(om.ExplicitComponent):
         rotor torque at rated power
     brake_mass_user : float, [kg]
         User override of brake mass
-    D_shaft_end : float, [m]
+    [X, v] D_shaft_end : float, [m]
         low speed shaft outer diameter
     s_rotor : float, [m]
         Generator rotor attachment to shaft s-coordinate
     s_gearbox : float, [m]
         Gearbox s-coordinate measured from bedplate
-    rho : float, [kg/m**3]
+    [X, v] rho : float, [kg/m**3]
         material density
 
     Returns
@@ -236,7 +306,7 @@ class GeneratorSimple(om.ExplicitComponent):
     """
     The Generator class is used to represent the generator of a wind turbine drivetrain
     using simple scaling laws.  For a more detailed electromagnetic and structural design,
-    please see the other generator components.
+    please see the other generator components (Generator in drivetrainse.generator).
 
     Parameters
     ----------
@@ -328,7 +398,7 @@ class GeneratorSimple(om.ExplicitComponent):
         outputs["generator_rotor_I"] = outputs["generator_stator_I"] = 0.5 * mass * I
 
         # Efficiency performance- borrowed and adapted from servose
-        # Note: Have to use lss_rpm no matter what here because servose interpolation based on lss shaft rpm
+        # NOTE: Have to use lss_rpm no matter what here because servose interpolation based on lss shaft rpm
         rpm_full = inputs["lss_rpm"]
         if np.any(eff_user):
             eff = np.interp(rpm_full, eff_user[:, 0], eff_user[:, 1])
@@ -455,6 +525,8 @@ class YawSystem(om.ExplicitComponent):
 
     Returns
     -------
+    yaw_mass : float, [kg]
+        overall yaw system mass
     yaw_cm : numpy array[3], [m]
         center of mass of the component in [x,y,z] for an arbitrary coordinate system
     yaw_I : numpy array[3], [kg*m**2]
@@ -466,7 +538,7 @@ class YawSystem(om.ExplicitComponent):
         # variables
         self.add_input("rotor_diameter", 0.0, units="m")
         self.add_input("D_top", 0.0, units="m")
-        self.add_input("rho", 0.0, units="kg/m**3")
+        self.add_input("rho", 0.0, units="kg/m**3") #(v) connection to `bedplate_rho` in DrivetrainSE
         self.add_input("yaw_mass_user", 0.0, units="kg")
 
         self.add_output("yaw_mass", 0.0, units="kg")
@@ -521,7 +593,7 @@ class MiscNacelleComponents(om.ExplicitComponent):
     bedplate_I : numpy array[6], [kg*m**2]
         Bedplate mass moment of inertia about base
     R_generator : float, [m]
-        Generatour outer diameter
+        Generator outer diameter
     overhang : float, [m]
         Overhang of rotor from tower along x-axis in yaw-aligned c.s.
     cm_generator : float, [m]
@@ -789,6 +861,10 @@ class NacelleSystemAdder(om.ExplicitComponent):  # added to drive to include ele
         moments of inertia for the nacelle (excluding yaw) [Ixx, Iyy, Izz, Ixy, Ixz, Iyz] around its center of mass
     above_yaw_I_TT : numpy array[6], [kg*m**2]
         moments of inertia for the nacelle (excluding yaw) [Ixx, Iyy, Izz, Ixy, Ixz, Iyz] around the tower top
+    
+    ----- extended by Vasudev Gupta (v) -----
+    msa_mass : float, [kg]
+        main shaft assmebly (lss + mb1 + mb2)_mass
     """
 
     def initialize(self):
@@ -863,6 +939,7 @@ class NacelleSystemAdder(om.ExplicitComponent):  # added to drive to include ele
         self.add_output("nacelle_I_TT", np.zeros(6), units="kg*m**2")
         self.add_output("above_yaw_I", np.zeros(6), units="kg*m**2")
         self.add_output("above_yaw_I_TT", np.zeros(6), units="kg*m**2")
+        self.add_output("msa_mass", 0.0, units="kg") #(v) ----- extended below 
 
         self._mass_table = None
 
@@ -890,7 +967,7 @@ class NacelleSystemAdder(om.ExplicitComponent):  # added to drive to include ele
             components.extend(["transformer", "converter"])
 
         # Mass and CofM summaries first because will need them for I later
-        m_nac = 0.0
+        m_nac = msa_mass = 0.0 #(v) added `msa_mass` 
         cm_nac = np.zeros(3)
         shaft0 = np.zeros(3)
         shaft0[-1] += inputs["constr_height"][0]
@@ -908,6 +985,7 @@ class NacelleSystemAdder(om.ExplicitComponent):  # added to drive to include ele
             if len(cm_i) == 1:
                 cm_i = shaft0 + cm_i * np.array([Cup * np.cos(tilt), 0.0, np.sin(tilt)])
 
+            if k in ["mb1", "mb2", "lss"]: msa_mass += m_i #(v)
             m_nac += m_i
             cm_nac += m_i * cm_i
 
@@ -969,6 +1047,7 @@ class NacelleSystemAdder(om.ExplicitComponent):  # added to drive to include ele
         outputs["nacelle_mass"] = m_nac
         outputs["nacelle_cm"] = cm_nac
         outputs["nacelle_I"] = I_nac
+        outputs["msa_mass"] = msa_mass #(v)
 
         # Find nacelle MoI about tower top
         R = cm_nac

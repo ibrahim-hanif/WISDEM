@@ -35,6 +35,7 @@ class DriveMaterials(om.ExplicitComponent):
         self.add_discrete_input("hub_material", "iron")
         self.add_discrete_input("spinner_material", "carbon")
         self.add_discrete_input("bedplate_material", "steel")
+        #(v) TODO: from felix gear sizing line 82: C_SN, m_SN, sigma_FE, sigma_Hlim, nu (here Xt,y?), p_SF, p_SH, p_Sh, 
 
         self.add_output("hub_E", val=0.0, units="Pa")
         self.add_output("hub_G", val=0.0, units="Pa")
@@ -70,7 +71,7 @@ class DriveMaterials(om.ExplicitComponent):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Convert to isotropic material
-        E = np.mean(inputs["E_mat"], axis=1)
+        E = np.mean(inputs["E_mat"], axis=1) #(v) note, (axis=1) means over the columns
         G = np.mean(inputs["G_mat"], axis=1)
         # Take the minimum Xt in longitudinal and transversal diretion, neglect direction 3 (through the fibers)
         Xt = inputs["Xt_mat"][:, [0, 1]].min(axis=1)
@@ -191,7 +192,7 @@ class DrivetrainSE(om.Group):
         else:
             self.add_subsystem("layout", lay.GearedLayout(), promotes=["*"])
 
-        # All the smaller items
+        # All the smaller items (mass, cm, I: regression estimates)
         self.add_subsystem("bear1", dc.MainBearing())
         self.add_subsystem("bear2", dc.MainBearing())
         self.add_subsystem("brake", dc.Brake(direct_drive=direct), promotes=["*"])
@@ -260,16 +261,16 @@ class DrivetrainSE(om.Group):
         self.connect("bear1.mb_mass", "mb1_mass")
         self.connect("bear1.mb_I", "mb1_I")
         self.connect("bear1.mb_max_defl_ang", "mb1_max_defl_ang")
-        self.connect("s_mb1", "mb1_cm")
+        self.connect("s_mb1", "mb1_cm") #(v) mb_cm def in NacelleSystemAdder and s_mb* computed already in Layout
         self.connect("bear2.mb_mass", "mb2_mass")
         self.connect("bear2.mb_I", "mb2_I")
         self.connect("bear2.mb_max_defl_ang", "mb2_max_defl_ang")
         self.connect("s_mb2", "mb2_cm")
         self.connect("bedplate_rho", "yaw.rho")
-        self.connect("s_gearbox", "gearbox_cm")
+        self.connect("s_gearbox", "gearbox_cm") #(v) same as mb*_cm here (and gen below)
         self.connect("s_generator", "generator_cm")
 
-        if dogen:
+        if dogen: #(v) detailed generator design
             self.connect("generator.R_out", "R_generator")
             self.connect("bedplate_E", "generator.E")
             self.connect("bedplate_G", "generator.G")

@@ -1,19 +1,22 @@
 #!/usr/bin/env python
 # encoding: utf-8
-
+"""
+Adapted by Vasudev Gupta on 2025-11-06. Dept. of Marine Technology, NTNU. All rights reserved.
+"""
 import numpy as np
 import openmdao.api as om
 
 import wisdem.pyframe3dd.pyframe3dd as frame3dd
 from wisdem.commonse import gravity
 from wisdem.commonse.csystem import DirectionVector
-from wisdem.commonse.utilities import find_nearest, nodal2sectional
+from wisdem.commonse.utilities import find_nearest, nodal2sectional, smooth_abs
+from wisdem.commonse.utilities import pdf_norm_int_using_cdf, bin_counting_of_load, load_all_mat_to_dict #(v)
 from wisdem.commonse.cross_sections import Tube, IBeam
 from wisdem.commonse.utilization_constraints import TubevonMisesStressUtilization
+from scipy.stats import weibull_min #(v)
 
 RIGID = 1
 FREE = 0
-
 
 def tube_prop(s, Di, ti):
     L = s.max() - s.min()
@@ -34,7 +37,7 @@ def tube_prop(s, Di, ti):
 
 class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
     """
-    Run structural analysis of hub system with the generator rotor and main (LSS) shaft.
+    (Geared) Run structural analysis of hub system with the generator rotor and main (LSS) shaft.
 
     Parameters
     ----------
@@ -125,6 +128,16 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
     shaft_angle_allowable : float, [rad]
         Allowable rotation angle of the shaft at gearbox attachment
         = input from: user
+    
+    ----- extended by Vasudev Gupta (v) -----
+    mb1_face_width : float, [m]
+        face width of the 1st main bearing
+    mb2_face_width : float, [m]
+        face width of the 2nd main bearing
+    mb1_Reactions : numpy array[6] of int
+        Bearing 1 reaction constraints: [Rx,Ry,Rz,Rxx,Ryy,Rzz]
+    mb2_Reactions : numpy array[6] of int
+        Bearing 2 reaction constraints: [Rx,Ry,Rz,Rxx,Ryy,Rzz]
 
     Returns
     -------
@@ -160,6 +173,12 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         Constraint on LSS translational deflection: maximum along the shaft
     constr_shaft_angle : float
         Constraint on LSS anglular deflection: maximum along the shaft
+    
+    ----- extended by Vasudev Gupta (v) -----
+    constr_Lh1_MB1fw : float, [m]
+        length constraint that L_h1 must be more than 0.5 * MB1 face width
+    constr_L12_MBsFW : float, [m]
+        length constraint that L_12 must be more than 0.5 * face widths of both bearings (mb1, mb2)
 
     """
 
@@ -173,9 +192,9 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
 
         self.add_discrete_input("upwind", True)
         self.add_input("tilt", 0.0, units="deg")
-        self.add_input("s_lss", val=np.zeros(5), units="m")
-        self.add_input("lss_diameter", val=np.zeros(2), units="m")
-        self.add_input("lss_wall_thickness", val=np.zeros(2), units="m")
+        self.add_input("s_lss", val=np.zeros(5), units="m") #(v) TODO: use layout
+        self.add_input("lss_diameter", val=np.zeros(2), units="m") #(v) a DV to be optim
+        self.add_input("lss_wall_thickness", val=np.zeros(2), units="m") #(v) a DV to be optim
         self.add_input("hub_system_mass", 0.0, units="kg")
         self.add_input("hub_system_cm", 0.0, units="m")
         self.add_input("hub_system_I", np.zeros(6), units="kg*m**2")
@@ -189,23 +208,27 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         self.add_input("s_rotor", val=0.0, units="m")
         self.add_input("generator_rotor_mass", val=0.0, units="kg")
         self.add_input("generator_rotor_I", val=np.zeros(3), units="kg*m**2")
-        self.add_input("gearbox_mass", val=0.0, units="kg")
+        self.add_input("gearbox_mass", val=0.0, units="kg") #(v) TODO: use gearbox
         self.add_input("gearbox_I", val=np.zeros(3), units="kg*m**2")
         self.add_input("brake_mass", val=0.0, units="kg")
         self.add_input("brake_I", val=np.zeros(3), units="kg*m**2")
         self.add_input("carrier_mass", val=0.0, units="kg")
         self.add_input("carrier_I", val=np.zeros(3), units="kg*m**2")
-        self.add_input("lss_E", val=0.0, units="Pa")
+        self.add_input("lss_E", val=0.0, units="Pa") #(v) TODO: use materials
         self.add_input("lss_G", val=0.0, units="Pa")
         self.add_input("lss_rho", val=0.0, units="kg/m**3")
         self.add_input("lss_Xy", val=0.0, units="Pa")
 
         self.add_input("shaft_deflection_allowable", val=1.0, units="m")
         self.add_input("shaft_angle_allowable", val=1.0, units="rad")
+        self.add_input("mb1_face_width", val=0.0, units="m", desc="face width of the 1st main bearing") #(v) --- & below ---        
+        self.add_input("mb2_face_width", val=0.0, units="m", desc="face width of the 2nd main bearing")
+        self.add_input("mb1_Reactions", val=np.zeros(6,dtype=int), desc="Bearing 1 reaction constraints: [Rx,Ry,Rz,Rxx,Ryy,Rzz]")
+        self.add_input("mb2_Reactions", val=np.zeros(6,dtype=int), desc="Bearing 2 reaction constraints: [Rx,Ry,Rz,Rxx,Ryy,Rzz]")
 
         self.add_output("lss_spring_constant", 0.0, units="N*m/rad")
-        self.add_output("torq_deflection", val=0.0, units="m")
-        self.add_output("torq_angle", val=0.0, units="rad")
+        self.add_output("torq_deflection", val=0.0, units="m") #(v) defl at GB
+        self.add_output("torq_angle", val=0.0, units="rad")    #(v) angle at GB
         self.add_output("lss_axial_stress", np.zeros((4, n_dlcs)), units="Pa")
         self.add_output("lss_shear_stress", np.zeros((4, n_dlcs)), units="Pa")
         self.add_output("constr_lss_vonmises", np.zeros((4, n_dlcs)))
@@ -219,6 +242,8 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         self.add_output("lss_shear_load2stress", val=np.zeros(6), units="m**2")
         self.add_output("constr_shaft_deflection", 0.0)
         self.add_output("constr_shaft_angle", 0.0)
+        self.add_output("constr_Lh1_MB1fw", val=0.0, units="m") #(v) --- & below ---
+        self.add_output("constr_L12_MBsFW", val=0.0, units="m")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Unpack inputs
@@ -272,15 +297,15 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         torq_angle_allow = float(inputs["shaft_angle_allowable"][0])
 
         # ------- node data ----------------
-        n = len(s_lss)
-        inode = np.arange(1, n + 1)
+        n = len(s_lss)              #(v) n = 5 (made in GearedLayout)
+        inode = np.arange(1, n + 1) #(v) 1,2,3,..., n
         ynode = znode = rnode = np.zeros(n)
-        xnode = Cup * s_lss.copy()
+        xnode = Cup * s_lss.copy() #(v) 'shallow copy': Changes to copy don't affect original.
         nodes = frame3dd.NodeData(inode, xnode, ynode, znode, rnode)
         # Grab indices for later
-        i1 = inode[find_nearest(xnode, Cup * s_mb1)]
-        i2 = inode[find_nearest(xnode, Cup * s_mb2)]
-        iadd = inode[1]
+        i1 = inode[find_nearest(xnode, Cup * s_mb1)]; #(v) 4
+        i2 = inode[find_nearest(xnode, Cup * s_mb2)]; #(v) 2
+        iadd = inode[1];                              #(v) 2 (= i2)
         # Differences between direct annd geared
         if self.options["direct_drive"]:
             itorq = inode[find_nearest(xnode, Cup * s_rotor)]
@@ -299,14 +324,17 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         # ------------------------------------
 
         # ------ reaction data ------------
-        # Reactions at main bearings
+        # Reactions at main bearings %(v) NOTE: m4w UW CRB (rad), DW TRB (ax,rad,mom)
+        mb1_Reactions = inputs["mb1_Reactions"] #(v)
+        mb2_Reactions = inputs["mb2_Reactions"] #(v)
         rnode = np.r_[i1, i2, itorq]
-        Rx = np.array([RIGID, FREE, FREE])  # UW MB restricts translational
-        Ry = np.array([RIGID, FREE, FREE])  # Both MB restricts radial
-        Rz = np.array([RIGID, FREE, FREE])  # Both MB restricts radial
-        Rxx = np.array([FREE, FREE, RIGID])  # Torque is absorbed by stator, so this is the best way to capture that
-        Ryy = np.array([FREE, RIGID, FREE])  # downwind bearing carry moments
-        Rzz = np.array([FREE, RIGID, FREE])  # downwind bearing carry moments
+        Rx = np.array([mb1_Reactions[0], mb2_Reactions[0], FREE])  # (v, def) RIGID, FREE, FREE: Upwind bearing restricts translational
+        Ry = np.array([mb1_Reactions[1], mb2_Reactions[1], FREE])  # (v, def) RIGID, FREE, FREE: Upwind bearing restricts translational
+        Rz = np.array([mb1_Reactions[2], mb2_Reactions[2], FREE])  # (v, def) RIGID, FREE, FREE: Upwind bearing restricts translational
+        Rxx = np.array([FREE, FREE, RIGID])  # (v, def) FREE, FREE, RIGID: Torque is absorbed by stator, so this is the best way to capture that
+        Ryy = np.array([mb1_Reactions[4], mb2_Reactions[4], FREE])  # (v, def) FREE, RIGID, FREE: downwind bearing carry moments
+        Rzz = np.array([mb1_Reactions[5], mb2_Reactions[5], FREE])  # (v, def) FREE, RIGID, FREE:  downwind bearing carry moments
+        # print("LSS Bearing Reactions (Rx,Ry,Rz,Rxx,Ryy,Rzz): ", np.array((Rx,Ry,Rz,Rxx,Ryy,Rzz))) #(v) debugging
         reactions = frame3dd.ReactionData(rnode, Rx, Ry, Rz, Rxx, Ryy, Rzz, rigid=RIGID)
         # -----------------------------------
 
@@ -333,7 +361,7 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         # -----------------------------------
 
         # ------ options ------------
-        shear = geom = True
+        shear = geom = True #(v) 1: include shear deformation + geom stiffness
         dx = -1
         options = frame3dd.Options(shear, geom, dx)
         # -----------------------------------
@@ -342,21 +370,43 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         myframe = frame3dd.Frame(nodes, reactions, elements, options)
 
         # ------ add extra mass: hub and generator rotor (direct) or gearbox (geared) ------------
-        three0 = np.zeros(3).tolist()
-        myframe.changeExtraNodeMass(
-            np.r_[inode[-1], itorq, iadd],
-            [m_blades_hub, m_torq, m_add],
-            [I_blades_hub[0], I_torq[0], I_add[0]],
-            [I_blades_hub[1], I_torq[1], I_add[1]],
-            [I_blades_hub[2], I_torq[2], I_add[2]],
-            three0,
-            three0,
-            three0,
-            [cm_blades_hub, 0.0, 0.0],
-            three0,
-            three0,
-            True,
-        )
+        # ----- (v) added prev impl under "direct_drive", new (geared) under `else`
+        if self.options["direct_drive"]:
+            three0 = np.zeros(3).tolist()
+            myframe.changeExtraNodeMass(       #(v) NOTE: mb_mass added on bedplate, NOT LSS
+                np.r_[inode[-1], itorq, iadd], #(v) TODO: realistic to add itorq (weight of GB-carrier) on shaft DW end?
+                [m_blades_hub, m_torq, m_add], #(v) TODO: check if rotor (blades+hub) mass should be added or not (incl in F_aero_hub)
+                [I_blades_hub[0], I_torq[0], I_add[0]],
+                [I_blades_hub[1], I_torq[1], I_add[1]],
+                [I_blades_hub[2], I_torq[2], I_add[2]],
+                three0,
+                three0,
+                three0,
+                [cm_blades_hub, 0.0, 0.0],
+                three0,
+                three0,
+                True,
+            )
+        else:
+        # -----(v) -----
+        # - 1. removed (GB-carrier) weight from DW end
+        # - 2. shifted carrier weight from mb2 to DW end (itorq)
+        # - 3. removed hub self-weight loads from UW end (already in F_aero_hub, from openFAST)
+            one0 = np.zeros(1).tolist()
+            myframe.changeExtraNodeMass(    #(v) NOTE: mb_mass added on bedplate, NOT LSS
+                np.r_[itorq],               #(v) DONE: realistic to add itorq (weight of GB-carrier) on shaft DW end? removed.
+                [m_add],                    #(v) DONE: check if rotor (blades+hub) mass should be added or not (incl in F_aero_hub), removed
+                [I_add[0]],
+                [I_add[1]],
+                [I_add[2]],
+                one0,
+                one0,
+                one0,
+                [0.0],
+                one0,
+                one0,
+                True,
+            )
         # ------------------------------------
 
         # ------- NO dynamic analysis ----------
@@ -382,7 +432,7 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
             # Put all together and run
             myframe.addLoadCase(load)
 
-        myframe.write('myframe_made4wind.3dd') # Debugging
+        myframe.write('myframe_lss.3dd') # Debugging
         displacements, forces, reactions, internalForces, mass3dd, modal = myframe.run()
 
         # ------------ Loop over DLCs and append to outputs ------------
@@ -411,8 +461,8 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
             )
 
             # shear and bending, one per element (convert from local to global c.s.)
-            Fx = forces.Nx[k, 1::2]
-            Vy = forces.Vy[k, 1::2]
+            Fx = forces.Nx[k, 1::2] #(v) internal force, thru the elements/body in x-dir
+            Vy = forces.Vy[k, 1::2] #(v) shear force upwards (y- / z- dir)
             Vz = -forces.Vz[k, 1::2]
             F = np.sqrt(Vz**2 + Vy**2)
 
@@ -459,6 +509,12 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         outputs["lss_axial_load2stress"] = ax_load2stress
         outputs["lss_shear_load2stress"] = sh_load2stress
 
+        #(v) length constraints for L_h1 and L_12, compared to bearing face widths
+        L_12, L_h1 = float(s_lss[3]-s_lss[1]), float(s_lss[4]-s_lss[3])
+        mb1_face_width = float(inputs["mb1_face_width"][0]) #(v) NEW
+        mb2_face_width = float(inputs["mb2_face_width"][0]) #(v) NEW
+        outputs["constr_Lh1_MB1fw"] = L_h1 - (mb1_face_width*0.5) #(v) Should be > 0
+        outputs["constr_L12_MBsFW"] = L_12 - (mb1_face_width+mb2_face_width)*0.5 #(v) Should be > 0
 
 class HSS_Frame(om.ExplicitComponent):
     """
@@ -691,7 +747,7 @@ class HSS_Frame(om.ExplicitComponent):
 
 class Nose_Stator_Bedplate_Frame(om.ExplicitComponent):
     """
-    Run structural analysis of nose/turret with the generator stator and bedplate
+    (DD) Run structural analysis of nose/turret with the generator stator and bedplate
 
     Parameters
     ----------
@@ -1277,7 +1333,7 @@ class Bedplate_IBeam_Frame(om.ExplicitComponent):
         D_top = float(inputs["D_top"][0])
         tiltD = float(inputs["tilt"][0])
         tiltR = np.deg2rad(tiltD)
-        s_drive = inputs["s_drive"]
+        s_drive = inputs["s_drive"] #(v) eg. [-0.6374810261863306, 0.43751897381366933, 1.5125189738136693, 2.356110670770005, 3.1997023677263408, 4.999702367726341, 6.799702367726341, 6.8997023677263405, 7.52625494207485, 8.15280751642336, 8.532663244734854, 8.912518973046348].shape = 12
 
         s_gear = float(inputs["s_gearbox"][0])
         s_gen = float(inputs["s_generator"][0])
@@ -1317,7 +1373,7 @@ class Bedplate_IBeam_Frame(om.ExplicitComponent):
         stator_angle_allow = float(inputs["stator_angle_allowable"][0])
 
         # ------- node data ----------------
-        n = len(s_drive)
+        n = len(s_drive) #(v) n = 12
         inode = np.arange(1, 3 * n + 1)
         ynode = 0.25 * D_top * np.r_[np.zeros(n), np.ones(n), -np.ones(n)]
         xnode = s_drive * np.cos(tiltR)
@@ -1448,7 +1504,7 @@ class Bedplate_IBeam_Frame(om.ExplicitComponent):
         outputs["constr_bedplate_vonmises"] = np.zeros((2 * n - 2, n_dlcs))
         for k in range(n_dlcs):
             # Deflections and rotations at bearings- how to sum up rotation angles? TODO
-            outputs["mb1_deflection"][k] = np.sqrt(
+            outputs["mb1_deflection"][k] = np.sqrt(             #(v) TODO: not used as constr for mb1 (linear) defl?
                 displacements.dx[k, i1 - 1] ** 2 + displacements.dy[k, i1 - 1] ** 2 + displacements.dz[k, i1 - 1] ** 2
             )
             outputs["mb2_deflection"][k] = np.sqrt(
@@ -1505,9 +1561,443 @@ class Bedplate_IBeam_Frame(om.ExplicitComponent):
             )
 
         # Evaluate bearing limits
-        outputs["constr_mb1_defl"] = outputs["mb1_angle"] / inputs["mb1_max_defl_ang"]
+        outputs["constr_mb1_defl"] = outputs["mb1_angle"] / inputs["mb1_max_defl_ang"] #(v) Should be < 1
         outputs["constr_mb2_defl"] = outputs["mb2_angle"] / inputs["mb2_max_defl_ang"]
         outputs["stator_deflection"] = bedplate_deflection.max()
         outputs["stator_angle"] = bedplate_angle.max()
         outputs["constr_stator_deflection"] = gamma * outputs["stator_deflection"] / stator_defl_allow
         outputs["constr_stator_angle"] = gamma * outputs["stator_angle"] / stator_angle_allow
+
+#%%[markdown]
+# Vasudev Gupta: adaptations
+# ============================================================
+#%%
+class FLS_Hub_Rotor_LSS_Frame (Hub_Rotor_LSS_Frame):
+    "inherits from `Hub_Rotor_LSS_Frame` class component for its _inputs and compute()"
+
+    def initialize(self):
+        super().initialize()
+        self.options.declare('batch_size', default=100, 
+                           desc='Number of time steps to process at once')
+
+    def setup( self ):
+        super().setup() # call the parent setup for its inputs'
+
+        mod_opt = self.options['modeling_options']
+        # n_ws = mod_opt.get('n_ws', 10) #TODO: check WEIS for its input names, if any
+        # n_t = mod_opt.get('n_time_steps', 72000)  # Reduced for memory
+
+class DrivetrainFLS(Hub_Rotor_LSS_Frame):
+    """
+    Extends Hub_Rotor_LSS_Frame to compute bearing loads for FLS using
+    time-series hub loads from OpenFAST.
+    """
+
+    import scipy.io as sio
+
+    def initialize(self):
+        super().initialize()
+        self.options.declare('hub_loads', types=dict,
+                             desc='Dictionary with time-series hub loads: F_aero_hub, M_aero_hub')
+
+    def setup(self):
+        # Call parent setup for geometry and material inputs
+        super().setup()
+        # Add output for aggregated bearing loads
+        self.add_output('bearing_loads', shape_by_conn=True) #TODO: shape_ correct?
+
+    def compute(self, inputs, outputs):
+        hub_loads = self.options['hub_loads']
+        bearing_load_series = []
+
+        # Loop through hub loads and call parent compute
+        for F_hub, M_hub in zip(hub_loads['F_aero_hub'], hub_loads['M_aero_hub']):
+            # Set loads for this time step
+            self.F_hub = F_hub
+            self.M_hub = M_hub
+
+            # Call parent compute to calculate F_mb
+            super().compute(inputs, outputs)
+
+            # Store bearing loads for fatigue analysis
+            bearing_load_series.append(outputs['F_mb'])
+
+        outputs['bearing_loads'] = bearing_load_series
+
+#%% =======================================================
+#   ============ analytical implementations ===============
+# =======================================================
+
+# ---------------
+def analytical_MB_Forces( Fx,Fy,Fz, Mx,My,Mz, L_h1,L_12, flag_jac=False ):
+    """
+    Analytical low-fidelity (quick) main bearing force calculation,
+    using static equilibrium or moment balance, 
+    unlike higher fidelity `Hub_Rotor_LSS_Frame` using pyFrame3DD.
+
+    Inputs
+    -------
+    F* : array[ # of time steps , # of wind speeds ]
+        Forces (aero) on the hub center/main shaft input; for FLS, shape=(72e4,10)
+    M* : array[ # of time steps , # of wind speeds ]
+        Moment (aero) on the hub center/main shaft input; for FLS, shape=(72e4,10)
+    L_h1 : float
+        length along main shaft btw hub and mb1
+    L_12 : float
+        length along main shaft btw mb1 and mb2
+    flag_jac : Boolean
+        whether to provide analytical derivatives (True) or not (False)
+
+    Outputs
+    -------
+    F_mb1 : All forces on the 1. main bearing
+        shape = (4, shape(F*) )
+    F_mb2 : All forces on the 2. main bearing
+        shape = (4, shape(F*) )
+    
+    --- if flag_jac = True ---
+    dFmb1_dLh1 : All derivatives of mb1 forces wrt. L_h1
+        shape = (4, shape(F_mb1) )
+    dFmb1_dLh1 : All derivatives of mb1 forces wrt. L_12
+        shape = (4, shape(F_mb1) )
+    dFmb2_dLh1 : All derivatives of mb2 forces wrt. L_h1
+        shape = (4, shape(F_mb2) )
+    dFmb2_dL12 : All derivatives of mb2 forces wrt. L_12
+        shape = (4, shape(F_mb2) )
+
+    Internal Progress
+    --------------
+    - DONE : implement as a openMDAO Explicit Component
+        depr, due to 'known and fixed' shape of F* and M*
+    - DONE : implement as a function, general purpose
+    - DONE : add analytical gradients?
+    - TODO : mag of F* and M* is O(6)! exploding jac? how to scale
+    """
+    
+    ### === Loads on bearings ===
+    # init
+    n_ts, n_ws = Fx.shape[0], Fx.shape[1] # = 72e4, 10
+    F_mb1 = np.zeros( (n_ts,n_ws,4) ) # for 4 forces (ax,y,z,rad)
+    F_mb2 = np.zeros( (n_ts,n_ws,4) ) # for 4 forces (ax,y,z,rad)
+
+    # ----- MB2 (downwind) reactions
+    F_mb2_ax = np.abs(Fx)   # 2TRB typically
+    F_mb2_y = (-Mz + Fy * L_h1) / L_12  #
+    F_mb2_z = (My + Fz * L_h1) / L_12   #
+    # stable, vectorized hypot (handles overflow/underflow)
+    F_mb2_rad = np.hypot(F_mb2_y, F_mb2_z) # element-wise
+
+    # ----- MB1 (upwind) reactions
+    F_mb1_ax = np.zeros_like( F_mb2_ax )  # CRB typically
+    F_mb1_y = -F_mb2_y - Fy #
+    F_mb1_z = -F_mb2_z - Fz #
+    F_mb1_rad = np.hypot(F_mb1_y, F_mb1_z)
+
+    # ----- collect for outputs
+    F_mb1 = np.stack([F_mb1_ax, F_mb1_y, F_mb1_z, F_mb1_rad])
+    F_mb2 = np.stack([F_mb2_ax, F_mb2_y, F_mb2_z, F_mb2_rad])
+
+    if not flag_jac:
+        return F_mb1, F_mb2
+    # ==============================
+
+    else:
+    ### === Derivatives of loads wrt. L_* ===
+    # init
+        dFmb1_dLh1 = F_mb1                # ----- main jac outputs -----
+        dFmb1_dL12 = F_mb1
+        dFmb2_dLh1 = F_mb2
+        dFmb2_dL12 = F_mb2
+
+        # ----- MB2 -----            
+        dFmb2axdL_h1 = np.zeros_like(F_mb2_ax)
+        dFmb2axdL_12 = np.zeros_like(F_mb2_ax)
+        # NOTE: no need to use `utils/smooth_abs` coz dFx_dL* = 0 anyway
+            
+        # ----- mb2_y diff wrt. L_
+        dFmb2ydL_h1 = Fy / L_12
+        dFmb2ydL_12 = (-1/L_12) * F_mb2_y
+
+        # ----- mb2_z diff wrt. L_
+        dFmb2zdL_h1 = Fz / L_12
+        dFmb2zdL_12 = (-1/L_12) * F_mb2_z
+        
+        # ----- mb2_r diff wrt. y, z
+        dFmb2rad_dFmb2y = F_mb2_y / F_mb2_rad
+        dFmb2rad_dFmb2z = F_mb2_z / F_mb2_rad
+        # ----- mb2_r diff wrt. L_
+        dFmb2rad_L_h1 = (dFmb2rad_dFmb2y*dFmb2ydL_h1) + (dFmb2rad_dFmb2z*dFmb2zdL_h1)
+        dFmb2rad_L_12 = (dFmb2rad_dFmb2y*dFmb2ydL_12) + (dFmb2rad_dFmb2z*dFmb2zdL_12)
+        # ---------------
+
+        # ----- MB1 -----
+        dFmb1axdL_h1 = F_mb1_ax # both 0s
+        dFmb1axdL_12 = F_mb1_ax
+        
+        # ----- mb1_y diff wrt. L_
+        dFmb1ydL_h1 = -dFmb2ydL_h1
+        dFmb1ydL_12 = -dFmb2ydL_12
+
+        # ----- mb1_z diff wrt. L_
+        dFmb1zdL_h1 = -dFmb2zdL_h1
+        dFmb1zdL_12 = -dFmb2zdL_12
+        
+        # ----- mb1_r diff wrt. y, z
+        dFmb1rad_dFmb1y = F_mb1_y / F_mb1_rad
+        dFmb1rad_dFmb1z = F_mb1_z / F_mb1_rad
+        # ----- mb1_r wrt. L_
+        dFmb1rad_L_h1 = (dFmb1rad_dFmb1y*dFmb1ydL_h1) + (dFmb1rad_dFmb1z*dFmb1zdL_h1)
+        dFmb1rad_L_12 = (dFmb1rad_dFmb1y*dFmb1ydL_12) + (dFmb1rad_dFmb1z*dFmb1zdL_12)
+        # ---------------
+
+        # ----- collect for outputs
+        dFmb1_dLh1 = np.stack([dFmb1axdL_h1,dFmb1ydL_h1,dFmb1zdL_h1,dFmb1rad_L_h1])
+        dFmb1_dL12 = np.stack([dFmb1axdL_12,dFmb1ydL_12,dFmb1zdL_12,dFmb1rad_L_12])
+
+        dFmb2_dLh1 = np.stack([dFmb2axdL_h1,dFmb2ydL_h1,dFmb2zdL_h1,dFmb2rad_L_h1])
+        dFmb2_dL12 = np.stack([dFmb2axdL_12,dFmb2ydL_12,dFmb2zdL_12,dFmb2rad_L_12])
+
+        return F_mb1, F_mb2, dFmb1_dLh1, dFmb1_dL12, dFmb2_dLh1, dFmb2_dL12
+    # ==============================
+
+# ---------------
+def del_bearing_computation(load_series, ws_bins, t_step, omega,
+                    probabilities, p=10/3, flag_jac=False):
+    """
+    Compute Damage Equivalent Load (DEL) using full time series method.
+
+    Inputs
+    -------
+    load_series : array[ # of time steps , # of wind speeds ]
+        Time series of loads (forces or moments); for FLS, shape=(72e4,10)
+    ws : array[ 1, # of wind speeds ]
+        Wind speed bins corresponding to load_series columns, shape=(1,10)
+    t_step : float, [s]
+        Time step used for integration
+    omega : array[ # of time steps , # of wind speeds ]
+        Rotational speed time series corresponding to load_series; shape=(72e4,10)
+    p : float
+        Exponent for equivalent load calculation (default 10/3 for bearings)
+    probabilites : array, same size as ws
+        or pdf of occurence of each ws
+    
+    Outputs
+    -------
+    DEL : float
+        Damage Equivalent Load weighted-averaged over all wind speeds
+
+    Internal Progress
+    --------------
+    - DONE : implement as a function, general purpose
+    - TODO : vectorize more?
+    - TODO : add analytical gradients? `flag_jac`; cf. `compute_partials` below
+    """
+    # init
+    P = load_series
+
+    # take out dimenstions
+    n_t, n_w = omega.shape[0], omega.shape[1] # 72e3, 11
+    ws = ws_bins.reshape(1,n_w)
+
+    # start computing DEL
+    n = (omega/60 * t_step) # element wise multiplication, broadcasting (72e3,11)
+    N = np.sum(n, axis=0).reshape(1, n_w) # (1,11)
+
+    numerator = np.sum((P**p) * n, axis=0).reshape(1,n_w) # (1,11)
+
+    DEL_j = (numerator/N)**(1/p) # (1,11)
+
+    DEL = np.sum( DEL_j**p * probabilities )**(1/p) # float
+    return DEL
+
+# def compute_partials(self, inputs, partials):
+#     """
+#     Analytic gradient: d(L10) / d(DEL)
+    
+#     Given:
+#         DEL_w = (Σ DEL[i]^m × p[i])^(1/m)     ... weighted DEL
+#         L10 = (Cr / DEL_w)^m                   ... ISO 281
+    
+#     Want: ∂L10/∂DEL[j]
+    
+#     Chain rule:
+#         ∂L10/∂DEL[j] = (∂L10/∂DEL_w) × (∂DEL_w/∂DEL[j])
+    
+#     Step 1: ∂L10/∂DEL_w
+#         L10 = Cr^m × DEL_w^(-m)
+#         ∂L10/∂DEL_w = -m × Cr^m × DEL_w^(-m-1)
+    
+#     Step 2: ∂DEL_w/∂DEL[j]
+#         DEL_w = (Σ DEL[i]^m × p[i])^(1/m)
+#         Let S = Σ DEL[i]^m × p[i], so DEL_w = S^(1/m)
+#         ∂DEL_w/∂DEL[j] = (1/m) × S^(1/m - 1) × m × DEL[j]^(m-1) × p[j]
+#                        = S^(1/m - 1) × DEL[j]^(m-1) × p[j]
+#                        = DEL_w^(1-m) × DEL[j]^(m-1) × p[j]
+    
+#     Combining:
+#         ∂L10/∂DEL[j] = -m × Cr^m × DEL_w^(-m-1) × DEL_w^(1-m) × DEL[j]^(m-1) × p[j]
+#                      = -m × Cr^m × DEL_w^(-2m) × DEL[j]^(m-1) × p[j]
+#     """
+#     m = 10.0 / 3.0
+#     DEL = inputs['DEL_mb1']
+#     ws_pdf = inputs['ws_pdf']
+#     Cr = inputs['Cr_mb1']
+    
+#     # Intermediate values
+#     S = np.sum((DEL ** m) * ws_pdf)
+#     DEL_w = S ** (1.0 / m)
+    
+#     # Gradient w.r.t. each DEL[j]
+#     dL10_dDEL = -m * (Cr ** m) * (DEL_w ** (-2*m)) * (DEL ** (m-1)) * ws_pdf
+    
+#     partials['L10_mb1', 'DEL_mb1'] = dL10_dDEL
+    
+#     # Gradient w.r.t. Cr
+#     # L10 = (Cr/DEL_w)^m = Cr^m × DEL_w^(-m)
+#     # ∂L10/∂Cr = m × Cr^(m-1) × DEL_w^(-m)
+#     partials['L10_mb1', 'Cr_mb1'] = m * (Cr ** (m-1)) * (DEL_w ** (-m))
+# ---------------
+
+#%%
+# ---------------
+class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
+    """
+    Component to compute bearing fatigue life (FLS)
+    using analytical bearing load calculations and either methods:
+    1. bin counting method          : note: bad within optimization
+    2. damage equivalent load (DEL) : note: preferred
+
+    Inputs
+    -------
+    L_12 : float
+        Main bearing span / distance between main bearings
+    L_h1 : float
+        Rotor to main bearing 1 distance
+
+    Outputs
+    -------
+    constr_L10_mb1 : float
+        Safety factor MB1 L10 life compared to design life
+    constr_L10_mb2 : float
+        Safety factor MB2 L10 life compared to design life
+    
+    Internal Progress
+    --------------
+    - DONE : implement as a openMDAO Explicit Component
+    - DONE : make DLC load series (yaml; not local stored) compatible with WEIS iA
+    - TODO : use log-space constraints?
+    """
+    
+    def initialize(self):
+        self.options.declare("modeling_options") # opt_drivese = self.options["modeling_options"]["WISDEM"]["DriveSE"]
+        self.options.declare("openfast_options") # opt_openfast = self.options["modeling_options"]["OpenFAST"]
+        self.options.declare("dlc_options")      # opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
+        
+    def setup(self):
+        # Inputs
+        # - loads & operational:
+        dir_loads = self.options['openfast_options']['openfast_dir'] # directory of MS loads
+        self.loads_dict, _ = load_all_mat_to_dict(dir_loads)
+        # here coz runs only once per model build
+        
+        # - 1. LSS parameters (from Layout, Hub_Rotor_LSS_Frame)
+        self.add_input('L_12', val=5.0, desc='Main bearing span', units='m')
+        self.add_input('L_h1', val=1.0, desc='Rotor bearing distance', units='m')
+        # - 2. bearing parameters (from MainBearing)
+        self.add_input('Cr_mb1', val=1e7, units='N', desc='Dynamic load rating MB1')
+        self.add_input('Cr_mb2', val=1e7, units='N', desc='Dynamic load rating MB2')
+        self.add_input('p_mb', val=3.33, desc='Bearing life exponent')
+        self.add_input('e_mb', val=3.5, desc='Bearing limiting factor, load ratio')
+        self.add_input('X1_mb', val=1.0, desc='Bearing light coefficient for P calculation')
+        self.add_input('Y1_mb', val=1.0, desc='Bearing light coefficient for P calculation')
+        self.add_input('X2_mb', val=1.0, desc='Bearing heavy coefficient for P calculation')
+        self.add_input('Y2_mb', val=1.0, desc='Bearing heavy coefficient for P calculation')
+        # - operational
+        self.add_input('rated_rpm', val=7.56, desc='Nominal/rated rotational speed', units='rpm')
+        self.add_input('lifetime', val=25.0, desc='Wind turbine design life')
+
+        # Outputs
+        self.add_output('L10h_mb1', val=0.0, desc='L10 life MB1', units='h')
+        self.add_output('L10h_mb2', val=0.0, desc='L10 life MB2', units='h')
+        self.add_output('constr_L10_mb1', val=0.0, desc='Safety factor MB1')
+        self.add_output('constr_L10_mb2', val=0.0, desc='Safety factor MB2')
+        self.add_output('constr_L10_mb_all', val=0.0, desc='Minimum safety factor')
+        
+        # self.declare_partials('*', '*', method='fd') #TODO: analyical gradients?
+        
+    def compute(self, inputs, outputs):
+        # Extract options + sanity check
+        # - 1. openfast (Wind statistics)
+        ws = self.options['dlc_options']['wind_speed'] # shape=(1,10)
+        n_ws = len(ws)
+        ws = np.reshape( ws, (1,n_ws))
+        probabilities = np.reshape( self.options['dlc_options']['probabilities'], (1,n_ws))
+        # - 2. DLC
+        dt = self.options['openfast_options']['simulation']['DT'] # 0.05 (20 Hz)
+        
+        # ISO 281 parameters (from MainBearing)
+        e, p = inputs['e_mb'], inputs['p_mb']
+        X1, Y1 = inputs['X1_mb'], inputs['Y1_mb']
+        X2, Y2 = inputs['X2_mb'], inputs['Y2_mb']
+        
+        L_12 = inputs['L_12']
+        L_h1 = inputs['L_h1']
+        n0 = inputs['rated_rpm']
+        
+        # loads: extract from self, cf. setup()
+        loads_dict = self.loads_dict
+        Fx = loads_dict['Fx']
+        # print(f"Fx[:2,:2]: {Fx[:2,:2]}, Fx shape: {Fx.shape}") # debugging: check mags wrt. units
+        Fy = loads_dict['Fy']
+        Fz = loads_dict['Fz']
+        Mx = loads_dict['Mx']
+        My = loads_dict['My']
+        Mz = loads_dict['Mz']
+        omega = loads_dict['rot_speed']
+
+        # Bearing loads (analytical) calculation: shape=(4, 720000, 10)
+        Fmb1, Fmb2, = analytical_MB_Forces(
+            Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=False )
+        # ----- extract axial and radial forces
+        F_mb1_rad = Fmb1[3, :, :]                           # shape (720000,10)
+        F_mb2_ax, F_mb2_rad = Fmb2[0, :, :], Fmb2[3, :, :]  # shape (720000,10)
+        # ----- equivalent loads MB2 TODO: grad-friendly, coz optim issues rn !
+        ratio = F_mb2_ax / np.maximum(F_mb2_rad, np.finfo(float).eps)
+        light = np.abs(ratio) <= e
+        P_mb2 = np.zeros_like(F_mb2_rad)
+        P_mb2[light] = X1 * F_mb2_rad[light] + Y1 * F_mb2_ax[light]
+        P_mb2[~light] = X2 * F_mb2_rad[~light] + Y2 * F_mb2_ax[~light]
+        # --- trying smooth approximation for optim ---
+        # P_mb2 = X2 * F_mb2_rad + Y2 * F_mb2_ax # step 2
+        # P_mb2 = F_mb2_rad # step 1
+        # ----- equivalent loads MB1
+        P_mb1 = F_mb1_rad # (= radial loads coz radial bearing CRB)
+
+        # Bin counting: depr. and removed due to non-smoothness within optimization
+        # nBins = self.options['modeling_options']['nBins']
+        # P_mb1_sum = bin_counting_of_load(P_mb1, ws, p, coeff_weibull, nBins)
+        # P_mb2_sum = bin_counting_of_load(P_mb2, ws, p, coeff_weibull, nBins)
+
+        # DEL calculation
+        # print('ws: ', ws) # debugging
+        P_mb1_sum = del_bearing_computation(P_mb1, ws, dt, omega, probabilities, p)
+        P_mb2_sum = del_bearing_computation(P_mb2, ws, dt, omega, probabilities, p)
+
+        # L10 life calculation
+        Cr1 = inputs['Cr_mb1']
+        Cr2 = inputs['Cr_mb2']
+        # L10 = (Cr/P)^p
+        L10_mb1 = (Cr1 / P_mb1_sum) ** (p) # note: noth in [N] !!!
+        L10_mb2 = (Cr2 / P_mb2_sum) ** (p)
+        # print(f"L10_mb1: {L10_mb1}, L10_mb2: {L10_mb2}") # debugging
+        
+        outputs['L10h_mb1'] = L10_mb1 * (1e6 / n0 / 60)
+        outputs['L10h_mb2'] = L10_mb2 * (1e6 / n0 / 60)
+        # print(f"L10h_mb1: {outputs['L10h_mb1']}, L10h_mb2: {outputs['L10h_mb2']}") # debugging
+        
+        # Safety factors (20 years = 20*8766 hours)
+        L_design = inputs['lifetime']
+        outputs['constr_L10_mb1'] = ( (outputs['L10h_mb1'] / (L_design * 8766)) ** (1/p) ) # inside log should be >= 1, with log should be >= 0
+        outputs['constr_L10_mb2'] = ( (outputs['L10h_mb2'] / (L_design * 8766)) ** (1/p) )
+        outputs['constr_L10_mb_all'] = min(outputs['constr_L10_mb1'], outputs['constr_L10_mb2'])
+# ---------------

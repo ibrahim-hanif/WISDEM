@@ -843,6 +843,8 @@ def assign_nacelle_values(wt_opt, modeling_options, nacelle, flags, user_elastic
         wt_opt["nacelle.lss_diameter"] = nacelle["drivetrain"]["lss_diameter"]
         wt_opt["nacelle.mb1Type"] = nacelle["drivetrain"]["mb1Type"]
         wt_opt["nacelle.mb2Type"] = nacelle["drivetrain"]["mb2Type"]
+        wt_opt["nacelle.mb1_e"] = nacelle["drivetrain"]["mb1_e"] #(v) new
+        wt_opt["nacelle.mb2_e"] = nacelle["drivetrain"]["mb2_e"] #(v) new
         wt_opt["nacelle.uptower"] = nacelle["drivetrain"]["uptower"]
         wt_opt["nacelle.lss_material"] = nacelle["drivetrain"]["lss_material"]
         wt_opt["nacelle.bedplate_material"] = nacelle["drivetrain"]["bedplate_material"]

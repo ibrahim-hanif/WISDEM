@@ -9,7 +9,7 @@ import wisdem.commonse.utilities as util
 from wisdem.commonse.cross_sections import IBeam
 
 
-def rod_prop(s, Di, ti, rho):
+def rod_prop(s, Di, ti, rho, return_Ds=False): #(v) added `return_Ds=False`
     L = s.max() - s.min()
 
     def equal_pts(xi):
@@ -35,7 +35,8 @@ def rod_prop(s, Di, ti, rho):
             (1.0 / 12.0) * (3 * 0.25 * (Dm**2 + (Dm - 2 * tm) ** 2) + L**2),
         ]
     )
-    return m, cm, m * I
+    if return_Ds: return m, cm, m * I, D #(v) changed return(s) for `return_Ds` usage
+    else: return m, cm, m * I
 
 
 class Layout(om.ExplicitComponent):
@@ -470,6 +471,12 @@ class GearedLayout(Layout):
     s_generator : float, [m]
         Generator (centroid) position in s-coordinates
 
+    ---------- (v) extended by Vasudev Gupta -----
+    Dshaft_mb1 : float, [m]
+        LSS outer / MB1 bore diameter; calc: linear interp between lss_diameter
+    Dshaft_mb2 : float, [m]
+        LSS outer / MB2 bore diameter; calc: linear interp between lss_diameter
+
     """
 
     def setup(self):
@@ -487,22 +494,24 @@ class GearedLayout(Layout):
         self.add_output("s_drive", val=np.zeros(12), units="m")
         self.add_output("s_hss", val=np.zeros(3), units="m")
         self.add_output("bedplate_web_height", val=0.0, units="m")
+        self.add_output("Dshaft_mb1", val=0.0, units="m", desc="D_shaft at mb1") # ----- (v) & below -----
+        self.add_output("Dshaft_mb2", val=0.0, units="m", desc="D_shaft at mb2")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Unpack inputs
         upwind = discrete_inputs["upwind"]
         Cup = -1.0 if upwind else 1.0
-
+        # L lengths in DT
         L_12 = float(inputs["L_12"][0])
         L_h1 = float(inputs["L_h1"][0])
         L_hss = float(inputs["L_hss"][0])
         L_gearbox = float(inputs["L_gearbox"][0])
         L_generator = float(inputs["L_generator"][0])
-        L_overhang = float(inputs["overhang"][0])
-        H_drive = float(inputs["drive_height"][0])
-
+        L_overhang = float(inputs["overhang"][0]) #(v) NOTE: how used here
+        H_drive = float(inputs["drive_height"][0])#(v) TODO: modify coz func of L_*
+        # tilt in radians
         tilt = float(np.deg2rad(inputs["tilt"][0]))
-
+        ## D diameters, t thicknesses in DT
         D_lss = inputs["lss_diameter"]
         t_lss = inputs["lss_wall_thickness"]
         D_hss = inputs["hss_diameter"]
@@ -510,20 +519,20 @@ class GearedLayout(Layout):
 
         D_top = float(inputs["D_top"][0])
         D_hub = float(inputs["hub_diameter"][0])
-
+        # bedplate (I-beam) cross-section
         bed_w_flange = float(inputs["bedplate_flange_width"][0])
         bed_t_flange = float(inputs["bedplate_flange_thickness"][0])
         # bed_h_web    = float(inputs['bedplate_web_height'][0])
         bed_t_web = float(inputs["bedplate_web_thickness"][0])
-
+        # material data (densities, mass)
         lss_rho = float(inputs["lss_rho"][0])
         hss_rho = float(inputs["hss_rho"][0])
         bedplate_rho = float(inputs["bedplate_rho"][0])
-        bedplate_mass_user = float(inputs["bedplate_mass_user"][0])
+        bedplate_mass_user = float(inputs["bedplate_mass_user"][0]) #(v) NOTE: unused?
 
         # ------- Discretization ----------------
         # Length of lss and drivetrain length
-        delta = 0.1  # separation between MB2 and gearbox attachment
+        delta = 0.5 # separation between MB2 and gearbox attachment #(v) TODO: must be more than 0.5 * 'mb2_face_width'
         L_lss = L_12 + L_h1 + delta
         L_drive = L_lss + L_gearbox + L_hss + L_generator
         ds = 0.5 * np.ones(2)
@@ -533,7 +542,7 @@ class GearedLayout(Layout):
         outputs["L_lss"] = L_lss
 
         # Put tower at 0 position
-        s_tower = s_drive[-1] + 0.5 * D_hub - L_overhang / np.cos(tilt)
+        s_tower = s_drive[-1] + (0.5 * D_hub) - (L_overhang / np.cos(tilt)) #(v) added all brackets () around * and /
         s_drive -= s_tower
         outputs["s_drive"] = s_drive
 
@@ -543,9 +552,9 @@ class GearedLayout(Layout):
         s_generator = 0.5*(s_rotor + s_stator)
         s_mb1 = s_drive[9]
         s_mb2 = s_drive[7]
-        s_gearbox = s_drive[5]
+        s_gearbox = s_drive[5] #(v) centroid of gearbox length
         s_lss = s_drive[6:]
-        s_lss = np.r_[s_lss[:-2], s_lss[-1]]  # Need to stick to 5 points
+        s_lss = np.r_[s_lss[:-2], s_lss[-1]]  # Need to stick to 5 points (v: so remove index 10 (center of L_h1) )
         s_hss = s_drive[2:5]
 
         # Store outputs
@@ -559,17 +568,21 @@ class GearedLayout(Layout):
 
         # ------- hss, lss, and bearing properties ----------------
         # Compute center of mass based on area
-        m_hss, cm_hss, I_hss = rod_prop(s_hss, D_hss, t_hss, hss_rho)
+        m_hss, cm_hss, I_hss = rod_prop(s_hss, D_hss, t_hss, hss_rho) #(v) HSS
         outputs["hss_mass"] = m_hss
         outputs["hss_cm"] = cm_hss
         outputs["hss_I"] = I_hss
         outputs["s_hss"] = s_hss
 
-        m_lss, cm_lss, I_lss = rod_prop(s_lss, D_lss, t_lss, lss_rho)
+        m_lss, cm_lss, I_lss, Ds_lss = rod_prop(s_lss, D_lss, t_lss, lss_rho, return_Ds=True) #(v) LSS
         outputs["lss_mass"] = m_lss
         outputs["lss_cm"] = cm_lss
         outputs["lss_I"] = I_lss
         outputs["s_lss"] = s_lss
+        #(v) take out D shaft at both bearings
+        outputs["Dshaft_mb1"] = Ds_lss[1] #(v) change indices (mb1 > mb2) coz rod_prop changes it (func [0,1] <-> D_lss)
+        outputs["Dshaft_mb2"] = Ds_lss[3]
+        # print(f"--- GearedLayout: D_mb1={Ds_lss[1]}, D_mb2={Ds_lss[3]}") #(v) debugging
 
         # ------- Bedplate I-beam properties ----------------
         L_bedplate = (L_drive + 0.5 * D_hub) * np.cos(tilt)

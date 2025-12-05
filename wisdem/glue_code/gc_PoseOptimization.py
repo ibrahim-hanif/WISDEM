@@ -1237,7 +1237,7 @@ class PoseOptimization(object):
                 upper=jacket_constr["frequency_1"]["upper_bound"],
             )
 
-        # Hub and drivetrain constraints
+        # Hub and drivetrain constraints #(v) TODO: add new constrs
         hub_constr = self.opt["constraints"]["hub"]
         drive_constr = self.opt["constraints"]["drivetrain"]
 
@@ -1458,7 +1458,7 @@ class PoseOptimization(object):
                     if self.modeling["flags"]["tower"]:
                         wt_opt["tcons.max_allowable_td_ratio"] = blade_constr["tip_deflection"]["margin"]
 
-        if self.modeling["flags"]["nacelle"]:
+        if self.modeling["flags"]["nacelle"]: #(v) TODO: change accordingly
             drive_constr = self.opt["constraints"]["drivetrain"]
 
             wt_opt["drivese.shaft_deflection_allowable"] = drive_constr["shaft_deflection"]["upper_bound"]

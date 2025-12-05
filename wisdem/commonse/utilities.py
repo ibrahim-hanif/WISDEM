@@ -1,10 +1,10 @@
 """
 utilities.py
 
-Created by Andrew Ning on 2013-05-31.
-Copyright (c) NREL. All rights reserved.
+Created by Andrew Ning on 2013-05-31. Copyright (c) NREL. All rights reserved.
+Adapted by Vasudev Gupta on 2025-11-03. Dept. of Marine Technology, NTNU. All rights reserved.
 """
-
+#(v) import libraries (global scope)
 import logging
 logger = logging.getLogger("wisdem/weis")
 
@@ -12,7 +12,9 @@ import numpy as np
 from scipy.linalg import solve_banded
 
 # from scipy.optimize import curve_fit
-
+# ----- (v) below
+import scipy.io as sio
+from scipy.stats import weibull_min
 
 def mode_fit(x, c2, c3, c4, c5, c6):
     return c2 * x**2.0 + c3 * x**3.0 + c4 * x**4.0 + c5 * x**5.0 + c6 * x**6.0
@@ -678,7 +680,7 @@ def smooth_min(yd, ymin, pct_offset=0.01, dyd=None):
 
 
 def smooth_abs(x, dx=0.01):
-    """smoothed version of absolute vaue function, with quadratic instead of sharp bottom.
+    """smoothed version of absolute value function, with quadratic instead of sharp bottom.
     Derivative w.r.t. variable of interest.  Width of quadratic can be controlled"""
 
     x, n = _checkIfFloat(x)
@@ -805,3 +807,339 @@ class CubicSplineSegment(object):
             dF[i] = np.dot(dF_df, df) + dF_dx1 * dx1 + dF_dx2 * dx2
 
         return dF
+
+#%%[markdown]
+# Vasudev Gupta: adaptations
+# ============================================================
+#%%
+def get_recorder_results(filename, list_driver_vars=None, dvs_as_arrays=False):
+    """
+    Inputs:
+    -------
+    filename : str
+        path to the sqlite recorder file
+    list_driver_vars : dict
+        output of prob.driver.list_vars() openmdao function
+    dvs_as_arrays : bool
+        if (some) design variables are arrays (size>1), set to True
+    
+    Outputs:
+    -------
+    results
+        if dvs_as_arrays is False (default):
+            np.array, size (n_cases, n_DVs + n_objs)
+            array with rows as cases and columns as DVs followed by objectives
+        else:
+            dict of np.arrays
+            with keys as [DVs, constrs, objs], each array size (n_cases, array_size)
+
+    Internal Progress:
+    -----------------
+    - DONE : change from predefined names (x,y,obj) to input list_driver_vars (or DrivetrainSE specific)
+    - DONE : adopt for array (size>1) DVs like lss_*
+    """
+
+    import openmdao.api as om
+
+    if not dvs_as_arrays: # (default) DVs as scalars, return np.array
+
+        if list_driver_vars is not None:
+            isolate = ['objectives', 'design_vars']
+            name_obj = [list_driver_vars[isolate[0]][0][0]] 
+            name_DVs = []
+            for i in range( len( list_driver_vars[isolate[1]] ) ):
+                name = list_driver_vars[isolate[1]][i][0]
+                name_DVs.append( name )
+                # val = prob.get_val( name )
+                # print(f'DV: {name} = {val}')
+        else:
+            name_obj = ['nacelle_mass']
+            name_DVs = ['L_h1', 'L_12', 'lss_diameter', 'lss_wall_thickness']
+            # TODO: adopt for array (size>1) DVs like lss_*
+
+        # case reader accessing
+        cr = om.CaseReader(filename)
+        cases = cr.list_cases('driver', out_stream=None) #NOTE:cases are a list of Case objects; with 'outputs' attribute
+        len_cases = len(cases)
+
+        results = np.zeros( (len_cases, (len(name_DVs)+len(name_obj)) ) ) # ( dv(1), dv(2), ..., obj )
+        for i in range(len_cases):
+            case = cases[i]
+            output = cr.get_case(case).outputs
+            dvs = [float(output[ name_DVs[i] ][0]) for i in range(len(name_DVs))]
+            results[i,:] = np.r_[ dvs, float(output[name_obj[0]][0]) ]
+        
+        # results = np.squeeze(np.array(results)).reshape( (length, 3) ) # size (n, 3)
+    
+    else: # DVs as arrays, return dict (of np.arrays)
+        results = {}
+        
+        # case reader accessing
+        cr = om.CaseReader(filename)
+        cases = cr.list_cases('driver', out_stream=None) #NOTE:cases are a list of Case objects; with 'outputs' attribute
+        len_cases = len(cases)
+        
+        for i in range(len_cases):
+            out = cr.get_case(i).outputs
+            # rd = {**rd, **out}
+            for key, val in out.items():
+                if key in results:
+                    results[key] = np.vstack( (results[key], val) )
+                else:
+                    results[key] = val
+
+    return results
+    """
+    # results dictionary
+    d = {}
+    # init all DVs into results dictionary
+    dvs = prob.model.get_design_vars()
+    names_DVs = []
+    for key, val in dvs.items():
+        print( key )
+        names_DVs.append( key )
+        print( val['size'] )
+        d[key] = np.zeros( (len_cases,val['size']) )
+    # init all Objs into results dictionary
+    objs = prob.model.get_objectives()
+    names_obj = []
+    for key, val in objs.items():
+        print( key )
+        names_obj.append( key )
+        print( val['size'] )
+        d[key] = np.zeros( (len_cases,val['size']) )
+    d
+    """
+
+# ---------------
+def mainshaft_loads_from_mat_to_dict( loc_FLS_loads_mat_file, loc_ULS_loads_mat_file, loc_all_loads_mat_file="" ):
+    """
+    Inputs:
+    -------
+    loc_FLS_loads_mat_file : str
+        path to FLS loads .mat file
+    loc_FLS_loads_mat_file : str
+        path to ULS loads .mat file
+    loc_all_loads_mat_file : str
+        path to all loads .mat file (named `mainshaft_loads.mat`)
+    
+    Outputs:
+    -------
+    Snew : dict
+        with keys = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+        and values= np.array of shape (720000,10)
+        &
+        with keys = ['Fx_max','Fy_max','Fz_mean', 'Mx_max','My_max','Mz_max']
+        and values= float
+
+    Internal Progress:
+    -----------------
+    - DONE : implementation
+    """
+    # init
+    print(f' --- Loading: mainshaft FLS loads from {loc_FLS_loads_mat_file}')
+    print(f' --- Loading: mainshaft ULS loads from {loc_ULS_loads_mat_file}')
+    if len(loc_all_loads_mat_file) != 0: print(f' --- Loading: all mainshaft loads from {loc_all_loads_mat_file}')
+
+    try:
+        S_FLS = sio.loadmat(loc_FLS_loads_mat_file)
+        S_ULS = sio.loadmat(loc_ULS_loads_mat_file)
+        if len(loc_all_loads_mat_file) != 0: S_all = sio.loadmat(loc_all_loads_mat_file)
+
+    except Exception as e:
+        raise RuntimeError(f'Could not load FLS/ULS .mat files: {e}')
+    # Merge both into unified structure (SI units: N, Nm)
+    S = {
+        'Fx': S_FLS['S_FLS']['Fx'][0, 0], # S['Fx'].shape=(1,10); S['Fx'][0,i] being (72e4,1) per ws
+        'Fy': S_FLS['S_FLS']['Fy'][0, 0],
+        'Fz': S_FLS['S_FLS']['Fz'][0, 0],
+        'Mx': S_FLS['S_FLS']['Mx'][0, 0],
+        'My': S_FLS['S_FLS']['My'][0, 0],
+        'Mz': S_FLS['S_FLS']['Mz'][0, 0],
+        'ws': S_FLS['S_FLS']['ws'][0,0],       # np.array of shape (1,10)
+        'Time': S_FLS['S_FLS']['Time'][0, 0], # np.array of shape (720000,10)
+        'rot_speed': S_FLS['S_FLS']['rot_speed'][0, 0], # np.array of shape (720000,10)
+
+        'Fx_max': S_ULS['S_ULS']['Fx_max'][0, 0].item(),
+        'Fy_max': S_ULS['S_ULS']['Fy_max'][0, 0].item(),
+        'Fz_mean': S_ULS['S_ULS']['Fz_mean'][0, 0].item(), #TODO: "_mean" alongisde "_max"! why?! + automate with openFAST outputs
+        'Mx_max': S_ULS['S_ULS']['Mx_max'][0, 0].item(),
+        'My_max': S_ULS['S_ULS']['My_max'][0, 0].item(),
+        'Mz_max': S_ULS['S_ULS']['Mz_max'][0, 0].item(),
+    }
+    print(' --- Success: loaded FLS and ULS load data.\n')
+
+    # init
+    n_timeSteps = S['Fx'][0,0].shape[0]
+    n_ws = S['Fx'].shape[1]
+
+    Snew = {}
+    keys_all = []
+    for key,val in S.items():
+        # init
+        # (0) key == 'Fx', val.shape == (1,10)
+        keys_all.append(key)
+
+        # 1. float (ULS load)
+        if key.endswith('_max') or key.endswith('_mean'):
+            Snew[ key ] = float( val )
+        # 2. vector (ws)
+        elif key == 'ws':
+            Snew[ key ] = val.reshape( 1,n_ws )
+        elif key == 'Time': # time values same for all ws, save as vector
+            Snew[ key ] = val[0,0].reshape( n_timeSteps,1 )
+        # 3. matrix (FLS load & rot_speed)
+        else:
+            Snew[ key ] = np.zeros(( n_timeSteps,n_ws  ))    
+            # print( Snew[key].shape ) # for debugging
+            for i in range( n_ws ):
+                Snew[ key ][:,i] = val[0,i].reshape( n_timeSteps, )
+
+    print(' --- Success: converted .mat loads to dict (returning).\n')
+    return Snew, keys_all
+
+# ---------------
+def load_all_mat_to_dict( loc_all_loads_mat_file ):
+    """
+    Inputs:
+    -------
+    loc_all_loads_mat_file : str
+        path to all loads .mat file (named `mainshaft_loads.mat`)
+
+    Outputs:
+    -------
+    Snew : dict
+        keys    = ['F*','F*_max', 'M*','M*_max', 'Time', 'mean_wind_speed','rot_speed']
+        values  = np.array[720000,10] for FLS loads & rot_speed
+                = np.array[1,10] for ULS loads & others
+    keys_all : list
+        list of all keys in Snew
+    """
+    # load database
+    print(f' --- Loading: all mainshaft loads from {loc_all_loads_mat_file}')
+    try:
+        S_all = sio.loadmat(loc_all_loads_mat_file)
+    except Exception as e:
+        raise RuntimeError(f'Could not load from the .mat file: {e}')
+
+    # compute
+    n_timeSteps,n_ws = S_all['Fx'].shape[1], S_all['Fx'].shape[0]
+
+    Snew = {}
+    keys_all = []
+    for key,val in S_all.items():
+        # init
+        # (0) key == 'Fx', val.shape == (1,10)
+        
+        if key.startswith('__'): continue
+
+        if key.endswith('_max') or (                            # ULS load
+                key == 'Time') or (key == 'mean_wind_speed'):   # others
+            keys_all.append(key)
+            Snew[ key ] = val
+        elif key.endswith('_mean') or key.endswith('_st'): continue
+
+        if val.shape[0] > 1:                    # FLS load & rot_speed
+            keys_all.append(key)
+            if val.shape[1] > val.shape[0]:
+                Snew[ key ] = val.T    
+            # Snew[ key ] = np.zeros(( n_timeSteps,n_ws  ))    
+            # print( Snew[key].shape ) # for debugging
+            else: Snew[ key ].shape = val
+
+    print(' --- Success: converted .mat all-loads to dict (returning).\n')
+    return Snew, keys_all
+
+# ---------------
+def pdf_norm_int_using_cdf( ws_pts, coeff_weibull=(1.95,11.6) ):
+    """
+    Compute normalized PDF of Weibull distribution at given (ws) points.
+
+    Inputs
+    -------
+    ws_pts : array[1,n]
+        Points at which to evaluate the PDF.
+        Typically wind speed bins, [5,  7,  9, 11, 13, 15, 17, 19, 21, 23, 25] [m/s]
+    coeff_weibull : tuple
+        Coefficients of Weibull distribution for site (c, scale)
+        Typically for utsira, (1.95, 11.6)
+    
+    Outputs
+    -------
+    pdf_vals : array[n]
+        Normalized PDF values at the given points.
+    """
+    # init
+    # force ws to be 1D array of shape (1,n)
+    ws_pts = np.atleast_2d(ws_pts)
+    
+    # compute
+    delta = ws_pts[0,1] - ws_pts[0,0] #NOTE: 2D array of shape (1,n) with just one row index=0
+    ws_ranges = np.array((
+        np.r_[ ws_pts[0,0], ws_pts[0,1:]-(delta / 2)],
+        np.r_[ (delta/2) + ws_pts[0,:-1], ws_pts[0,-1] ],
+    ))
+
+    pdf = (
+        weibull_min.cdf(ws_ranges[1,:], 1.95, scale=11.6) -
+        weibull_min.cdf(ws_ranges[0,:], 1.95, scale=11.6)
+    )
+    # pdf_vals = pdf / np.sum(pdf) #TODO: check if this is needed
+    return pdf
+
+# ---------------
+def bin_counting_of_load(load_series, ws, 
+                         p=10/3, coeff_weibull=(1.95,11.6), nBins=100):
+    """
+    Compute equivalent load using bin counting method (histogram).
+    NOTE: BINNING BAD WITHIN OPTIMIZATION, TODO: DOCUMENT FAILURE AND SOLUTION!
+
+    Inputs
+    -------
+    load_series : array[ # of time steps , # of wind speeds ]
+        Time series of loads (forces or moments); for FLS, shape=(72e4,10)
+    p : float
+        Exponent for equivalent load calculation (default 10/3 for bearings)
+    ws : array[ # of wind speeds ]
+        Wind speed bins corresponding to load_series columns, shape=(1,10)
+    coeff_weibull : tuple
+        Coefficients of Weibull distribution for site (c, scale)
+    nBins : int
+        Number of bins to use for histogramming the load data
+    
+    Outputs
+    -------
+    load_eq : array[ # of wind speeds ]
+        Equivalent load per wind speed bin, shape=(10,)
+    """
+    # init
+    P = load_series  # shape=(72e4,10)
+    ws_pdf = pdf_norm_int_using_cdf(ws, coeff_weibull) # (1,10)
+    
+    Pmax = np.max(P) if np.max(P) > 0 else np.finfo(float).eps
+    
+    edges_P = np.linspace(0, Pmax, nBins + 1)
+    centers_P = (edges_P[:-1] + edges_P[1:]) / 2
+    
+    P_hist = np.zeros(nBins)    
+    for ec in range(len(ws)):
+        hist_count, _ = np.histogram(P[:, ec], bins=edges_P, density=True) #density, for it is PDF
+        # hist_count = hist_count / np.sum(hist_count) if np.sum(hist_count) > 0 else hist_count #divide to normalize (sum=1), not needed coz density=True
+        P_hist += ws_pdf[ec] * hist_count
+
+    P_sum = (np.sum((centers_P ** (p)) * P_hist)) ** (1/p)
+    return P_sum
+
+# ---------------
+def scale_bounds_for_driver( lb, ub ):
+    """
+    function to provide the m (scalar) and b (adder) values for uniform
+    scaling of openMDAO driver, with which
+    - lb --> 0.0
+    - ub --> 1.0
+    with formula: x_driver = m * x_model + b
+    """
+    ref0, ref = lb, ub
+    m = 1 / (ref-ref0)
+    b = -ref0
+    return m,b

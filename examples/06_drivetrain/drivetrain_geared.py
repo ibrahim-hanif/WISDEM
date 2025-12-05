@@ -46,7 +46,7 @@ if opt_flag:
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
     prob.driver.options["tol"] = 1e-2
-    prob.driver.options["maxiter"] = 5 * 10
+    prob.driver.options["maxiter"] = 5 * 1
     prob.driver.options["disp"] = True
     #prob.driver.options["debug_print"] = ["desvars", "ln_cons", "nl_cons", "objs"]
 
@@ -83,7 +83,7 @@ if opt_flag:
     prob.model.add_constraint("constr_stator_angle", upper=1.0)
     # 3. hub dia to accom. blades' roots
     prob.model.add_constraint("constr_hub_diameter", lower=0.0)
-    # 4. target overhand and hub height
+    # 4. target overhang and hub height
     prob.model.add_constraint("constr_length", lower=0.0)
     prob.model.add_constraint("constr_height", lower=0.0)
     # ---
@@ -236,50 +236,49 @@ print("stage_ratios:", prob["stage_ratios"])
 # OUTPUT
 # test 1: maxiter = 100 (L_h1 = 1.912, L_12 = 0.368)
 """
-Iteration limit reached    (Exit mode 9)
-            Current function value: 0.2148923706136918
-            Iterations: 15
-            Function evaluations: 47
-            Gradient evaluations: 15
-Optimization FAILED.
-Iteration limit reached
+Optimization terminated successfully    (Exit mode 0)
+            Current function value: 0.2800365326879702
+            Iterations: 21
+            Function evaluations: 71
+            Gradient evaluations: 21
+Optimization Complete
 -----------------------------------
-nacelle_mass: [214892.37061369]
+nacelle_mass: [280036.53268797]
 
-L_h1: [1.85213743]
-L_12: [0.21747006]
-L_lss: [2.16960749]
-L_hss: [1.70543375]
+L_h1: [0.98700811]
+L_12: [0.14248346]
+L_lss: [1.22949157]
+L_hss: [0.10189485]
 L_generator: [2.]
 L_gearbox: [1.89]
-L_bedplate: [10.20833514]
-H_bedplate: [1.4068864]
-hub_diameter: [4.96457615]
-lss_diameter: [0.72913067 0.68132551]
-lss_wall_thickness: [0.28795036 0.28796475]
-hss_diameter: [0.79803005 0.59119554]
-hss_wall_thickness: [0.09998059 0.10000368]
-bedplate_web_thickness: [0.09916725]
-bedplate_flange_thickness: [0.09928848]
-bedplate_flange_width: [0.10000218]
+L_bedplate: [7.69200422]
+H_bedplate: [1.62703683]
+hub_diameter: [5.]
+lss_diameter: [0.84109957 0.68091051]
+lss_wall_thickness: [0.28202845 0.27139887]
+hss_diameter: [0.93633721 1.07883486]
+hss_wall_thickness: [0.15150088 0.1424637 ]
+bedplate_web_thickness: [0.30592616]
+bedplate_flange_thickness: [0.1786935]
+bedplate_flange_width: [1.35453364]
 
-constr_lss_vonmises: [0.88781754 0.9116373  0.9213352  1.00498142]
-constr_hss_vonmises: [0.01762401 0.01698292]
-constr_bedplate_vonmises: [1.59172436e-03 2.11318304e-02 1.59681595e-02 3.41050530e-02
- 5.98077606e-02 8.16137897e-01 1.72215411e-01 1.19032580e-01
- 1.14808695e-01 1.44360268e-03 4.02717099e-08 1.59175037e-03
- 2.87696750e-02 3.25174931e-02 4.86681405e-02 7.31905727e-02
- 9.49564715e-01 1.95209331e-01 1.19047532e-01 1.14811933e-01
- 1.44361980e-03 2.10381468e-08]
-constr_mb1_defl: [-0.0024758]
-constr_mb2_defl: [-0.00020514]
-constr_shaft_deflection: [0.16678208]
-constr_shaft_angle: [0.00136116]
-constr_stator_deflection: [6.03118593]
-constr_stator_angle: [1.38174264]
-constr_hub_diameter: [0.05663698]
-constr_length: [3.27333514]
-constr_height: [1.4068864]
+constr_lss_vonmises: [0.59788466 0.62962778 0.65081657 0.84502496]
+constr_hss_vonmises: [0.00749502 0.00423346]
+constr_bedplate_vonmises: [5.25284543e-03 8.14276095e-03 8.42624564e-03 8.61197297e-03
+ 1.23542396e-02 3.72733017e-02 3.68210304e-02 2.59750009e-02
+ 2.56966517e-02 1.18267485e-03 1.73289935e-09 8.86278004e-03
+ 1.17818084e-02 1.18560214e-02 1.20260423e-02 1.57640014e-02
+ 3.63103944e-02 3.54833110e-02 2.59756973e-02 2.56968542e-02
+ 1.18267905e-03 6.25132740e-10]
+constr_mb1_defl: [-0.0001797]
+constr_mb2_defl: [-0.00158303]
+constr_shaft_deflection: [0.06377591]
+constr_shaft_angle: [0.00079599]
+constr_stator_deflection: [0.99650798]
+constr_stator_angle: [0.02038174]
+constr_hub_diameter: [0.09206083]
+constr_length: [0.75700422]
+constr_height: [1.62703683]
 
 planet_numbers: [3 3 0]
 stage_ratios: [3.39744738 3.21443045 8.79051271]
