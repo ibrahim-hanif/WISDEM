@@ -63,19 +63,22 @@ loc_save_data = os.path.join(results_path, "02")
 
 #%% Loading `openFAST` hub loads from a saved file
 part_loads = True 
+load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 
 dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
 
-if part_loads:
+if part_loads: # define paths
     loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
 
-else:
+else: # define paths
     loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
     loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
-    Snew, keys_new = mainshaft_loads_from_mat_to_dict(loc_FLS_loads_mat_file, loc_ULS_loads_mat_file)
+    if load_fls_loads: # load from paths
+        Snew, keys_new = mainshaft_loads_from_mat_to_dict(
+            loc_FLS_loads_mat_file, loc_ULS_loads_mat_file)
 # %% [markdown]
 # ### Defining options (`modelling_options`), flags
 
@@ -89,7 +92,7 @@ opts = {}
 opts["WISDEM"] = {}
 opts["WISDEM"]["n_dlc"] = 1
 opts["WISDEM"]["DriveSE"] = {}
-# NOTE "hub": 'Hub_System' component are NOT included in the 'LSS_layout' component 
+# NOTE "hub": 'Hub_System' component are NOT included in the 'DrivetrainSE_M4W' component 
 opts["WISDEM"]["DriveSE"]["hub"] = {}
 opts["WISDEM"]["DriveSE"]["hub"]["hub_gamma"] = 2.0
 opts["WISDEM"]["DriveSE"]["hub"]["spinner_gamma"] = 1.5
@@ -113,6 +116,21 @@ opts["flags"] = {}
 dogen = opts["flags"]["generator"] = False
 dohub = opts["flags"]["hub"] = False #(v)
 
+opts["OpenFAST"] = {}
+opts["OpenFAST"]["simulation"] = {}
+opts["OpenFAST"]["simulation"]["DT"] = 0.05
+# dir(ectory) where MS loads are stored .csv (?)
+if part_loads:
+    opts["OpenFAST"]["openfast_dir"] = loc_all_loads_mat_file
+else:
+    ValueError('Full loads not defined in openfast_dir<-OpenFAST<-modelling_options. Please define it first. jazakumAllahu khayr.')
+
+opts["DLC_driver"] = {}
+opts["DLC_driver"]["DLCs"] = [{}]
+opts["DLC_driver"]["DLCs"][0]["DLC"] = "1.2"
+opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23., 25.]
+opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332 , 0.05894909, 0.03942148, 0.02472593, 0.01457773, 0.00466888]
+
 # %% [markdown]
 # ### Defining the model `problem class`:
 # as an openMDAO group that uses DrivetrainSE classes as components
@@ -124,13 +142,18 @@ class LSS_layout( om.Group ):
         self.options.declare("modeling_options")
 
     def setup(self):
-        opt = self.options["modeling_options"]["WISDEM"]["DriveSE"]
+        opt_drivese = self.options["modeling_options"]["WISDEM"]["DriveSE"]
+        # OpenFAST: containing 1. simulation DT and 2. MS loads dir
+        opt_openfast = self.options["modeling_options"]["OpenFAST"]
+        # DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
+        opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
+
         n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
-        direct = opt["direct"]
+        direct = opt_drivese["direct"]
         if direct:
             use_gb_torque_density = False
         else:
-            use_gb_torque_density = opt["use_gb_torque_density"]
+            use_gb_torque_density = opt_drivese["use_gb_torque_density"]
             
         dogen = self.options["modeling_options"]["flags"]["generator"]
         n_pc = self.options["modeling_options"]["WISDEM"]["RotorSE"]["n_pc"]
@@ -155,7 +178,7 @@ class LSS_layout( om.Group ):
         # 1. hub system (perf hub system optimization)
         if flag_hub: # bypass rn, TODO later
             self.add_subsystem(
-                "hub", Hub_System(modeling_options=opt["hub"]),
+                "hub", Hub_System(modeling_options=opt_drivese["hub"]),
                     promotes=["*"]
                 )
         
@@ -181,7 +204,7 @@ class LSS_layout( om.Group ):
         
         # Hub_Rotor_LSS_Frame:
         self.add_subsystem(
-            "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt),
+            "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt_drivese),
                 promotes=["*"]
             )
         # -connecting = bear(1,2) -to- Hub_Rotor_LSS_Frame (NEW)
@@ -192,8 +215,12 @@ class LSS_layout( om.Group ):
         
         # FLS MBs (Analytical)
         self.add_subsystem(
-            "mb_fls", ds.Analytical_FLS_Bearing_Life(modeling_options=opt),
-            promotes_inputs=["Fx_FLS","Fy_FLS","Fz_FLS", "Mx_FLS","My_FLS","Mz_FLS", "L_h1","L_12", "rated_rpm","lifetime","rot_speed","mean_wind_speed","Time","coeff_weibull"],
+            "mb_fls", ds.Analytical_FLS_Bearing_Life(
+                modeling_options=opt_drivese,
+                openfast_options=opt_openfast,
+                dlc_options=opt_DLC
+                ),
+            promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime"],
             promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
         )
         # -connecting = bear(1,2) -to- Analy_*
@@ -227,7 +254,7 @@ class LSS_layout( om.Group ):
 
         # # Bedplate_IBeam_Frame:
         # self.add_subsystem(
-        #     "bed", ds.Bedplate_IBeam_Frame(modeling_options=opt, n_dlcs=n_dlcs),
+        #     "bed", ds.Bedplate_IBeam_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
         #         promotes=["*"]
         #     )
         # -connecting = bear(1,2) -to- Bedplate_*
@@ -254,7 +281,7 @@ class LSS_layout( om.Group ):
 
             # Hub_Rotor_LSS_Frame:
             self.add_subsystem(
-                "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt, direct_drive=direct),
+                "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt_drivese, direct_drive=direct),
                     promotes=["*"]
                 )
             
@@ -266,7 +293,7 @@ class LSS_layout( om.Group ):
 
             # Bedplate_IBeam_Frame:
             self.add_subsystem(
-                "bed", ds.Bedplate_IBeam_Frame(modeling_options=opt, n_dlcs=n_dlcs),
+                "bed", ds.Bedplate_IBeam_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
                     promotes=["*"]
                 )
             
@@ -336,6 +363,9 @@ elif flag_DOE: #NOTE: running 194 mins! on my PC for 10 levels x 4 DVs (khayr in
     prob.driver = om.DOEDriver(om.FullFactorialGenerator(levels=10))
     recorder = om.SqliteRecorder( loc_doe )
     prob.driver.add_recorder( recorder )
+
+else:
+    print("=== running analysis only (`run_model()`) ===")
 
 #%%
 # setup optimization: objs, desvars, cons
@@ -427,19 +457,20 @@ else:
 # ## FLS load loads (xD), input to Analy_*; (72e4, 10)
 # TODO: change here for testing
 # 1. partial loads (S_all)
-if part_loads:
-    prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = S_all['Fx'],S_all['Fy'],S_all['Fz']
-    prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = S_all['Mx'],S_all['My'],S_all['Mz']
-    prob['rot_speed'] = S_all['rot_speed']
-    prob['mean_wind_speed'] = S_all['mean_wind_speed'][0]
-    prob['Time'] = S_all['Time'][0]
-# 2. full loads (Snew)
-else:
-    prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = Snew['Fx'],Snew['Fy'],Snew['Fz']
-    prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = Snew['Mx'],Snew['My'],Snew['Mz']
-    prob['rot_speed'] = Snew['rot_speed']
-    prob['mean_wind_speed'] = Snew['ws']
-    prob['Time'] = Snew['Time']
+if load_fls_loads:
+    if part_loads:
+        prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = S_all['Fx'],S_all['Fy'],S_all['Fz']
+        prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = S_all['Mx'],S_all['My'],S_all['Mz']
+        prob['rot_speed'] = S_all['rot_speed']
+        prob['mean_wind_speed'] = S_all['mean_wind_speed'][0]
+        prob['Time'] = S_all['Time'][0]
+    # 2. full loads (Snew)
+    else:
+        prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = Snew['Fx'],Snew['Fy'],Snew['Fz']
+        prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = Snew['Mx'],Snew['My'],Snew['Mz']
+        prob['rot_speed'] = Snew['rot_speed']
+        prob['mean_wind_speed'] = Snew['ws']
+        prob['Time'] = Snew['Time']
 
 # TODO: make nice PPT with flow/chart of om.Problem here
 # TODO: update using pCrunch's rainflow
@@ -497,20 +528,20 @@ myones = np.ones(2)
 # - init condn for some design vars
 
 # Main Bearing inputs
-prob["bear1.bearing_type"] = "CARB" # 1. floating MB
+prob["bear1.bearing_type"] = "CRB" # 1. floating MB
 prob["bear2.bearing_type"] = "TRB2" # 2. fixed MB
 # prob["bear1.D_shaft"] = 2.0 #(def:2.0), 4.0
 # prob["bear2.D_shaft"] = 2.0 #(def:2.0), 3.2
-prob["bear1.mb_e"] = 4.0 # from 3.5-4.0 (TODO: find ref.)
-prob["bear2.mb_e"] = 4.0
-prob["bear1.mb_p"] = 3.33
-prob["bear2.mb_p"] = 3.33
+prob["bear1.mb_e"] = 3.5 # from 3.5-4.0 (TODO: find ref.)
+prob["bear2.mb_e"] = 3.5
+# prob["bear1.mb_p"] = 3.33
+# prob["bear2.mb_p"] = 3.33
 
 # Layout / lss inputs
-prob["L_h1"] = 4.25 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
-prob["L_12"] = 7.1 #(def:1.2), 7.1
-prob["lss_diameter"] = myones * 4.0 #(def:1.0), 4.0
-prob["lss_wall_thickness"] = myones * 0.3 #(def:0.1), 0.3
+prob["L_h1"] = 0.5 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
+prob["L_12"] = 7.0 #(def:1.2), 7.1
+prob["lss_diameter"] = myones * 2.0 #(def:1.0), 4.0
+prob["lss_wall_thickness"] = myones * 0.1 #(def:0.1), 0.3
 
 # Gearbox inputs
 # prob["L_gearbox"] = 1.5 #(v) calc in gearbox.py
@@ -530,8 +561,8 @@ prob["hss_wall_thickness"] = 0.1 * myones
 # prob["R_generator"] = 1.7999999999999998
 prob["L_generator"] = 2.15 #TODO: opts: 1. input from gen design (indar), 2. maybe calc in generator.py?, 3. 11.98398883842414 (from drivetrain_example.csv), 4. 2.0 (drivetrain_geared) or 2.15 (drivetrain_direct)
 # prob["generator_cm"] = -0.09998102618633065
-prob["generator_rotor_mass"] = 26437.71371233699
-prob["generator_rotor_I"] = np.array([42829.09621398592, 31598.575743266098, 31598.575743266098])
+# prob["generator_rotor_mass"] = 26437.71371233699
+# prob["generator_rotor_I"] = np.array([42829.09621398592, 31598.575743266098, 31598.575743266098])
 # prob["F_generator"] = np.array([[-55905.04536116102], [-0.0], [-531900.9765713954]])
 # prob["M_generator"] = np.array([[420611.2199999999], [-1687869.5522841304], [-0.0]])
 generator_mass_375rpm = 14482 #[kg] (cf. Made4Wind D5.1, Tab.9)
@@ -607,7 +638,6 @@ else:
     prob.run_model()
 
 # %%[markdown]
-# %%[markdown]
 # Print the results
 print("LSS desvars:")
 print(" ", prob["L_h1"], prob["L_12"], prob["lss_diameter"], prob["lss_wall_thickness"] )
@@ -665,8 +695,8 @@ if flag_study_parametric and flag_opt_GBO:
     steps_MBtype = [
         ("CRB","TRB2"),
         ("CARB","TRB2"),
-        ("TRB2","CRB"),
-        ("TRB2","CARB")
+        ("CRB","SRB"),
+        ("CARB","SRB")
         ]
     # length: total num of param varying steps
     len_steps = len(steps_MBtype)
@@ -698,4 +728,27 @@ if flag_study_parametric and flag_opt_GBO:
         for key, val in outs_recorded.items():
             outs_recorded[key][i,:] = prob[key]
 
+outs_recorded
+"""
+{'L_12': array([[7.11508108],
+        [4.86211493],
+        [5.00521375],
+        [2.5813102 ]]),
+ 'L_h1': array([[0.5],
+        [0.5],
+        [0.5],
+        [0.5]]),
+ 'lss_diameter': array([[2.9400542 , 1.69282221],
+        [0.82386622, 2.05669697],
+        [3.46496236, 1.73341613],
+        [1.06322768, 2.05570005]]),
+ 'lss_wall_thickness': array([[0.00617199, 0.11922258],
+        [0.24435041, 0.08887677],
+        [0.004     , 0.10886274],
+        [0.21524046, 0.11465028]]),
+ 'msa_mass': array([[70717.29939399],
+        [52712.3936233 ],
+        [66503.51114266],
+        [39964.99830566]])}
+"""
 # %%
