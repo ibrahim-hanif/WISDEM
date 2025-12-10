@@ -1670,7 +1670,7 @@ def analytical_MB_Forces( Fx,Fy,Fz, Mx,My,Mz, L_h1,L_12, flag_jac=False ):
     - DONE : implement as a openMDAO Explicit Component
         depr, due to 'known and fixed' shape of F* and M*
     - DONE : implement as a function, general purpose
-    - DONE : add analytical gradients?
+    - DONE : add analytical gradients
     - TODO : mag of F* and M* is O(6)! exploding jac? how to scale
     """
     
@@ -1710,59 +1710,59 @@ def analytical_MB_Forces( Fx,Fy,Fz, Mx,My,Mz, L_h1,L_12, flag_jac=False ):
         dFmb2_dL12 = F_mb2
 
         # ----- MB2 -----            
-        dFmb2axdL_h1 = np.zeros_like(F_mb2_ax)
-        dFmb2axdL_12 = np.zeros_like(F_mb2_ax)
+        dFmb2ax_dLh1 = np.zeros_like(F_mb2_ax)
+        dFmb2ax_dL12 = np.zeros_like(F_mb2_ax)
         # NOTE: no need to use `utils/smooth_abs` coz dFx_dL* = 0 anyway
             
         # ----- mb2_y diff wrt. L_
-        dFmb2ydL_h1 = Fy / L_12
-        dFmb2ydL_12 = (-1/L_12) * F_mb2_y
+        dFmb2y_dLh1 = Fy / L_12
+        dFmb2y_dL12 = (-1/L_12) * F_mb2_y
 
         # ----- mb2_z diff wrt. L_
-        dFmb2zdL_h1 = Fz / L_12
-        dFmb2zdL_12 = (-1/L_12) * F_mb2_z
+        dFmb2z_dLh1 = Fz / L_12
+        dFmb2z_dL12 = (-1/L_12) * F_mb2_z
         
         # ----- mb2_r diff wrt. y, z
         dFmb2rad_dFmb2y = F_mb2_y / F_mb2_rad
         dFmb2rad_dFmb2z = F_mb2_z / F_mb2_rad
         # ----- mb2_r diff wrt. L_
-        dFmb2rad_L_h1 = (dFmb2rad_dFmb2y*dFmb2ydL_h1) + (dFmb2rad_dFmb2z*dFmb2zdL_h1)
-        dFmb2rad_L_12 = (dFmb2rad_dFmb2y*dFmb2ydL_12) + (dFmb2rad_dFmb2z*dFmb2zdL_12)
+        dFmb2rad_dLh1 = (dFmb2rad_dFmb2y*dFmb2y_dLh1) + (dFmb2rad_dFmb2z*dFmb2z_dLh1)
+        dFmb2rad_dL12 = (dFmb2rad_dFmb2y*dFmb2y_dL12) + (dFmb2rad_dFmb2z*dFmb2z_dL12)
         # ---------------
 
         # ----- MB1 -----
-        dFmb1axdL_h1 = F_mb1_ax # both 0s
-        dFmb1axdL_12 = F_mb1_ax
+        dFmb1ax_dLh1 = F_mb1_ax # both 0s
+        dFmb1ax_dL12 = F_mb1_ax
         
         # ----- mb1_y diff wrt. L_
-        dFmb1ydL_h1 = -dFmb2ydL_h1
-        dFmb1ydL_12 = -dFmb2ydL_12
+        dFmb1y_dLh1 = -dFmb2y_dLh1
+        dFmb1y_dL12 = -dFmb2y_dL12
 
         # ----- mb1_z diff wrt. L_
-        dFmb1zdL_h1 = -dFmb2zdL_h1
-        dFmb1zdL_12 = -dFmb2zdL_12
+        dFmb1z_dLh1 = -dFmb2z_dLh1
+        dFmb1z_dL12 = -dFmb2z_dL12
         
         # ----- mb1_r diff wrt. y, z
         dFmb1rad_dFmb1y = F_mb1_y / F_mb1_rad
         dFmb1rad_dFmb1z = F_mb1_z / F_mb1_rad
         # ----- mb1_r wrt. L_
-        dFmb1rad_L_h1 = (dFmb1rad_dFmb1y*dFmb1ydL_h1) + (dFmb1rad_dFmb1z*dFmb1zdL_h1)
-        dFmb1rad_L_12 = (dFmb1rad_dFmb1y*dFmb1ydL_12) + (dFmb1rad_dFmb1z*dFmb1zdL_12)
+        dFmb1rad_dLh1 = (dFmb1rad_dFmb1y*dFmb1y_dLh1) + (dFmb1rad_dFmb1z*dFmb1z_dLh1)
+        dFmb1rad_dL12 = (dFmb1rad_dFmb1y*dFmb1y_dL12) + (dFmb1rad_dFmb1z*dFmb1z_dL12)
         # ---------------
 
         # ----- collect for outputs
-        dFmb1_dLh1 = np.stack([dFmb1axdL_h1,dFmb1ydL_h1,dFmb1zdL_h1,dFmb1rad_L_h1])
-        dFmb1_dL12 = np.stack([dFmb1axdL_12,dFmb1ydL_12,dFmb1zdL_12,dFmb1rad_L_12])
+        dFmb1_dLh1 = np.stack([dFmb1ax_dLh1,dFmb1y_dLh1,dFmb1z_dLh1,dFmb1rad_dLh1])
+        dFmb1_dL12 = np.stack([dFmb1ax_dL12,dFmb1y_dL12,dFmb1z_dL12,dFmb1rad_dL12])
 
-        dFmb2_dLh1 = np.stack([dFmb2axdL_h1,dFmb2ydL_h1,dFmb2zdL_h1,dFmb2rad_L_h1])
-        dFmb2_dL12 = np.stack([dFmb2axdL_12,dFmb2ydL_12,dFmb2zdL_12,dFmb2rad_L_12])
+        dFmb2_dLh1 = np.stack([dFmb2ax_dLh1,dFmb2y_dLh1,dFmb2z_dLh1,dFmb2rad_dLh1])
+        dFmb2_dL12 = np.stack([dFmb2ax_dL12,dFmb2y_dL12,dFmb2z_dL12,dFmb2rad_dL12])
 
         return F_mb1, F_mb2, dFmb1_dLh1, dFmb1_dL12, dFmb2_dLh1, dFmb2_dL12
     # ==============================
 
 # ---------------
 def del_bearing_computation(load_series, ws_bins, t_step, omega,
-                    probabilities, p=10/3, flag_jac=False):
+                    probabilities, p=10/3, dP_dL=[]):
     """
     Compute Damage Equivalent Load (DEL) using full time series method.
 
@@ -1780,17 +1780,24 @@ def del_bearing_computation(load_series, ws_bins, t_step, omega,
         Exponent for equivalent load calculation (default 10/3 for bearings)
     probabilites : array, same size as ws
         or pdf of occurence of each ws
+    dP_dL : array, same size as load_series ('P')
+        gradient of P wrt. the length segments of the main shaft (L_*)
+        if provided, the gradients are computed; otherwise if empty, no gradients
     
     Outputs
     -------
     DEL : float
         Damage Equivalent Load weighted-averaged over all wind speeds
+        provided as the only output if no gradients are computed (len(dP_dL)==0)
+    dDEL_dL : float
+        Gradients of DEL wrt. L (length of main shaft segments)
+        returned as the second output if dP_dL is input to the function (size~=0)
 
     Internal Progress
     --------------
     - DONE : implement as a function, general purpose
-    - TODO : vectorize more?
-    - TODO : add analytical gradients? `flag_jac`; cf. `compute_partials` below
+    - DONE : add analytical gradients; vectorize more?
+    - TODO : remove ws_bins from inputs (not used, probab input directly instead)
     """
     # init
     P = load_series
@@ -1798,17 +1805,31 @@ def del_bearing_computation(load_series, ws_bins, t_step, omega,
     # take out dimenstions
     n_t, n_w = omega.shape[0], omega.shape[1] # 72e3, 11
     ws = ws_bins.reshape(1,n_w)
+    pdf_ws = probabilities.reshape(1,n_w)
 
     # start computing DEL
-    n = (omega/60 * t_step) # element wise multiplication, broadcasting (72e3,11)
-    N = np.sum(n, axis=0).reshape(1, n_w) # (1,11)
+    N = (omega/60 * t_step) # element wise multiplication, broadcasting (72e3,11)
+    n = np.sum(N, axis=0).reshape(1, n_w) # (1,11)
 
-    numerator = np.sum((P**p) * n, axis=0).reshape(1,n_w) # (1,11)
+    numerator = np.sum((P**p) * N, axis=0).reshape(1,n_w) # (1,11)
 
-    DEL_j = (numerator/N)**(1/p) # (1,11)
+    DEL_j = (numerator/n)**(1/p) # (1,11)
 
-    DEL = np.sum( DEL_j**p * probabilities )**(1/p) # float
-    return DEL
+    DEL = np.sum( DEL_j**p * pdf_ws )**(1/p) # float
+    # provide DEL without gradients
+    if len(dP_dL)==0:
+        return DEL
+    
+    # provide DEL with gradients (DEL, gradients)
+    else:
+        dDELj_dL = (1/p)*(DEL_j**(1-p))*(1/n)*np.sum(
+            p*(P**(p-1))*dP_dL*N,
+            axis=0
+        )
+        dDEL_dL = (1/p)*(DEL**(1-p)) * np.sum(
+            p*(DEL_j**(p-1))*dDELj_dL*pdf_ws
+        )
+        return DEL, dDEL_dL
 
 # def compute_partials(self, inputs, partials):
 #     """
@@ -1921,9 +1942,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_output('L10h_mb2', val=0.0, desc='L10 life MB2', units='h')
         self.add_output('constr_L10_mb1', val=0.0, desc='Safety factor MB1')
         self.add_output('constr_L10_mb2', val=0.0, desc='Safety factor MB2')
-        self.add_output('constr_L10_mb_all', val=0.0, desc='Minimum safety factor')
-        
-        # self.declare_partials('*', '*', method='fd') #TODO: analyical gradients?
+        # self.add_output('constr_L10_mb_all', val=0.0, desc='Minimum safety factor')
         
     def compute(self, inputs, outputs):
         # Extract options + sanity check
@@ -1955,23 +1974,25 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         Mz = loads_dict['Mz']
         omega = loads_dict['rot_speed']
 
-        # Bearing loads (analytical) calculation: shape=(4, 720000, 10)
-        Fmb1, Fmb2, = analytical_MB_Forces(
-            Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=False )
+        # Bearing loads (analytical) calculation: shape=(4, 72000, 11)
+        Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MB_Forces(
+            Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=True )
         # ----- extract axial and radial forces
         F_mb1_rad = Fmb1[3, :, :]                           # shape (720000,10)
         F_mb2_ax, F_mb2_rad = Fmb2[0, :, :], Fmb2[3, :, :]  # shape (720000,10)
-        # ----- equivalent loads MB2 TODO: grad-friendly, coz optim issues rn !
-        ratio = F_mb2_ax / np.maximum(F_mb2_rad, np.finfo(float).eps)
-        light = np.abs(ratio) <= e
+        # ----- equivalent loads MB2
+        ratio = F_mb2_ax / F_mb2_rad # DONE: removed max, coz F_mb2_rad is pos always (sqrt)
+        light = np.abs(ratio) <= e; self.light = light
         P_mb2 = np.zeros_like(F_mb2_rad)
         P_mb2[light] = X1 * F_mb2_rad[light] + Y1 * F_mb2_ax[light]
         P_mb2[~light] = X2 * F_mb2_rad[~light] + Y2 * F_mb2_ax[~light]
+        self.P_mb2 = P_mb2
         # --- trying smooth approximation for optim ---
         # P_mb2 = X2 * F_mb2_rad + Y2 * F_mb2_ax # step 2
         # P_mb2 = F_mb2_rad # step 1
         # ----- equivalent loads MB1
         P_mb1 = F_mb1_rad # (= radial loads coz radial bearing CRB)
+        self.P_mb1 = P_mb1
 
         # Bin counting: depr. and removed due to non-smoothness within optimization
         # nBins = self.options['modeling_options']['nBins']
@@ -1991,13 +2012,139 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         L10_mb2 = (Cr2 / P_mb2_sum) ** (p)
         # print(f"L10_mb1: {L10_mb1}, L10_mb2: {L10_mb2}") # debugging
         
-        outputs['L10h_mb1'] = L10_mb1 * (1e6 / n0 / 60)
-        outputs['L10h_mb2'] = L10_mb2 * (1e6 / n0 / 60)
+        # ---- mb1 ----
+        L10h_mb1 = L10_mb1 * (1e6 / n0 / 60)
+        self.L10h_mb1 = L10h_mb1
+        outputs['L10h_mb1'] = L10h_mb1
+        # ---- mb1 ----
+        L10h_mb2 = L10_mb2 * (1e6 / n0 / 60)
+        self.L10h_mb2 = L10h_mb2
+        outputs['L10h_mb2'] = L10h_mb2
         # print(f"L10h_mb1: {outputs['L10h_mb1']}, L10h_mb2: {outputs['L10h_mb2']}") # debugging
         
-        # Safety factors (20 years = 20*8766 hours)
+        # constraints: on FLS safety factors (20 years = 20*8766 hours)
         L_design = inputs['lifetime']
-        outputs['constr_L10_mb1'] = ( (outputs['L10h_mb1'] / (L_design * 8766)) ** (1/p) ) # inside log should be >= 1, with log should be >= 0
-        outputs['constr_L10_mb2'] = ( (outputs['L10h_mb2'] / (L_design * 8766)) ** (1/p) )
-        outputs['constr_L10_mb_all'] = min(outputs['constr_L10_mb1'], outputs['constr_L10_mb2'])
+        # ---- mb1 ----
+        outputs['constr_L10_mb1'] = (L10h_mb1/(L_design*8766))**(1/p) # inside log should be >= 1, with log should be >= 0
+        self.constr_L10_mb1 = outputs['constr_L10_mb1']
+        # ---- mb2 ----
+        outputs['constr_L10_mb2'] = (L10h_mb2/(L_design*8766))**(1/p)
+        self.constr_L10_mb2 = outputs['constr_L10_mb2']
+        # ---- all ----
+        # outputs['constr_L10_mb_all'] = min(outputs['constr_L10_mb1'], outputs['constr_L10_mb2'])
+# ---------------
+
+# ---------------
+class Analytical_FLS_Bearing_Life_Derivatives( Analytical_FLS_Bearing_Life ):
+    """
+    Version with analytical derivatives
+    - a sub-class inheriting from parent `Analytical_FLS_Bearing_Life` 
+
+    Internal Progress
+    --------------
+    - DONE : new subclass: analytical gradients (declare_partials, compute_partials)
+    - TODO : check and verify: rn error: calc O(-8), fd O(-2)
+    """
+
+    def setup_partials(self):
+        # call to declare_partials tells openMDAO which to expect, hence these being non-zero
+        self.declare_partials(of='constr_L10_mb1', wrt=['L_h1', 'L_12'])
+        self.declare_partials(of='constr_L10_mb2', wrt=['L_h1', 'L_12'])
+
+    def compute_partials(self, inputs, J, discrete_inputs=None):
+        # Extract options + sanity check
+        # - 1. openfast (Wind statistics)
+        ws = self.options['dlc_options']['wind_speed'] # shape=(1,10)
+        n_ws = len(ws)
+        ws = np.reshape( ws, (1,n_ws))
+        probabilities = np.reshape( self.options['dlc_options']['probabilities'], (1,n_ws))
+        # - 2. DLC
+        dt = self.options['openfast_options']['simulation']['DT'] # 0.05 (20 Hz)
+        omega = self.loads_dict['rot_speed']
+
+        # Inputs unpacking
+        # - ISO 281 parameters (from MainBearing)
+        p = inputs['p_mb']
+        X1, Y1 = inputs['X1_mb'], inputs['Y1_mb']
+        X2, Y2 = inputs['X2_mb'], inputs['Y2_mb']
+        # - DVs
+        L_12 = inputs['L_12']
+        L_h1 = inputs['L_h1']
+        
+        # `self` unpacking
+        light = self.light
+        # ---- mb1 wrt. L_*
+        dFmb1_dLh1 = self.dFmb1_dLh1; dFmb1rad_dLh1 = dFmb1_dLh1[3,:,:]
+        dFmb1_dL12 = self.dFmb1_dL12; dFmb1rad_dL12 = dFmb1_dL12[3,:,:]
+        # ---- mb2 wrt. L_*
+        dFmb2_dLh1 = self.dFmb2_dLh1
+        dFmb2ax_dLh1, dFmb2rad_dLh1 = dFmb2_dLh1[0,:,:], dFmb2_dLh1[3,:,:]
+        dFmb2_dL12 = self.dFmb2_dL12
+        dFmb2ax_dL12, dFmb2rad_dL12 = dFmb2_dL12[0,:,:], dFmb2_dL12[3,:,:]
+
+        # compute partials (P_* wrt. L_*)
+        # ---- mb1 ---- (note: direct)
+        # formula: P_mb1 = F_mb1_rad
+        dPmb1_dLh1 = dFmb1rad_dLh1
+        dPmb1_dL12 = dFmb1rad_dL12
+        # ---- mb2 ---- (note: based on light)
+        # formula: P_mb2[light] = X1 * F_mb2_rad[light] + Y1 * F_mb2_ax[light]
+        # formula: P_mb2[~light] = X2 * F_mb2_rad[~light] + Y2 * F_mb2_ax[~light]
+        # ---------- init with zeros (like P_mb2 in compute)
+        dPmb2_dLh1 = np.zeros_like(dFmb2rad_dLh1)
+        dPmb2_dL12 = np.zeros_like(dFmb2rad_dLh1)
+        # ---------- wrt. L_h1
+        dPmb2_dLh1[light] = (X1 * dFmb2rad_dLh1[light]) + (Y1 * dFmb2ax_dLh1[light])
+        dPmb2_dLh1[~light] = (X2 * dFmb2rad_dLh1[~light]) + (Y2 * dFmb2ax_dLh1[~light])
+        # ---------- wrt. L_12
+        dPmb2_dL12[light] = (X1 * dFmb2rad_dL12[light]) + (Y1 * dFmb2ax_dL12[light])
+        dPmb2_dL12[~light] = (X2 * dFmb2rad_dL12[~light]) + (Y2 * dFmb2ax_dL12[~light])
+
+        # compute partials (DEL)
+        # TODO: use 'p' exponent for each mb (when input to compn)
+        # ---- mb1 ----
+        P_mb1 = self.P_mb1
+        DEL_1, dDEL1_dLh1 = del_bearing_computation(
+            P_mb1,ws,dt,omega,probabilities,p,dPmb1_dLh1)
+        _, dDEL1_dL12 = del_bearing_computation(
+            P_mb1,ws,dt,omega,probabilities,p,dPmb1_dL12)
+        # ---- mb2 ----
+        P_mb2 = self.P_mb2
+        DEL_2, dDEL2_dLh1 = del_bearing_computation(
+            P_mb2,ws,dt,omega,probabilities,p,dPmb2_dLh1)
+        _, dDEL2_dL12 = del_bearing_computation(
+            P_mb2,ws,dt,omega,probabilities,p,dPmb2_dL12)
+        
+        # compute partials (L10)
+        # ---- mb1 ----
+        Cr1 = inputs['Cr_mb1']
+        dL10_1_dLh1 = (Cr1**p)*(-p)*(DEL_1**(-p-1))*dDEL1_dLh1
+        dL10_1_dL12 = (Cr1**p)*(-p)*(DEL_1**(-p-1))*dDEL1_dL12
+        # ---- mb2 ----
+        Cr2 = inputs['Cr_mb2']
+        dL10_2_dLh1 = (Cr2**p)*(-p)*(DEL_2**(-p-1))*dDEL2_dLh1
+        dL10_2_dL12 = (Cr2**p)*(-p)*(DEL_2**(-p-1))*dDEL2_dL12
+
+        # compute partials (L10h)
+        n0 = inputs['rated_rpm']
+        n060 = (1e6 / n0 / 60)
+        # ---- mb1 ----
+        dL10h_1_dLh1 = n060 * dL10_1_dLh1
+        dL10h_1_dL12 = n060 * dL10_1_dL12
+        # ---- mb2 ----
+        dL10h_2_dLh1 = n060 * dL10_2_dLh1
+        dL10h_2_dL12 = n060 * dL10_2_dL12
+
+        # compute partials (constr_)
+        # ---- mb1 ----
+        L10h_mb1 = self.L10h_mb1
+        constr_L10_mb1 = self.constr_L10_mb1
+        J['constr_L10_mb1','L_h1'] = (1/p)*constr_L10_mb1*(L10h_mb1**(1-p))*dL10h_1_dLh1
+        J['constr_L10_mb1','L_12'] = (1/p)*constr_L10_mb1*(L10h_mb1**(1-p))*dL10h_1_dL12
+
+        # ---- mb2 ----
+        L10h_mb2 = self.L10h_mb2
+        constr_L10_mb2 = self.constr_L10_mb2
+        J['constr_L10_mb2','L_h1'] = (1/p)*constr_L10_mb2*(L10h_mb2**(1-p))*dL10h_2_dLh1
+        J['constr_L10_mb2','L_12'] = (1/p)*constr_L10_mb2*(L10h_mb2**(1-p))*dL10h_2_dL12
 # ---------------

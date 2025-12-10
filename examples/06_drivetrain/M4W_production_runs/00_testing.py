@@ -31,39 +31,46 @@ from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from
 
 #%% Loading `openFAST` hub loads from a saved file
 part_loads = True 
+load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 
 dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
 
-if part_loads:
+if part_loads: # define paths
     loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
 
-else:
+else: # define paths
     loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
     loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
-    Snew, keys_new = mainshaft_loads_from_mat_to_dict(loc_FLS_loads_mat_file, loc_ULS_loads_mat_file)
-
+    if load_fls_loads: # load from paths
+        Snew, keys_new = mainshaft_loads_from_mat_to_dict(
+            loc_FLS_loads_mat_file, loc_ULS_loads_mat_file)
 #%% segment loads for testing
 Fx, Fy, Fz = S_all['Fx'][:3,:2], S_all['Fy'][:3,:2], S_all['Fz'][:3,:2]
 Mx, My, Mz = S_all['Mx'][:3,:2], S_all['My'][:3,:2], S_all['Mz'][:3,:2]
 
 #%% test forces
-myForces = np.ones((3,2)) * 5
+myForces = np.ones((2,2)) * 5 #(3,2)
 Fx, Fy, Fz = myForces, myForces, myForces
 Mx, My, Mz = myForces, myForces, myForces
 
-# %%
+# %% F_* computation
+L_h1 = 2; L_12 = 5
 Fmb1, Fmb2, dFmb1dLh1, dFmb1dL12, dFmb2dLh1, dFmb2dL12 = ds.analytical_MB_Forces(
-    Fx,Fy,Fz,Mx,My,Mz,2,5, flag_jac=True)
+    Fx,Fy,Fz,Mx,My,Mz,L_h1,L_12, flag_jac=True)
 
-# %%
+# %% P_* computation
 P = Fmb1[3,:,:]
 n_t, n_w = P.shape[0], P.shape[1]
 ws = S_all['mean_wind_speed'][0,:n_w]
 time = S_all['Time'][:n_t,0]; dt = 0.05
 omega = S_all['rot_speed'][:n_t,:n_w]
+p = 10/3
+
+dP_dLh1 = dFmb1dLh1[3,:,:]
+dP_dL12 = dFmb1dL12[3,:,:]
 
 # %%
 coeff_weibull = (1.95, 11.6)
@@ -71,8 +78,19 @@ pdf_ws = pdf_norm_int_using_cdf( ws, coeff_weibull )
 pdf_ws
 
 #%%
-DEL = ds.del_bearing_computation( P, ws, dt, omega, pdf_ws )
+DEL = ds.del_bearing_computation( P, ws, dt, omega, pdf_ws, p )
 DEL
+
+#%%
+# P=10; ws=np.array([[10]]); dt=0.1
+# omega=np.array([[60]]); pdf_ws=np.array([[1]]); p=2; dP_dLh1=np.array([[1]])
+
+DEL, dDEL_dLh1 = ds.del_bearing_computation( P, ws, dt, omega, pdf_ws,
+                    p, dP_dLh1 )
+print(DEL, dDEL_dLh1)
+_, dDEL_dL12 = ds.del_bearing_computation( P, ws, dt, omega, pdf_ws,
+                    p, dP_dL12 )
+print(dDEL_dL12)
 
 #%%[markdown]
 # ## === test `om._Component` ===
@@ -130,6 +148,8 @@ opt_openfast = opts["OpenFAST"]
 # DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
 opt_DLC = opts["DLC_driver"]["DLCs"][0]
 
+#%%[markdown]
+# ### problem: setup and check partials
 #%%
 prob = om.Problem(reports=False)
 
@@ -146,6 +166,27 @@ prob.model.add_subsystem("mb_fls",
 # connections
 
 prob.setup()
+
+#%%
+prob.check_partials( compact_print=True );
+
+#%%[markdown]
+# ### problem with derivatives: setup and check partials
+#%%
+prob_deri = om.Problem(reports=False)
+model_deri = prob_deri.model = om.Group()
+model_deri.add_subsystem(
+    "mb_fls_deri",
+    ds.Analytical_FLS_Bearing_Life_Derivatives(
+        modeling_options=opt_drivese,
+        openfast_options=opt_openfast,
+        dlc_options=opt_DLC
+    ),
+    promotes=['*']
+)
+
+prob_deri.setup()
+prob_deri.check_partials(compact_print=True);
 
 #%% Loads assignment (ULS, FLS)
 
@@ -167,19 +208,20 @@ prob.setup()
 # FLS load loads (xD), input to Analy_*; (72e4, 10)
 # TODO: change here for testing
 # 1. partial loads (S_all)
-if part_loads:
-    prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = S_all['Fx'],S_all['Fy'],S_all['Fz']
-    prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = S_all['Mx'],S_all['My'],S_all['Mz']
-    prob['rot_speed'] = S_all['rot_speed']
-    prob['mean_wind_speed'] = S_all['mean_wind_speed'][0]
-    prob['Time'] = S_all['Time'][0]
-# 2. full loads (Snew)
-else:
-    prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = Snew['Fx'],Snew['Fy'],Snew['Fz']
-    prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = Snew['Mx'],Snew['My'],Snew['Mz']
-    prob['rot_speed'] = Snew['rot_speed']
-    prob['mean_wind_speed'] = Snew['ws']
-    prob['Time'] = Snew['Time']
+if load_fls_loads:
+    if part_loads:
+        prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = S_all['Fx'],S_all['Fy'],S_all['Fz']
+        prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = S_all['Mx'],S_all['My'],S_all['Mz']
+        prob['rot_speed'] = S_all['rot_speed']
+        prob['mean_wind_speed'] = S_all['mean_wind_speed'][0]
+        prob['Time'] = S_all['Time'][0]
+    # 2. full loads (Snew)
+    else:
+        prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = Snew['Fx'],Snew['Fy'],Snew['Fz']
+        prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = Snew['Mx'],Snew['My'],Snew['Mz']
+        prob['rot_speed'] = Snew['rot_speed']
+        prob['mean_wind_speed'] = Snew['ws']
+        prob['Time'] = Snew['Time']
 
 # TODO: make nice PPT with flow/chart of om.Problem here
 # TODO: update using pCrunch's rainflow
@@ -235,4 +277,47 @@ from scipy.stats import norm
 beta = 1.28
 Pf = norm.cdf(-beta)
 Pf
+
+# %%[markdown]
+# ### Analytical derivatives (using `JAX`) and time compr to analytical
+# =====================================================================
+#%%
+import jax.numpy as jnp
+from jax import jacfwd
+import jax
+import time
+#%%
+# generate a random number using `JAX`'s pure functional RNG
+keyRNG = jax.random.PRNGKey(42) # seed = 42
+X = jax.random.uniform(keyRNG,shape=(2,2)); dims = (2,2)
+# X = jax.random.uniform(keyRNG,shape=(72000,11)); dims = (72000,11)
+#%%
+def f(X):
+    return jnp.sum(X, axis=0)  # sum columns
+
+# X = jnp.array([[1., 2.], [3., 4.]])
+t0_jax = time.time()
+J = jacfwd(f)(X)
+t1_jax = time.time()
+print(f"JAX, shape={dims}, in time {t1_jax-t0_jax}s") # J = {J}, 
+# Shape: (2, 2, 2) because JAX returns per-element derivative
+# You can reshape to (n, m*n) if needed
+
+# %%
+def jacobian_sum_columns(m, n):
+    # Jacobian shape: (n, m*n)
+    J = np.zeros((n, m*n))
+    for col in range(n):
+        start = col * m
+        J[col, start:start+m] = 1
+    return J
+
+t0_ana = time.time()
+J_analy = jacobian_sum_columns( dims[0], dims[1] )
+t1_ana = time.time()
+print(f"Analy, shape={dims}, in time {t1_ana-t0_ana}s") # J = {J_analy}, 
+# Output:
+# [[1. 1. 0. 0.]
+#  [0. 0. 1. 1.]]
+
 # %%
