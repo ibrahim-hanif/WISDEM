@@ -338,7 +338,7 @@ if flag_opt_GBO:
     # Choose the (GBO) optimizer to use
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
-    prob.driver.options["tol"] = 1e-4 # default: 1e-6
+    prob.driver.options["tol"] = 1e-3 # default: 1e-6
     prob.driver.options["maxiter"] = 5 * 4
     prob.driver.options["disp"] = True
     prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
@@ -371,7 +371,7 @@ else:
 # - TODO: scaling (is better).
 if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # === Add objective ===
-    prob.model.add_objective("nacelle_mass", ref=1e5)               #DONE: 'nacelle_mass' minimization
+    prob.model.add_objective("nacelle_mass", ref=1e6)               #DONE: 'nacelle_mass' minimization
     
     # === Add design variables === 
     # 1. LSS
@@ -383,9 +383,9 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # 2. HSS (TODO: add later if needed)
 
     # 3. Bedplate (TODO: add later if needed)
-    # prob.model.add_design_var("bedplate_web_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
-    # prob.model.add_design_var("bedplate_flange_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
-    # prob.model.add_design_var("bedplate_flange_width", lower=0.1, upper=2.0)
+    prob.model.add_design_var("bedplate_web_thickness", lower=4e-3, upper=5e-1, ref=5e-1, ref0=4e-3)
+    prob.model.add_design_var("bedplate_flange_thickness", lower=4e-3, upper=5e-1, ref=5e-1, ref0=4e-3)
+    prob.model.add_design_var("bedplate_flange_width", lower=0.1, upper=2.0, ref=2.0, ref0=0.1)
 
     # === Add constraints ===    
     if flag_DOE: pass # DOE: no constraints
@@ -404,8 +404,8 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     prob.model.add_constraint("constr_mb1_defl", upper=1.0)                 #DONE: add next
     prob.model.add_constraint("constr_mb2_defl", upper=1.0)                 #DONE: add next
     # --- bedplate # TODO: add later if needed (gen stator / max bedplate end defl)
-    # prob.model.add_constraint("constr_stator_deflection", upper=1.0)
-    # prob.model.add_constraint("constr_stator_angle", upper=1.0)
+    prob.model.add_constraint("constr_stator_deflection", upper=1.0)
+    prob.model.add_constraint("constr_stator_angle", upper=1.0)
 
     # 3. length: target overhang, hub height and LSS wrt. MBs
     prob.model.add_constraint("constr_length", lower=0.0)               #DONE: add later
@@ -543,8 +543,8 @@ myones = np.ones(2)
 # - init condn for some design vars
 
 # Main Bearing inputs
-prob["bear1.bearing_type"] = "TRB2" # 1. floating MB
-prob["bear2.bearing_type"] = "CRB" # 2. fixed MB
+prob["bear1.bearing_type"] = "CRB" # 1. floating MB
+prob["bear2.bearing_type"] = "TRB2" # 2. fixed MB
 # prob["bear1.D_shaft"] = 2.0 #(def:2.0), 4.0
 # prob["bear2.D_shaft"] = 2.0 #(def:2.0), 3.2
 prob["bear1.mb_e"] = 3.5 # from 3.5-4.0 (TODO: find ref.)
@@ -575,13 +575,25 @@ prob["hss_wall_thickness"] = 0.1 * myones
 # - needed by Bedplate_IBeam_Frame in drive_structure.py, output of HSS_Frame
 # - copied from made4wind_geared.py's output drivetrain_example.csv
 # prob["R_generator"] = 1.7999999999999998
-prob["L_generator"] = 2.15 #TODO: opts: 1. input from gen design (indar), 2. maybe calc in generator.py?, 3. 11.98398883842414 (from drivetrain_example.csv), 4. 2.0 (drivetrain_geared) or 2.15 (drivetrain_direct)
+prob["L_generator"] = 4.2
+# TODO: opts:
+# --- 1. input from gen design (ingeteam),
+# --- 2. maybe calc in generator.py?,
+# --- 3. 11.98398883842414 (from drivetrain_example.csv),
+# --- 4. 2.0 (drivetrain_geared) or 2.15 (drivetrain_direct)
+
 # prob["generator_cm"] = -0.09998102618633065
 # prob["generator_rotor_mass"] = 26437.71371233699
 # prob["generator_rotor_I"] = np.array([42829.09621398592, 31598.575743266098, 31598.575743266098])
 # prob["F_generator"] = np.array([[-55905.04536116102], [-0.0], [-531900.9765713954]])
 # prob["M_generator"] = np.array([[420611.2199999999], [-1687869.5522841304], [-0.0]])
-generator_mass_375rpm = 14482 #[kg] (cf. Made4Wind D5.1, Tab.9)
+
+# TODO: Ingeteam generator dimensions (email 15.12.25 from Bidane):
+# Mass [kg] = 8 Tn per 8MW conversion line
+prob["generator_mass_user"] = (3*1e3/8)*(
+    prob["machine_rating"]/1e3)
+# Overall dimensions (est. very preliminary): 2400x800x4200 mm [HxWxL]
+H_generator, W_generator, L_generator = 2.4, 0.8, 4.2 # [m]
 
 # 'drive_height' : derive from the high-level inputs
 # - needed by layout.py (line 123)
