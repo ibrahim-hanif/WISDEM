@@ -60,6 +60,7 @@ loc_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "02")
+loc_xdsm = os.path.join(results_path, 'xdsm_02')
 
 #%% Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -395,14 +396,31 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     prob.model.add_constraint("constr_L10_mb2", lower=1.0)
 
     # 3. target overhang and hub height
-    prob.model.add_constraint("constr_length", lower=0.0)               #DONE: add later
-    prob.model.add_constraint("constr_height", lower=0.0, ref=1e1)               #DONE: add later
+    # prob.model.add_constraint("constr_length", lower=0.0)               #DONE: add later
+    # prob.model.add_constraint("constr_height", lower=0.0, ref=1e1)               #DONE: add later
     prob.model.add_constraint("constr_Lh1_MB1fw", lower=0.0, ref=1e1)            #DONE: add later
     prob.model.add_constraint("constr_L12_MBsFW", lower=0.0, ref=1e0)            #DONE: add later
 
 # %%
 # Setup the problem
 prob.setup()
+
+#%%[markdown]
+### pyXDSM trial
+#%%
+from omxdsm import write_xdsm
+
+write_xdsm(
+    prob,
+    filename=loc_xdsm,
+    out_format='pdf',
+    show_browser=True,
+    quiet=False,
+    output_side='left',
+    include_indepvarcomps=False,
+    class_names=False
+)
+# -----
 
 # %%[markdown]
 # Print objectives, design variables, and constraints in a concise readable form
@@ -559,13 +577,24 @@ prob["hss_wall_thickness"] = 0.1 * myones
 # - needed by Bedplate_IBeam_Frame in drive_structure.py, output of HSS_Frame
 # - copied from made4wind_geared.py's output drivetrain_example.csv
 # prob["R_generator"] = 1.7999999999999998
-prob["L_generator"] = 2.15 #TODO: opts: 1. input from gen design (indar), 2. maybe calc in generator.py?, 3. 11.98398883842414 (from drivetrain_example.csv), 4. 2.0 (drivetrain_geared) or 2.15 (drivetrain_direct)
+prob["L_generator"] = 4.2
+# TODO: opts:
+# --- 1. input from gen design (ingeteam),
+# --- 2. maybe calc in generator.py?,
+# --- 3. 11.98398883842414 (from drivetrain_example.csv),
+# --- 4. 2.0 (drivetrain_geared) or 2.15 (drivetrain_direct)
+
 # prob["generator_cm"] = -0.09998102618633065
 # prob["generator_rotor_mass"] = 26437.71371233699
 # prob["generator_rotor_I"] = np.array([42829.09621398592, 31598.575743266098, 31598.575743266098])
 # prob["F_generator"] = np.array([[-55905.04536116102], [-0.0], [-531900.9765713954]])
 # prob["M_generator"] = np.array([[420611.2199999999], [-1687869.5522841304], [-0.0]])
 generator_mass_375rpm = 14482 #[kg] (cf. Made4Wind D5.1, Tab.9)
+
+# TODO: Ingeteam generator dimensions (email 15.12.25 from Bidane):
+m_generator = (3*1e3/8)*(prob["machine_rating"]/1e3) #[kg] 8 Tn per 8MW conversion line
+# Overall dimensions (est. very preliminary): 2400x800x4200 mm [HxWxL]
+H_generator, W_generator, L_generator = 2.4, 0.8, 4.2 # [m]
 
 # 'drive_height' : derive from the high-level inputs
 # - needed by layout.py (line 123)
