@@ -1626,7 +1626,7 @@ class DrivetrainFLS(Hub_Rotor_LSS_Frame):
 
 #%% =======================================================
 #   ============ analytical implementations ===============
-# =======================================================
+#   =======================================================
 
 # ---------------
 def analytical_MB_Forces( Fx,Fy,Fz, Mx,My,Mz, L_h1,L_12, flag_jac=False ):
@@ -1634,6 +1634,7 @@ def analytical_MB_Forces( Fx,Fy,Fz, Mx,My,Mz, L_h1,L_12, flag_jac=False ):
     Analytical low-fidelity (quick) main bearing force calculation,
     using static equilibrium or moment balance, 
     unlike higher fidelity `Hub_Rotor_LSS_Frame` using pyFrame3DD.
+    [depr.]
 
     Inputs
     -------
@@ -1756,6 +1757,116 @@ def analytical_MB_Forces( Fx,Fy,Fz, Mx,My,Mz, L_h1,L_12, flag_jac=False ):
 
         dFmb2_dLh1 = np.stack([dFmb2ax_dLh1,dFmb2y_dLh1,dFmb2z_dLh1,dFmb2rad_dLh1])
         dFmb2_dL12 = np.stack([dFmb2ax_dL12,dFmb2y_dL12,dFmb2z_dL12,dFmb2rad_dL12])
+
+        return F_mb1, F_mb2, dFmb1_dLh1, dFmb1_dL12, dFmb2_dLh1, dFmb2_dL12
+    # ==============================
+
+# ---------------
+def analytical_MBforces_realistic( Fx,Fy,Fz, Mx,My,Mz, m_carrier,delta,tilt,
+        L_h1,L_12, flag_jac=False ):
+    """
+    Analytical low-fidelity main bearing force calculation,
+    using static equilibrium about MB2 (fixed; TRB2)
+    Using 4-node formulation, includes carrier mass at shaft-end (GB-input)
+
+    Inputs
+    -------
+    F* : float array[ # of time steps , # of wind speeds ], [N]
+        Forces (aero) on the hub center/main shaft input; for FLS, shape=(72e4,10)
+    M* : float array[ # of time steps , # of wind speeds ], [Nm]
+        Moment (aero) on the hub center/main shaft input; for FLS, shape=(72e4,10)
+    m_carrier : float, [kg]
+        mass of the planet carrier (gearbox's first stage): calculated in gearbox.py
+    delta : float, [m]
+        separation between MB2 and gearbox attachment (constant 0.5 in layout.py)
+    tilt : float, [rad]
+        drivetrain tilt angle
+    L_h1 : float
+        length along main shaft btw hub and mb1
+    L_12 : float
+        length along main shaft btw mb1 and mb2
+    flag_jac : Boolean
+        whether to provide analytical derivatives (True) or not (False)
+
+    Outputs
+    -------
+    F_mb1 : All forces on the 1. main bearing
+        shape = (4, shape(F*) )
+    F_mb2 : All forces on the 2. main bearing
+        shape = (4, shape(F*) )
+    
+    --- if flag_jac = True ---
+    dFmb1_dLh1 : All derivatives of mb1 forces wrt. L_h1
+        shape = (4, shape(F_mb1) )
+    dFmb1_dLh1 : All derivatives of mb1 forces wrt. L_12
+        shape = (4, shape(F_mb1) )
+    dFmb2_dLh1 : All derivatives of mb2 forces wrt. L_h1
+        shape = (4, shape(F_mb2) )
+    dFmb2_dL12 : All derivatives of mb2 forces wrt. L_12
+        shape = (4, shape(F_mb2) )
+
+    Internal Progress
+    --------------
+    - DONE : implement as a function, general purpose
+    - TODO?: implement as a openMDAO Explicit Component
+    - TODO : add analytical gradients
+    """
+    # init
+    g = 9.81 # m^2/s
+    x3 = L_h1 + L_12
+    n_ts, n_ws = Fx.shape[0], Fx.shape[1] # = 72e4, 10
+    ### === Loads on bearings ===
+    F_mb1 = np.zeros( (n_ts,n_ws,4) ) # for 4 forces (ax,y,z,rad)
+    F_mb2 = np.zeros( (n_ts,n_ws,4) ) # for 4 forces (ax,y,z,rad)
+        
+    # --- MB1 (CRB) ---
+    F_mb1_ax = np.zeros_like(Fx)
+    F_mb1_y = ( Mz - (Fy*x3) ) / L_12
+    F_mb1_z = ( - My - (Fz*x3) + (m_carrier*g*np.cos(tilt)*delta) ) / L_12
+    F_mb1_rad = np.hypot(F_mb1_y, F_mb1_z) # element-wise
+
+    # --- MB2 (DRTRB) ---
+    F_mb2_ax = np.abs( -Fx - (m_carrier*g*np.sin(tilt)) ) # `abs` coz mb2 reacts to the axial load, regardless if tensile or compressive.
+    F_mb2_y = -Fy - F_mb1_y
+    F_mb2_z = -Fz - F_mb1_z + (m_carrier*g*np.cos(tilt))
+    F_mb2_rad = np.hypot(F_mb2_y, F_mb2_z) # element-wise
+
+    # ----- collect for outputs
+    F_mb1 = np.stack([F_mb1_ax, F_mb1_y, F_mb1_z, F_mb1_rad])
+    F_mb2 = np.stack([F_mb2_ax, F_mb2_y, F_mb2_z, F_mb2_rad])
+
+    if not flag_jac:
+        return F_mb1, F_mb2
+    # ==============================
+
+    else:
+    ### === Derivatives of loads wrt. L_* ===
+    # init
+        dFmb1_dLh1 = F_mb1                # ----- main jac outputs -----
+        dFmb1_dL12 = F_mb1
+        dFmb2_dLh1 = F_mb2
+        dFmb2_dL12 = F_mb2
+
+        # ---- MB1 derivatives ----       # TODO
+        # dFmb1y_dLh1 = -Fy / L12
+        # dFmb1y_dL12 = -(Fy * L12 - Fy * x3) / L12**2
+
+        # dFmb1z_dLh1 = -Fz / L12
+        # dFmb1z_dL12 = -(Fz * L12 - Fz * x3) / L12**2
+
+        # # ---- MB2 depends on MB1 ----
+        # dFmb2y_dLh1 = -dFmb1y_dLh1
+        # dFmb2y_dL12 = -dFmb1y_dL12
+
+        # dFmb2z_dLh1 = -dFmb1z_dLh1
+        # dFmb2z_dL12 = -dFmb1z_dL12
+
+        # ----- collect for outputs
+        # dFmb1_dLh1 = np.stack([dFmb1ax_dLh1,dFmb1y_dLh1,dFmb1z_dLh1,dFmb1rad_dLh1])
+        # dFmb1_dL12 = np.stack([dFmb1ax_dL12,dFmb1y_dL12,dFmb1z_dL12,dFmb1rad_dL12])
+
+        # dFmb2_dLh1 = np.stack([dFmb2ax_dLh1,dFmb2y_dLh1,dFmb2z_dLh1,dFmb2rad_dLh1])
+        # dFmb2_dL12 = np.stack([dFmb2ax_dL12,dFmb2y_dL12,dFmb2z_dL12,dFmb2rad_dL12])
 
         return F_mb1, F_mb2, dFmb1_dLh1, dFmb1_dL12, dFmb2_dLh1, dFmb2_dL12
     # ==============================
@@ -1906,6 +2017,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
     --------------
     - DONE : implement as a openMDAO Explicit Component
     - DONE : make DLC load series (yaml; not local stored) compatible with WEIS iA
+    - TODO : modify for more_realisitc analy_MBforces: add relevant inputs
     - TODO : use log-space constraints?
     """
     
@@ -1933,10 +2045,13 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input('Y1_mb', val=1.0, desc='Bearing light coefficient for P calculation')
         self.add_input('X2_mb', val=1.0, desc='Bearing heavy coefficient for P calculation')
         self.add_input('Y2_mb', val=1.0, desc='Bearing heavy coefficient for P calculation')
-        # - operational
+        # - 3. operational
         self.add_input('rated_rpm', val=7.56, desc='Nominal/rated rotational speed', units='rpm')
         self.add_input('lifetime', val=25.0, desc='Wind turbine design life')
-
+        # - 4. drivetrain
+        self.add_input("carrier_mass", 0.0, units="kg")
+        self.add_input("tilt", 0.0, units="deg")
+        self.add_input("s_lss", val=np.zeros(5), units="m")
         # Outputs
         self.add_output('L10h_mb1', val=0.0, desc='L10 life MB1', units='h')
         self.add_output('L10h_mb2', val=0.0, desc='L10 life MB2', units='h')
@@ -1958,11 +2073,16 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         e, p = inputs['e_mb'], inputs['p_mb']
         X1, Y1 = inputs['X1_mb'], inputs['Y1_mb']
         X2, Y2 = inputs['X2_mb'], inputs['Y2_mb']
-        
+        # LSS
         L_12 = inputs['L_12']
         L_h1 = inputs['L_h1']
         n0 = inputs['rated_rpm']
-        
+        # drivetrain
+        tilt_rad = float(np.deg2rad(inputs["tilt"][0]))
+        m_carrier = float(inputs["carrier_mass"][0])
+        s_lss = inputs["s_lss"]
+        delta = float(s_lss[1]-s_lss[0])
+
         # loads: extract from self, cf. setup()
         loads_dict = self.loads_dict
         Fx = loads_dict['Fx']
@@ -1975,8 +2095,13 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         omega = loads_dict['rot_speed']
 
         # Bearing loads (analytical) calculation: shape=(4, 72000, 11)
-        Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MB_Forces(
-            Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=True )
+        # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MB_Forces(
+        #     Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=True )
+        # --- more realistic
+        Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MBforces_realistic(
+            Fx,Fy,Fz,Mx,My,Mz,
+            m_carrier,delta,tilt_rad,
+            L_h1,L_12,flag_jac=True)
         # ----- extract axial and radial forces
         F_mb1_rad = Fmb1[3, :, :]                           # shape (720000,10)
         F_mb2_ax, F_mb2_rad = Fmb2[0, :, :], Fmb2[3, :, :]  # shape (720000,10)
@@ -2044,6 +2169,7 @@ class Analytical_FLS_Bearing_Life_Derivatives( Analytical_FLS_Bearing_Life ):
     --------------
     - DONE : new subclass: analytical gradients (declare_partials, compute_partials)
     - TODO : check and verify: rn error: calc O(-8), fd O(-2)
+    -- check by a new Compn for each step (forces, P, DEL, constr) and check_partials()?
     """
 
     def setup_partials(self):
