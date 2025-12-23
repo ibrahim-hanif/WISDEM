@@ -30,7 +30,7 @@ import openmdao.api as om
 # import pickle
 
 # %%
-from wisdem.drivetrainse.drivetrain import DriveMaterials
+from wisdem.drivetrainse.drivetrain import DriveMaterials, DrivetrainSE_M4W
 
 from wisdem.drivetrainse.hub import Hub_System
 from wisdem.drivetrainse.gearbox import Gearbox
@@ -60,6 +60,16 @@ loc_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "03")
+loc_xdsm = os.path.join(results_path, 'xdsm_03')
+
+#%%
+# Record results?
+record_cases = False #TODO: add in final setup (full problem)
+if record_cases:
+    print(" ---- Recording cases using `SqliteRecorder` ---- ")
+    loc_cases = os.path.join(results_path, "cases_recorded.sql")
+    if os.path.exists( loc_cases ):
+        os.remove( loc_cases )
 
 #%% Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -135,191 +145,191 @@ opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.1429
 # %% [markdown]
 # ### Defining the model `problem class`:
 # as an openMDAO group that uses DrivetrainSE classes as components
-class DrivetrainSE_M4W( om.Group ):
-    """
-    Group containing components for the layout of the LSS components
-    """
-    def initialize(self):
-        self.options.declare("modeling_options")
+# class DrivetrainSE_M4W( om.Group ):
+#     """
+#     Group containing components for the layout of the LSS components
+#     """
+#     def initialize(self):
+#         self.options.declare("modeling_options")
 
-    def setup(self):
-        opt_drivese = self.options["modeling_options"]["WISDEM"]["DriveSE"]
-        # OpenFAST: containing 1. simulation DT and 2. MS loads dir
-        opt_openfast = self.options["modeling_options"]["OpenFAST"]
-        # DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
-        opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
+#     def setup(self):
+#         opt_drivese = self.options["modeling_options"]["WISDEM"]["DriveSE"]
+#         # OpenFAST: containing 1. simulation DT and 2. MS loads dir
+#         opt_openfast = self.options["modeling_options"]["OpenFAST"]
+#         # DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
+#         opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
 
-        n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
-        direct = opt_drivese["direct"]
-        if direct:
-            use_gb_torque_density = False
-        else:
-            use_gb_torque_density = opt_drivese["use_gb_torque_density"]
+#         n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
+#         direct = opt_drivese["direct"]
+#         if direct:
+#             use_gb_torque_density = False
+#         else:
+#             use_gb_torque_density = opt_drivese["use_gb_torque_density"]
             
-        dogen = self.options["modeling_options"]["flags"]["generator"]
-        n_pc = self.options["modeling_options"]["WISDEM"]["RotorSE"]["n_pc"]
-        flag_hub = self.options["modeling_options"]["flags"]["hub"] #TODO: this modified; remove and add hub as legacy
+#         dogen = self.options["modeling_options"]["flags"]["generator"]
+#         n_pc = self.options["modeling_options"]["WISDEM"]["RotorSE"]["n_pc"]
+#         flag_hub = self.options["modeling_options"]["flags"]["hub"] #TODO: this modified; remove and add hub as legacy
         
-        # print flag information
-        print("=== Problem 'DrivetrainSE_M4W' setting up ===")
-        print(f"flag info: use_gb_torque_density={use_gb_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
+#         # print flag information
+#         print("=== Problem 'DrivetrainSE_M4W' setting up ===")
+#         print(f"flag info: use_gb_torque_density={use_gb_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
 
-        # self.set_input_defaults("machine_rating", units="kW")
-        #self.set_input_defaults("hvac_mass_coeff", 0.025, units="kg/kW/m")
+#         # self.set_input_defaults("machine_rating", units="kW")
+#         #self.set_input_defaults("hvac_mass_coeff", 0.025, units="kg/kW/m")
 
-        # Materials prep
-        self.add_subsystem(
-            "mat",
-            DriveMaterials(direct=direct, n_mat=self.options["modeling_options"]["materials"]["n_mat"]),
-                promotes=["*"]
-            )
-        # - for 'layout' component: need = lss_rho, bedplate_rho, hss_rho 
+#         # Materials prep
+#         self.add_subsystem(
+#             "mat",
+#             DriveMaterials(direct=direct, n_mat=self.options["modeling_options"]["materials"]["n_mat"]),
+#                 promotes=["*"]
+#             )
+#         # - for 'layout' component: need = lss_rho, bedplate_rho, hss_rho 
 
-        # Before the layout, need to do these first
-        # 1. hub system (perf hub system optimization)
-        if flag_hub: # bypass rn, TODO later
-            self.add_subsystem(
-                "hub", Hub_System(modeling_options=opt_drivese["hub"]),
-                    promotes=["*"]
-                )
+#         # Before the layout, need to do these first
+#         # 1. hub system (perf hub system optimization)
+#         if flag_hub: # bypass rn, TODO later
+#             self.add_subsystem(
+#                 "hub", Hub_System(modeling_options=opt_drivese["hub"]),
+#                     promotes=["*"]
+#                 )
         
-        # # 2. gearbox
-        self.add_subsystem(
-            "gear", Gearbox(direct_drive=direct, use_gb_torque_density=use_gb_torque_density),
-                promotes=["*"]
-            )
+#         # # 2. gearbox
+#         self.add_subsystem(
+#             "gear", Gearbox(direct_drive=direct, use_gb_torque_density=use_gb_torque_density),
+#                 promotes=["*"]
+#             )
 
-        # Layout (just discretization of DT and each compn, output 's_drive', etc.)
-        #if not direct:
-        self.add_subsystem(
-            'layout', lay.GearedLayout(),
-                promotes=["*"]
-            )
+#         # Layout (just discretization of DT and each compn, output 's_drive', etc.)
+#         #if not direct:
+#         self.add_subsystem(
+#             'layout', lay.GearedLayout(),
+#                 promotes=["*"]
+#             )
         
-        # All smaller components (from `dc`; empirical no load analysis)
-        # - required by `Hub_Rotor_LSS_Frame`
-        # 0. Main Bearings
-        self.add_subsystem("bear1", dc.MainBearing())
-        self.add_subsystem("bear2", dc.MainBearing())
-        # -connecting = GearedLayout -to- bear(1,2) (NEW)
-        self.connect("Dshaft_mb1", "bear1.D_shaft") #DONE: impl later
-        self.connect("Dshaft_mb2", "bear2.D_shaft") #DONE: impl later
-        # 1. brake system
-        self.add_subsystem(
-            "brake", dc.Brake(direct_drive=direct),
-                promotes=["*"]
-            )
-        # 2. electronics
-        self.add_subsystem(
-            "elec", dc.Electronics(),
-            promotes=["*"]
-            )
-        # 3. yaw system
-        self.add_subsystem(
-            "yaw", dc.YawSystem(),
-            promotes=["yaw_mass", "yaw_mass_user", "yaw_I", "yaw_cm", "rotor_diameter", "D_top"]
-            )
+#         # All smaller components (from `dc`; empirical no load analysis)
+#         # - required by `Hub_Rotor_LSS_Frame`
+#         # 0. Main Bearings
+#         self.add_subsystem("bear1", dc.MainBearing())
+#         self.add_subsystem("bear2", dc.MainBearing())
+#         # -connecting = GearedLayout -to- bear(1,2) (NEW)
+#         self.connect("Dshaft_mb1", "bear1.D_shaft") #DONE: impl later
+#         self.connect("Dshaft_mb2", "bear2.D_shaft") #DONE: impl later
+#         # 1. brake system
+#         self.add_subsystem(
+#             "brake", dc.Brake(direct_drive=direct),
+#                 promotes=["*"]
+#             )
+#         # 2. electronics
+#         self.add_subsystem(
+#             "elec", dc.Electronics(),
+#             promotes=["*"]
+#             )
+#         # 3. yaw system
+#         self.add_subsystem(
+#             "yaw", dc.YawSystem(),
+#             promotes=["yaw_mass", "yaw_mass_user", "yaw_I", "yaw_cm", "rotor_diameter", "D_top"]
+#             )
         
-        # Generator (simple for now)
-        self.add_subsystem(
-            "rpm", dc.RPM_Input(n_pc=n_pc),
-            promotes=["*"]
-            )
-        # - TODO: add M4W gen data / `if dogen:`
-        self.add_subsystem(
-            "gensimp", dc.GeneratorSimple(direct_drive=direct, n_pc=n_pc),
-            promotes=["*"]
-            )
+#         # Generator (simple for now)
+#         self.add_subsystem(
+#             "rpm", dc.RPM_Input(n_pc=n_pc),
+#             promotes=["*"]
+#             )
+#         # - TODO: add M4W gen data / `if dogen:`
+#         self.add_subsystem(
+#             "gensimp", dc.GeneratorSimple(direct_drive=direct, n_pc=n_pc),
+#             promotes=["*"]
+#             )
 
-        # Hub_Rotor_LSS_Frame:
-        self.add_subsystem(
-            "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt_drivese),
-                promotes=["*"]
-            )
-        # -connecting = bear(1,2) -to- Hub_Rotor_LSS_Frame (NEW)
-        self.connect("bear1.face_width", "mb1_face_width") # mb_fw(s) shifted from GearedLayout to Hub_* to avoid cycle
-        self.connect("bear2.face_width", "mb2_face_width")
-        self.connect("bear1.mb_Reactions", "mb1_Reactions")
-        self.connect("bear2.mb_Reactions", "mb2_Reactions")
+#         # Hub_Rotor_LSS_Frame:
+#         self.add_subsystem(
+#             "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt_drivese),
+#                 promotes=["*"]
+#             )
+#         # -connecting = bear(1,2) -to- Hub_Rotor_LSS_Frame (NEW)
+#         self.connect("bear1.face_width", "mb1_face_width") # mb_fw(s) shifted from GearedLayout to Hub_* to avoid cycle
+#         self.connect("bear2.face_width", "mb2_face_width")
+#         self.connect("bear1.mb_Reactions", "mb1_Reactions")
+#         self.connect("bear2.mb_Reactions", "mb2_Reactions")
         
-        # FLS MBs (Analytical); TODO: input opt_openfast and opt_DLC.
-        self.add_subsystem(
-            "mb_fls", ds.Analytical_FLS_Bearing_Life(
-                modeling_options=opt_drivese,
-                openfast_options=opt_openfast,
-                dlc_options=opt_DLC
-                ),
-            promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime"],
-            promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
-        )
-        # -connecting = bear(1,2) -to- Analy_*
-        self.connect("bear2.mb_e", "mb_fls.e_mb") # same for both MBs ---
-        self.connect("bear2.mb_p", "mb_fls.p_mb")
-        self.connect("bear2.mb_X1", "mb_fls.X1_mb")
-        self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
-        self.connect("bear2.mb_X2", "mb_fls.X2_mb")
-        self.connect("bear2.mb_Y2", "mb_fls.Y2_mb") # ---
-        self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
-        self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
+#         # FLS MBs (Analytical); TODO: input opt_openfast and opt_DLC.
+#         self.add_subsystem(
+#             "mb_fls", ds.Analytical_FLS_Bearing_Life(
+#                 modeling_options=opt_drivese,
+#                 openfast_options=opt_openfast,
+#                 dlc_options=opt_DLC
+#                 ),
+#             promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss"],
+#             promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
+#         )
+#         # -connecting = bear(1,2) -to- Analy_*
+#         self.connect("bear2.mb_e", "mb_fls.e_mb") # same for both MBs ---
+#         self.connect("bear2.mb_p", "mb_fls.p_mb")
+#         self.connect("bear2.mb_X1", "mb_fls.X1_mb")
+#         self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
+#         self.connect("bear2.mb_X2", "mb_fls.X2_mb")
+#         self.connect("bear2.mb_Y2", "mb_fls.Y2_mb") # ---
+#         self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
+#         self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
 
-        # HSS
-        self.add_subsystem(
-            "hss", ds.HSS_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
-            promotes=["*"]
-            )
+#         # HSS
+#         self.add_subsystem(
+#             "hss", ds.HSS_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
+#             promotes=["*"]
+#             )
 
-        # Final tallying (mass summation)
-        self.add_subsystem(
-            "misc", dc.MiscNacelleComponents(direct_drive=direct),
-            promotes=["*"]
-            )
-        self.add_subsystem(
-            "nac", dc.NacelleSystemAdder(direct_drive=direct),
-            promotes=["*"]
-            )
-        # -connecting NacelleSystemAdder to Layout
-        self.connect("s_mb1", "mb1_cm") # mb*_cm is the s_* itself
-        self.connect("s_mb2", "mb2_cm")
-        self.connect("s_gearbox", "gearbox_cm")
-        self.connect("s_generator", "generator_cm")
-        # -connecting = bear(1,2) -to- NacelleSystemAdder
-        # -- already done with Bedplate_* (below; to avoid a cycle)
-        self.add_subsystem(
-            "rna", dc.RNA_Adder(),
-            promotes=["*"]
-            )
+#         # Final tallying (mass summation)
+#         self.add_subsystem(
+#             "misc", dc.MiscNacelleComponents(direct_drive=direct),
+#             promotes=["*"]
+#             )
+#         self.add_subsystem(
+#             "nac", dc.NacelleSystemAdder(direct_drive=direct),
+#             promotes=["*"]
+#             )
+#         # -connecting NacelleSystemAdder to Layout
+#         self.connect("s_mb1", "mb1_cm") # mb*_cm is the s_* itself
+#         self.connect("s_mb2", "mb2_cm")
+#         self.connect("s_gearbox", "gearbox_cm")
+#         self.connect("s_generator", "generator_cm")
+#         # -connecting = bear(1,2) -to- NacelleSystemAdder
+#         # -- already done with Bedplate_* (below; to avoid a cycle)
+#         self.add_subsystem(
+#             "rna", dc.RNA_Adder(),
+#             promotes=["*"]
+#             )
         
-        # Bedplate_IBeam_Frame:
-        self.add_subsystem(
-            "bed", ds.Bedplate_IBeam_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
-                promotes=["*"]
-            )
-        # -connecting = bear(1,2) -to- Bedplate_*
-        self.connect("bear1.mb_mass", "mb1_mass")
-        # self.connect("bear1.mb_cm", "mb1_cm")
-        self.connect("bear1.mb_I", "mb1_I")
-        self.connect("bear1.mb_max_defl_ang", "mb1_max_defl_ang")
-        self.connect("bear2.mb_mass", "mb2_mass")
-        # self.connect("bear2.mb_cm", "mb2_cm")
-        self.connect("bear2.mb_I", "mb2_I")
-        self.connect("bear2.mb_max_defl_ang", "mb2_max_defl_ang")
-        # -connecting = Bedplate_* to Yaw*
-        self.connect("bedplate_rho", "yaw.rho")
+#         # Bedplate_IBeam_Frame:
+#         self.add_subsystem(
+#             "bed", ds.Bedplate_IBeam_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
+#                 promotes=["*"]
+#             )
+#         # -connecting = bear(1,2) -to- Bedplate_*
+#         self.connect("bear1.mb_mass", "mb1_mass")
+#         # self.connect("bear1.mb_cm", "mb1_cm")
+#         self.connect("bear1.mb_I", "mb1_I")
+#         self.connect("bear1.mb_max_defl_ang", "mb1_max_defl_ang")
+#         self.connect("bear2.mb_mass", "mb2_mass")
+#         # self.connect("bear2.mb_cm", "mb2_cm")
+#         self.connect("bear2.mb_I", "mb2_I")
+#         self.connect("bear2.mb_max_defl_ang", "mb2_max_defl_ang")
+#         # -connecting = Bedplate_* to Yaw*
+#         self.connect("bedplate_rho", "yaw.rho")
 
-        # = mat -to- hub
-        if flag_hub:
-            self.connect("bedplate_rho", ["pitch_system.rho", "spinner.metal_rho"])
-            self.connect("bedplate_Xy", ["pitch_system.Xy", "spinner.Xy"])
-            self.connect("bedplate_mat_cost", "spinner.metal_cost")
-            self.connect("hub_rho", "hub_shell.rho")
-            self.connect("hub_Xy", "hub_shell.Xy")
-            self.connect("hub_mat_cost", "hub_shell.metal_cost")
-            self.connect("spinner_rho", "spinner.composite_rho")
-            self.connect("spinner_Xt", "spinner.composite_Xt")
-            self.connect("spinner_mat_cost", "spinner.composite_cost")
+#         # = mat -to- hub
+#         if flag_hub:
+#             self.connect("bedplate_rho", ["pitch_system.rho", "spinner.metal_rho"])
+#             self.connect("bedplate_Xy", ["pitch_system.Xy", "spinner.Xy"])
+#             self.connect("bedplate_mat_cost", "spinner.metal_cost")
+#             self.connect("hub_rho", "hub_shell.rho")
+#             self.connect("hub_Xy", "hub_shell.Xy")
+#             self.connect("hub_mat_cost", "hub_shell.metal_cost")
+#             self.connect("spinner_rho", "spinner.composite_rho")
+#             self.connect("spinner_Xt", "spinner.composite_Xt")
+#             self.connect("spinner_mat_cost", "spinner.composite_cost")
 
-            self.connect("hub_rho", "rho_castiron")
-            self.connect("spinner_rho", "rho_fiberglass")
+#             self.connect("hub_rho", "rho_castiron")
+#             self.connect("spinner_rho", "rho_fiberglass")
 
 # %% [markdown]
 # ### Setup the problem
@@ -338,15 +348,16 @@ if flag_opt_GBO:
     # Choose the (GBO) optimizer to use
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
-    prob.driver.options["tol"] = 1e-3 # default: 1e-6
-    prob.driver.options["maxiter"] = 5 * 4
+    prob.driver.options["tol"] = 1e-4 # default: 1e-6
+    prob.driver.options["maxiter"] = 5 * 6
     prob.driver.options["disp"] = True
     prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
     # prob.driver.options # disp for debugging
     # prob.set_solver_print(level=2)
 
-    # recorder = om.SqliteRecorder( loc_cases )     #TODO: add in final setup (full problem)
-    # prob.driver.add_recorder( recorder=recorder )
+    if record_cases:
+        recorder = om.SqliteRecorder( loc_cases )
+        prob.driver.add_recorder( recorder=recorder )
 
 elif flag_opt_GFO:
     print("=== running GFO ===")
@@ -376,16 +387,22 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # === Add design variables === 
     # 1. LSS
     prob.model.add_design_var("L_12", lower=0.5, upper=10.0, ref=10.0, ref0=0.5)
-    prob.model.add_design_var("L_h1", lower=0.5, upper=5.0, ref=5.0, ref0=0.5)
+    prob.model.add_design_var("L_h1", lower=0.2, upper=5.0, ref=5.0, ref0=0.2)
     prob.model.add_design_var("lss_diameter", lower=0.5, upper=4.0, ref=4.0, ref0=0.5)
-    prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.9, ref=1e-1) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
+    prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.9, ref=0.9, ref0=4e-3) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
 
     # 2. HSS (TODO: add later if needed)
+    prob.model.add_design_var("L_hss", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
+    prob.model.add_design_var("hss_diameter", lower=0.5, upper=6.0, ref=6.0, ref0=0.5)
+    prob.model.add_design_var("hss_wall_thickness", lower=4e-3, upper=0.5, ref=0.5, ref0=4e-3)
 
     # 3. Bedplate (TODO: add later if needed)
     prob.model.add_design_var("bedplate_web_thickness", lower=4e-3, upper=5e-1, ref=5e-1, ref0=4e-3)
     prob.model.add_design_var("bedplate_flange_thickness", lower=4e-3, upper=5e-1, ref=5e-1, ref0=4e-3)
     prob.model.add_design_var("bedplate_flange_width", lower=0.1, upper=2.0, ref=2.0, ref0=0.1)
+
+    # 4. hub
+    # prob.model.add_design_var("hub_diameter", lower=2.0, upper=5.0)
 
     # === Add constraints ===    
     if flag_DOE: pass # DOE: no constraints
@@ -393,6 +410,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # 1. von Mises stress util
     prob.model.add_constraint("constr_lss_vonmises", upper=1.0)         #DONE: add next
     prob.model.add_constraint("constr_bedplate_vonmises", upper=1.0)    #TODO: add if needed
+    prob.model.add_constraint("constr_hss_vonmises", upper=1.0)
 
     # 2. deflection #NOTE: scaling is better
     prob.model.add_constraint("constr_shaft_deflection", upper=1.0)         #DONE: add next
@@ -413,9 +431,30 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     prob.model.add_constraint("constr_Lh1_MB1fw", lower=0.0, ref=1e1)   #DONE: add later
     prob.model.add_constraint("constr_L12_MBsFW", lower=0.0, ref=1e0)   #DONE: add later
 
+    # 4. hub
+    # - hub dia to accom. blades' roots
+    # prob.model.add_constraint("constr_hub_diameter", lower=0.0)
+
 # %%
 # Setup the problem
 prob.setup()
+
+#%%[markdown]
+### pyXDSM trial
+#%%
+from omxdsm import write_xdsm
+
+write_xdsm(
+    prob,
+    filename=loc_xdsm,
+    out_format='pdf', # pdf / html
+    show_browser=True,
+    quiet=False,
+    output_side='left',
+    include_indepvarcomps=False,
+    class_names=False
+)
+# -----
 
 # %%[markdown]
 # ###
@@ -439,7 +478,7 @@ prob.model.list_outputs();
 # - TODO: check windIO (02_ref WTs) data and change below
 prob.set_val("machine_rating", 15.0, units="MW")
 prob["rotor_diameter"] = 240.0 # TODO: ref.1 = 240, geo_schema = 241.35064632
-prob["rated_torque"] = 4308926.79641971
+prob["rated_torque"] = 21.03*1e6 # [Nm] ref.2, tab.5-4
 prob["minimum_rpm"] = 5.0 # needed by RPM_Input
 prob["rated_rpm"] = 7.56
 prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
@@ -553,27 +592,26 @@ prob["bear2.mb_e"] = 3.5
 # prob["bear2.mb_p"] = 3.33
 
 # Layout / lss inputs
-prob["L_h1"] = 0.5 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
-prob["L_12"] = 7.0 #(def:1.2), 7.1
-prob["lss_diameter"] = myones * 2.0 #(def:1.0), 4.0
-prob["lss_wall_thickness"] = myones * 0.1 #(def:0.1), 0.3
+prob["L_h1"] = 0.52 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
+prob["L_12"] = 4.91 #(def:1.2), 7.1
+prob["lss_diameter"] = np.array([3.48486711, 2.10441671]) #(def:1.0), 4.0
+prob["lss_wall_thickness"] = np.array([0.01697175, 0.07193763]) #(def:0.1), 0.3
 
 # Gearbox inputs
 # prob["L_gearbox"] = 1.5 #(v) calc in gearbox.py
 # prob["gear_configuration"] = "eee"
 # prob["planet_numbers"] = np.array([5, 3, 0]) #ref.1
 prob["gear_ratio"] = 50 #.039
-#prob["gearbox_mass_user"] = 0.0 #(cf. defined default 0.0 line 156, gearbox.py)
-prob["gearbox_torque_density"] = 200.0 # (cf. line 210, gearbox.py)
+prob["gearbox_mass_user"] = 135.5*1e3 # D5.1 R2
+# prob["gearbox_torque_density"] = 200.0 # (cf. line 210, gearbox.py)
 
 # HSS (TODO: consider as DV if needed)
-prob["L_hss"] = 1.5
-prob["hss_diameter"] = 0.5 * myones
-prob["hss_wall_thickness"] = 0.1 * myones
+prob["L_hss"] = 0.25
+prob["hss_diameter"] = np.array([0.7357321 , 0.83711182])
+prob["hss_wall_thickness"] = np.array([0.07117872, 0.05547198])
 
 # Generator inputs (TODO: add compn later)
 # - needed by Bedplate_IBeam_Frame in drive_structure.py, output of HSS_Frame
-# - copied from made4wind_geared.py's output drivetrain_example.csv
 # prob["R_generator"] = 1.7999999999999998
 prob["L_generator"] = 4.2
 # TODO: opts:
@@ -589,7 +627,7 @@ prob["L_generator"] = 4.2
 # prob["M_generator"] = np.array([[420611.2199999999], [-1687869.5522841304], [-0.0]])
 
 # TODO: Ingeteam generator dimensions (email 15.12.25 from Bidane):
-# Mass [kg] = 8 Tn per 8MW conversion line
+# Mass [kg] = 3 Tn per 8MW conversion line
 prob["generator_mass_user"] = (3*1e3/8)*(
     prob["machine_rating"]/1e3)
 # Overall dimensions (est. very preliminary): 2400x800x4200 mm [HxWxL]
@@ -610,9 +648,10 @@ def calc_drive_height(prob):
 prob["drive_height"] = 5.614 # (def: 5.614 for 15MW DD)
 
 # bedplate: Hub:_Rotor_LSS_Frame, Bedplate_IBeam_Frame inputs
-prob["bedplate_flange_width"] = 1.0
-prob["bedplate_flange_thickness"] = 0.1
-prob["bedplate_web_thickness"] = 0.1
+# --- below vals from ONLY bedplate optim (desvars, constr) for nacelle mass min
+prob["bedplate_flange_width"] = 1.6
+prob["bedplate_flange_thickness"] = 0.040
+prob["bedplate_web_thickness"] = 0.02
 
 # `Hub_*` requires:
 prob["shaft_deflection_allowable"] = 1e-4 # within Hub_Rotor_LSS_Frame (below): Deflections and rotations at GB attachment
@@ -684,16 +723,18 @@ list_driver_vars = prob.list_driver_vars()
 
 #%%[markdown]
 # Driver scaling report 
-prob.driver.scaling_report(outfile=loc_scaling_report)
+prob.driver.scaling_report(outfile=loc_scaling_report);
 
 #%%
-### Recorded cases #TODO
-# print("\n=== Recorded cases from the optimization ===\n")
-# results_dict = get_recorder_results( loc_cases, None, True )
-# results_dict
-# ===============================================================
+### Recorded cases
+if record_cases:
+    print("\n=== Recorded cases from the optimization ===\n")
+    results_dict = get_recorder_results( loc_cases, None, True )
+    print(results_dict);
+
+# ### Plot recorded results TODO
 
 #%%
 save_data(loc_save_data, prob)
-
-#%%
+# ===============================================================
+# %%
