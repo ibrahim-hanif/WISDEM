@@ -10,6 +10,7 @@
 import os
 import numpy as np
 import openmdao.api as om
+import matplotlib.pyplot as plt
 # import scipy.io as sio # --- not used in here, but within imports
 # import pickle
 
@@ -61,10 +62,24 @@ L_h1 = 2; L_12 = 5
 Fmb1, Fmb2, dFmb1dLh1, dFmb1dL12, dFmb2dLh1, dFmb2dL12 = ds.analytical_MB_Forces(
     Fx,Fy,Fz,Mx,My,Mz,L_h1,L_12, flag_jac=True)
 
+#%%
+machine_rating = 15e6 #MW
+tilt_rad = np.deg2rad(6)
+delta = 0.5
+
+m_shrink_disc = (machine_rating*1e-3)/3.0
+m_carrier = 8e3
+carrier_mass = m_shrink_disc + m_carrier
+
+Fmb1_real, Fmb2_real = ds.analy_more_realistic_MBforces(
+    Fx,Fy,Fz,Mx,My,Mz,
+    m_carrier, delta, tilt_rad,
+    L_h1,L_12, flag_jac=False)
+
 # %% P_* computation
 P = Fmb1[3,:,:]
 n_t, n_w = P.shape[0], P.shape[1]
-ws = S_all['mean_wind_speed'][0,:n_w]
+ws_full = S_all['mean_wind_speed']; ws = ws_full[0,:n_w]
 time = S_all['Time'][:n_t,0]; dt = 0.05
 omega = S_all['rot_speed'][:n_t,:n_w]
 p = 10/3
