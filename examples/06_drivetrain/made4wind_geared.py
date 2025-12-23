@@ -135,6 +135,7 @@ D_rotor = prob["rotor_diameter"] = 240.0
 prob["D_top"] = 6.5 #tower top diameter
 prob["minimum_rpm"] = 5.0 
 prob["rated_rpm"] = 7.56 
+# prob["rated_torque"] = 21.03*1e6 # [Nm] ref.2, tab.5-4
 
 # Loading from rotor
 #(v) actual ULS loads (source: copied felix main_shafft_siz code 20251031)

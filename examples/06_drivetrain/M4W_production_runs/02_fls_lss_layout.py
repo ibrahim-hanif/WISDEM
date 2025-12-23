@@ -448,7 +448,7 @@ prob.model.list_outputs();
 # 1. High-level Inputs
 prob.set_val("machine_rating", 15.0, units="MW")
 prob["rotor_diameter"] = 240.0
-prob["rated_torque"] = 4308926.79641971
+prob["rated_torque"] = 21.03*1e6 # [Nm] ref.2, tab.5-4
 # prob["minimum_rpm"] = 5
 prob["rated_rpm"] = 7.56
 prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
