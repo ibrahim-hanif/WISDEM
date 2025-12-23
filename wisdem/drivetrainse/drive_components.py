@@ -50,9 +50,12 @@ class MainBearing(om.ExplicitComponent):
 
     Internal Progress
     --------------
-    - NOTE: some Cr here emperical on VERY small bearings (<=2 m), may need update for large bearings: eg. CRB, TRB1, SRB, CARB
-    - DONE: connect D_shaft(s) to lss_diameter[]
-    - TODO: add reactions for each bearing type (Fa,Fr,M), which inputs to Hub_*
+    - NOTE : some Cr here emperical on VERY small bearings (<=2 m), may need update for large bearings: eg. CRB, TRB1, SRB, CARB
+    - DONE : connect D_shaft(s) to lss_diameter[]
+    - DONE : add reactions for each bearing type (Fa,Fr,M), which inputs to Hub_*
+    - TODO : analytical gradients wrt. D_shaft (DV); use JAX (easy iA)?
+    - TODO : change 'TRB2' name to 'DRTRB' (as per IEC-4)
+    - TODO : moment-reacting bearings = (TRB2, TRB, SRB) ?
     """
 
     def setup(self):
