@@ -289,3 +289,192 @@ class DrivetrainSE(om.Group):
                 nlbgs.options["iprint"] = 0
             else:
                 self.connect("hss_rpm", "generator.shaft_rpm")
+
+# ----------------------------------------------------------------------------------
+# Vasudev Gupta
+# ----------------------------------------------------------------------------------
+class DrivetrainSE_M4W( om.Group ):
+    """
+    Group containing components for the layout of the LSS components
+    """
+    def initialize(self):
+        self.options.declare("modeling_options")
+
+    def setup(self):
+        opt_drivese = self.options["modeling_options"]["WISDEM"]["DriveSE"]
+        # OpenFAST: containing 1. simulation DT and 2. MS loads dir
+        opt_openfast = self.options["modeling_options"]["OpenFAST"]
+        # DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
+        opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
+
+        n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
+        direct = opt_drivese["direct"]
+        if direct:
+            use_gb_torque_density = False
+        else:
+            use_gb_torque_density = opt_drivese["use_gb_torque_density"]
+            
+        dogen = self.options["modeling_options"]["flags"]["generator"]
+        n_pc = self.options["modeling_options"]["WISDEM"]["RotorSE"]["n_pc"]
+        flag_hub = self.options["modeling_options"]["flags"]["hub"] #TODO: this modified; remove and add hub as legacy
+        
+        # print flag information
+        print("=== Problem 'DrivetrainSE_M4W' setting up ===")
+        print(f"flag info: use_gb_torque_density={use_gb_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
+
+        # self.set_input_defaults("machine_rating", units="kW")
+        #self.set_input_defaults("hvac_mass_coeff", 0.025, units="kg/kW/m")
+
+        # Materials prep
+        self.add_subsystem(
+            "mat",
+            DriveMaterials(direct=direct, n_mat=self.options["modeling_options"]["materials"]["n_mat"]),
+                promotes=["*"]
+            )
+        # - for 'layout' component: need = lss_rho, bedplate_rho, hss_rho 
+
+        # Before the layout, need to do these first
+        # 1. hub system (perf hub system optimization)
+        if flag_hub: # bypass rn, TODO later
+            self.add_subsystem(
+                "hub", Hub_System(modeling_options=opt_drivese["hub"]),
+                    promotes=["*"]
+                )
+        
+        # # 2. gearbox
+        self.add_subsystem(
+            "gear", Gearbox(direct_drive=direct, use_gb_torque_density=use_gb_torque_density),
+                promotes=["*"]
+            )
+
+        # Layout (just discretization of DT and each compn, output 's_drive', etc.)
+        #if not direct:
+        self.add_subsystem(
+            'layout', lay.GearedLayout(),
+                promotes=["*"]
+            )
+        
+        # All smaller components (from `dc`; empirical no load analysis)
+        # - required by `Hub_Rotor_LSS_Frame`
+        # 0. Main Bearings
+        self.add_subsystem("bear1", dc.MainBearing())
+        self.add_subsystem("bear2", dc.MainBearing())
+        # -connecting = GearedLayout -to- bear(1,2) (NEW)
+        self.connect("Dshaft_mb1", "bear1.D_shaft") #DONE: impl later
+        self.connect("Dshaft_mb2", "bear2.D_shaft") #DONE: impl later
+        # 1. brake system
+        self.add_subsystem(
+            "brake", dc.Brake(direct_drive=direct),
+                promotes=["*"]
+            )
+        # 2. electronics
+        self.add_subsystem(
+            "elec", dc.Electronics(),
+            promotes=["*"]
+            )
+        # 3. yaw system
+        self.add_subsystem(
+            "yaw", dc.YawSystem(),
+            promotes=["yaw_mass", "yaw_mass_user", "yaw_I", "yaw_cm", "rotor_diameter", "D_top"]
+            )
+        
+        # Generator (simple for now)
+        self.add_subsystem(
+            "rpm", dc.RPM_Input(n_pc=n_pc),
+            promotes=["*"]
+            )
+        # - TODO: add M4W gen data / `if dogen:`
+        self.add_subsystem(
+            "gensimp", dc.GeneratorSimple(direct_drive=direct, n_pc=n_pc),
+            promotes=["*"]
+            )
+
+        # Hub_Rotor_LSS_Frame:
+        self.add_subsystem(
+            "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt_drivese),
+                promotes=["*"]
+            )
+        # -connecting = bear(1,2) -to- Hub_Rotor_LSS_Frame (NEW)
+        self.connect("bear1.face_width", "mb1_face_width") # mb_fw(s) shifted from GearedLayout to Hub_* to avoid cycle
+        self.connect("bear2.face_width", "mb2_face_width")
+        self.connect("bear1.mb_Reactions", "mb1_Reactions")
+        self.connect("bear2.mb_Reactions", "mb2_Reactions")
+        
+        # FLS MBs (Analytical); TODO: input opt_openfast and opt_DLC.
+        self.add_subsystem(
+            "mb_fls", ds.Analytical_FLS_Bearing_Life(
+                modeling_options=opt_drivese,
+                openfast_options=opt_openfast,
+                dlc_options=opt_DLC
+                ),
+            promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss"],
+            promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
+        )
+        # -connecting = bear(1,2) -to- Analy_*
+        self.connect("bear2.mb_e", "mb_fls.e_mb") # same for both MBs ---
+        self.connect("bear2.mb_p", "mb_fls.p_mb")
+        self.connect("bear2.mb_X1", "mb_fls.X1_mb")
+        self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
+        self.connect("bear2.mb_X2", "mb_fls.X2_mb")
+        self.connect("bear2.mb_Y2", "mb_fls.Y2_mb") # ---
+        self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
+        self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
+
+        # HSS
+        self.add_subsystem(
+            "hss", ds.HSS_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
+            promotes=["*"]
+            )
+
+        # Final tallying (mass summation)
+        self.add_subsystem(
+            "misc", dc.MiscNacelleComponents(direct_drive=direct),
+            promotes=["*"]
+            )
+        self.add_subsystem(
+            "nac", dc.NacelleSystemAdder(direct_drive=direct),
+            promotes=["*"]
+            )
+        # -connecting NacelleSystemAdder to Layout
+        self.connect("s_mb1", "mb1_cm") # mb*_cm is the s_* itself
+        self.connect("s_mb2", "mb2_cm")
+        self.connect("s_gearbox", "gearbox_cm")
+        self.connect("s_generator", "generator_cm")
+        # -connecting = bear(1,2) -to- NacelleSystemAdder
+        # -- already done with Bedplate_* (below; to avoid a cycle)
+        self.add_subsystem(
+            "rna", dc.RNA_Adder(),
+            promotes=["*"]
+            )
+        
+        # Bedplate_IBeam_Frame:
+        self.add_subsystem(
+            "bed", ds.Bedplate_IBeam_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
+                promotes=["*"]
+            )
+        # -connecting = bear(1,2) -to- Bedplate_*
+        self.connect("bear1.mb_mass", "mb1_mass")
+        # self.connect("bear1.mb_cm", "mb1_cm")
+        self.connect("bear1.mb_I", "mb1_I")
+        self.connect("bear1.mb_max_defl_ang", "mb1_max_defl_ang")
+        self.connect("bear2.mb_mass", "mb2_mass")
+        # self.connect("bear2.mb_cm", "mb2_cm")
+        self.connect("bear2.mb_I", "mb2_I")
+        self.connect("bear2.mb_max_defl_ang", "mb2_max_defl_ang")
+        # -connecting = Bedplate_* to Yaw*
+        self.connect("bedplate_rho", "yaw.rho")
+
+        # = mat -to- hub
+        if flag_hub:
+            self.connect("bedplate_rho", ["pitch_system.rho", "spinner.metal_rho"])
+            self.connect("bedplate_Xy", ["pitch_system.Xy", "spinner.Xy"])
+            self.connect("bedplate_mat_cost", "spinner.metal_cost")
+            self.connect("hub_rho", "hub_shell.rho")
+            self.connect("hub_Xy", "hub_shell.Xy")
+            self.connect("hub_mat_cost", "hub_shell.metal_cost")
+            self.connect("spinner_rho", "spinner.composite_rho")
+            self.connect("spinner_Xt", "spinner.composite_Xt")
+            self.connect("spinner_mat_cost", "spinner.composite_cost")
+
+            self.connect("hub_rho", "rho_castiron")
+            self.connect("spinner_rho", "rho_fiberglass")
