@@ -1,4 +1,18 @@
 # Generic analysis options where nothing is run
-general:
+general: #(v) TODO: change?
     folder_output: outputs
     fname_output: refturb_output
+
+#(v) -------------- NEW! MB FLS constraints --------------
+constraints:
+    user: # check with runWISDEM code impl
+        - name: "nacelle.constr_L10_mb1"
+          lower_bound: [1.0]
+        - name: "nacelle.constr_L10_mb2"
+          lower_bound: [1.0]
+        - name: "nacelle.constr_Lh1_MB1fw"
+          lower_bound: [0.0]
+          ref: 1e1
+        - name: "nacelle.constr_L12_MBsFW"
+          lower_bound: [0.0]
+          ref: 1e0
