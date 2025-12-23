@@ -1,7 +1,7 @@
 name: IEA 15MW Offshore Reference Turbine, with taped chord tip design #(v)[link](https://ieawindsystems.github.io/windIO/main/source/how_to_build_a_turbine_model.html)
 assembly: #(v) 9 entries to describe the WT config and its components
     turbine_class: I
-    turbulence_class: B
+    turbulence_class: C
     drivetrain: geared
     rotor_orientation: Upwind
     number_of_blades: 3
@@ -414,16 +414,16 @@ components: #(v) specifications for individual components (blades, tower, nacell
         drivetrain: # DONE
             uptilt: 0.10471975511965977 # 6 deg
             distance_tt_hub: 5.614
-            distance_hub_mb: 0.5
-            distance_mb_mb: 7.0
-            overhang: 12.0313
+            distance_hub_mb: 0.268 # ---result of 03_nacelle_optim, below ---
+            distance_mb_mb: 6.634
+            overhang: 12.0313 # 11.35? (iea15mw)
 
             gear_ratio: 50.0
-            gearbox_torque_density: 200.0
-            gearbox_efficiency: 1.0
+            gearbox_torque_density: 155.2 # 200.0; D5.1, R2
+            gearbox_efficiency: 0.992 # 1.0; D5.1, R2
 
-            lss_diameter: [2.0, 2.0]
-            lss_wall_thickness: [0.1, 0.1]
+            lss_diameter: [2.96, 1.675]
+            lss_wall_thickness: [0.006, 0.123]
             lss_material: steel_drive
             
             hss_length: 1.5
@@ -442,20 +442,20 @@ components: #(v) specifications for individual components (blades, tower, nacell
             bedplate_web_thickness: 0.1
             bedplate_material: steel
             # MB : TODO: add new inputs to main bearings and whole DT
-            mb1Type: TRB2
-            mb2Type: CRB
+            mb1Type: CRB
+            mb2Type: TRB2
             mb1_e: 3.5
             mb2_e: 3.5
 
             uptower: True
 
-        generator: # simple generator (or none)
-            generator_length: 2.15
-            generator_rpm_efficiency_user:
+        generator: # simple generator (ingeteam data cf.)
+            generator_length: 4.2 #2.15
+            generator_rpm_efficiency_user: # gen eff = 0.98
                 grid: [0.0, 1.0]
                 values: [0.944, 0.944]
             generator_radius_user: 0.0
-            generator_mass_user: 0.0
+            generator_mass_user: 5625
     tower:
         outer_shape_bem:
             reference_axis: &id003
@@ -664,7 +664,7 @@ airfoils: #(v) Database of airfoil coordinates, polars, and unsteady aero parame
                     c_m:
                         grid: *id007
                         values: [0.0, 0.09142857142857111, 0.1828571428571434, 0.2742857142857145, 0.3657142857142855, 0.4031304636095545, 0.4081392053848416, 0.4131479471601289, 0.418156688935416, 0.4262712900595553, 0.4437034692302504, 0.461135648400946, 0.4785678275716412, 0.4960000067423368, 0.4883022318330648, 0.4678431517000181, 0.4480322988503198, 0.4369725143258274, 0.4259127298013352, 0.421499653933276, 0.4205848457791291, 0.4202386282975503, 0.4216794100726142, 0.4231201918476781, 0.4225819015145725, 0.4216313044922648, 0.4186442496773847, 0.4127722129896937, 0.4069001763020025, 0.3942614888768985, 0.3816228014517944, 0.3667605953544247, 0.3503288466648674, 0.3336237480028024, 0.3156065694727009, 0.2975893909425995, 0.2798918070549701, 0.2622959123717636, 0.2449149435317124, 0.2279423337936562, 0.2109697240555999, 0.1352478121095765, 0.0551741, 0.0321142, 0.01267890000000002, -0.002821250000000001, -0.0074129, -0.0110695, -0.01250065, -0.01177275, -0.01082065, -0.0276937, -0.05106789999999999, -0.0714813, -0.0917883, -0.1011907, -0.1098835, -0.1177635, -0.124769, -0.130977, -0.136484, -0.141299, -0.1454, -0.14875, -0.151175, -0.15262, -0.153103, -0.152545, -0.151206, -0.149693, -0.145621, -0.143578, -0.140948, -0.137106, -0.140821, -0.156927, -0.179786, -0.201472, -0.2240866097136903, -0.2461860684392151, -0.2613309888245065, -0.2764759092097978, -0.2906206368276409, -0.3042389471994587, -0.3178704108777556, -0.3315432135192723, -0.3452160161607889, -0.3584572127501313, -0.3716084914119372, -0.3840462584573971, -0.3954732173796998, -0.4069001763020025, -0.4127722129896937, -0.4186442496773847, -0.4216313044922648, -0.4225819015145725, -0.4231201918476781, -0.4216794100726143, -0.4202386282975503, -0.4205848457791291, -0.421499653933276, -0.4259127298013352, -0.4369725143258274, -0.4480322988503198, -0.4678431517000181, -0.4883022318330649, -0.4960000067423369, -0.4785678275716413, -0.461135648400946, -0.4437034692302504, -0.4262712900595553, -0.4352995460782729, -0.4531479471601288, -0.4709963482419844, -0.4888447493238403, -0.457142857142857, -0.3428571428571431, -0.2285714285714291, -0.1142857142857139, 0.0]
-materials: #(v) Database of matertial used in the turbine model.
+materials: #(v) Database of matertial used in the turbine model. (TODO: iron-MS? + add GB mats <- cf. bill_of_mats.xls, sharepoint/WP5/Mats )
    -  name: Gelcoat
       orth: 0
       rho: 1235.0
