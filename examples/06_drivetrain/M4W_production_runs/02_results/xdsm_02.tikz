@@ -1,0 +1,274 @@
+
+%%% Preamble Requirements %%%
+% \usepackage{geometry}
+% \usepackage{amsfonts}
+% \usepackage{amsmath}
+% \usepackage{amssymb}
+% \usepackage{tikz}
+
+% Optional packages such as sfmath set through python interface
+% \usepackage{sfmath}
+
+% \usetikzlibrary{arrows,chains,positioning,scopes,shapes.geometric,shapes.misc,shadows}
+
+%%% End Preamble Requirements %%%
+
+\input{"c:/Users/vasudevg/.conda/envs/wisdem-env/Lib/site-packages/pyxdsm/diagram_styles"}
+\begin{tikzpicture}
+
+\matrix[MatrixSetup]{
+%Row 0
+&
+\node [DataIO] (output_ScipyOptimizeDriver) {$\begin{array}{c}L\_12^{(0)} \\ L\_h1^{(0)} \\ lss\_diameter^{(0)} \\ lss\_wall\_thickness^{(0)}\end{array}$};&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+\\
+%Row 1
+\node [DataIO] (left_output_ScipyOptimizeDriver) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+\node [Optimization] (ScipyOptimizeDriver) {$\text{\text{0, 11 $ \rightarrow $ 1: ScipyOptimizeDriver}}$};&
+\node [DataInter] (ScipyOptimizeDriver-mat) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-gear) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-layout) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-bear1) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-bear2) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-lss) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-mb@fls) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-misc) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-nac) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\\
+%Row 2
+\node [DataIO] (left_output_mat) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+&
+\node [Function] (mat) {$\text{\text{1: mat}}$};&
+&
+\node [DataInter] (mat-layout) {$\begin{array}{c}bedplate\_rho \\ hss\_rho \\ lss\_rho\end{array}$};&
+&
+&
+\node [DataInter] (mat-lss) {$\begin{array}{c}lss\_E \\ lss\_G \\ lss\_Xy \\ lss\_rho\end{array}$};&
+&
+&
+&
+\\
+%Row 3
+\node [DataIO] (left_output_gear) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+&
+&
+\node [Function] (gear) {$\text{\text{2: gear}}$};&
+\node [DataInter] (gear-layout) {$\begin{array}{c}L\_gearbox\end{array}$};&
+&
+&
+\node [DataInter] (gear-lss) {$\begin{array}{c}carrier\_I \\ carrier\_mass \\ gearbox\_I \\ gearbox\_mass\end{array}$};&
+\node [DataInter] (gear-mb@fls) {$\begin{array}{c}carrier\_mass\end{array}$};&
+&
+\node [DataInter] (gear-nac) {$\begin{array}{c}gearbox\_I \\ gearbox\_mass\end{array}$};&
+\\
+%Row 4
+\node [DataIO] (left_output_layout) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+&
+&
+&
+\node [Function] (layout) {$\text{\text{3: layout}}$};&
+\node [DataInter] (layout-bear1) {$\begin{array}{c}Dshaft\_mb1\end{array}$};&
+\node [DataInter] (layout-bear2) {$\begin{array}{c}Dshaft\_mb2\end{array}$};&
+\node [DataInter] (layout-lss) {$\begin{array}{c}s\_lss \\ s\_mb1 \\ s\_mb2 \\ s\_rotor\end{array}$};&
+\node [DataInter] (layout-mb@fls) {$\begin{array}{c}s\_lss\end{array}$};&
+\node [DataInter] (layout-misc) {$\begin{array}{c}H\_bedplate \\ L\_bedplate\end{array}$};&
+\node [DataInter] (layout-nac) {$\begin{array}{c}bedplate\_I \\ bedplate\_cm \\ bedplate\_mass \\ constr\_height \\ hss\_I \\ hss\_cm \\ hss\_mass \\ lss\_I \\ lss\_cm \\ lss\_mass\end{array}$};&
+\\
+%Row 5
+\node [DataIO] (left_output_bear1) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+&
+&
+&
+&
+\node [Function] (bear1) {$\text{\text{4: bear1}}$};&
+&
+\node [DataInter] (bear1-lss) {$\begin{array}{c}face\_width \\ mb\_Reactions\end{array}$};&
+\node [DataInter] (bear1-mb@fls) {$\begin{array}{c}mb\_Cr\end{array}$};&
+&
+\node [DataInter] (bear1-nac) {$\begin{array}{c}mb\_I \\ mb\_mass\end{array}$};&
+\\
+%Row 6
+\node [DataIO] (left_output_bear2) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+&
+&
+&
+&
+&
+\node [Function] (bear2) {$\text{\text{5: bear2}}$};&
+\node [DataInter] (bear2-lss) {$\begin{array}{c}face\_width \\ mb\_Reactions\end{array}$};&
+\node [DataInter] (bear2-mb@fls) {$\begin{array}{c}mb\_Cr \\ mb\_X1 \\ mb\_X2 \\ mb\_Y1 \\ mb\_Y2 \\ mb\_p\end{array}$};&
+&
+\node [DataInter] (bear2-nac) {$\begin{array}{c}mb\_I \\ mb\_mass\end{array}$};&
+\\
+%Row 7
+\node [DataIO] (left_output_lss) {$\begin{array}{c}constr\_lss\_vonmises^{*} \\ constr\_shaft\_deflection^{*} \\ constr\_shaft\_angle^{*} \\ constr\_Lh1\_MB1fw^{*} \\ constr\_L12\_MBsFW^{*}\end{array}$};&
+\node [DataInter] (lss-ScipyOptimizeDriver) {$\begin{array}{c}constr\_lss\_vonmises \\ constr\_shaft\_deflection \\ constr\_shaft\_angle \\ constr\_Lh1\_MB1fw \\ constr\_L12\_MBsFW\end{array}$};&
+&
+&
+&
+&
+&
+\node [Function] (lss) {$\text{\text{6: lss}}$};&
+&
+&
+&
+\\
+%Row 8
+\node [DataIO] (left_output_mb@fls) {$\begin{array}{c}constr\_L10\_mb1^{*} \\ constr\_L10\_mb2^{*}\end{array}$};&
+\node [DataInter] (mb@fls-ScipyOptimizeDriver) {$\begin{array}{c}constr\_L10\_mb1 \\ constr\_L10\_mb2\end{array}$};&
+&
+&
+&
+&
+&
+&
+\node [Function] (mb@fls) {$\text{\text{7: mb\_fls}}$};&
+&
+&
+\\
+%Row 9
+\node [DataIO] (left_output_misc) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+&
+&
+&
+&
+&
+&
+&
+&
+\node [Function] (misc) {$\text{\text{8: misc}}$};&
+\node [DataInter] (misc-nac) {$\begin{array}{c}cover\_I \\ cover\_cm \\ cover\_mass \\ hvac\_I \\ hvac\_cm \\ hvac\_mass \\ platform\_I \\ platform\_cm \\ platform\_mass\end{array}$};&
+\\
+%Row 10
+\node [DataIO] (left_output_nac) {$\begin{array}{c}msa\_mass^{*}\end{array}$};&
+\node [DataInter] (nac-ScipyOptimizeDriver) {$\begin{array}{c}msa\_mass\end{array}$};&
+&
+&
+&
+&
+&
+&
+&
+&
+\node [Function] (nac) {$\text{\text{9: nac}}$};&
+\\
+%Row 11
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+\\
+};
+
+% XDSM process chains
+{ [start chain=process]
+ \begin{pgfonlayer}{process} 
+\chainin (ScipyOptimizeDriver);
+\chainin (mat) [join=by ProcessHV];
+\chainin (gear) [join=by ProcessHV];
+\chainin (layout) [join=by ProcessHV];
+\chainin (bear1) [join=by ProcessHV];
+\chainin (bear2) [join=by ProcessHV];
+\chainin (lss) [join=by ProcessHV];
+\chainin (mb@fls) [join=by ProcessHV];
+\chainin (misc) [join=by ProcessHV];
+\chainin (nac) [join=by ProcessHV];
+\chainin (ScipyOptimizeDriver) [join=by ProcessHV];
+\end{pgfonlayer}
+}
+
+\begin{pgfonlayer}{data}
+\path
+% Horizontal edges
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-bear1)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-gear)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-layout)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-mb@fls)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-misc)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-lss)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-nac)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-bear2)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-mat)
+(nac) edge [DataLine] (nac-ScipyOptimizeDriver)
+(lss) edge [DataLine] (lss-ScipyOptimizeDriver)
+(mb@fls) edge [DataLine] (mb@fls-ScipyOptimizeDriver)
+(bear1) edge [DataLine] (bear1-lss)
+(bear1) edge [DataLine] (bear1-mb@fls)
+(bear1) edge [DataLine] (bear1-nac)
+(bear2) edge [DataLine] (bear2-lss)
+(bear2) edge [DataLine] (bear2-mb@fls)
+(bear2) edge [DataLine] (bear2-nac)
+(gear) edge [DataLine] (gear-layout)
+(gear) edge [DataLine] (gear-lss)
+(gear) edge [DataLine] (gear-mb@fls)
+(gear) edge [DataLine] (gear-nac)
+(layout) edge [DataLine] (layout-bear1)
+(layout) edge [DataLine] (layout-bear2)
+(layout) edge [DataLine] (layout-misc)
+(layout) edge [DataLine] (layout-nac)
+(layout) edge [DataLine] (layout-lss)
+(layout) edge [DataLine] (layout-mb@fls)
+(mat) edge [DataLine] (mat-layout)
+(mat) edge [DataLine] (mat-lss)
+(misc) edge [DataLine] (misc-nac)
+(bear1) edge [DataLine] (left_output_bear1)
+(ScipyOptimizeDriver) edge [DataLine] (left_output_ScipyOptimizeDriver)
+(gear) edge [DataLine] (left_output_gear)
+(layout) edge [DataLine] (left_output_layout)
+(mb@fls) edge [DataLine] (left_output_mb@fls)
+(misc) edge [DataLine] (left_output_misc)
+(lss) edge [DataLine] (left_output_lss)
+(nac) edge [DataLine] (left_output_nac)
+(bear2) edge [DataLine] (left_output_bear2)
+(mat) edge [DataLine] (left_output_mat)
+% Vertical edges
+(ScipyOptimizeDriver-bear1) edge [DataLine] (bear1)
+(ScipyOptimizeDriver-gear) edge [DataLine] (gear)
+(ScipyOptimizeDriver-layout) edge [DataLine] (layout)
+(ScipyOptimizeDriver-mb@fls) edge [DataLine] (mb@fls)
+(ScipyOptimizeDriver-misc) edge [DataLine] (misc)
+(ScipyOptimizeDriver-lss) edge [DataLine] (lss)
+(ScipyOptimizeDriver-nac) edge [DataLine] (nac)
+(ScipyOptimizeDriver-bear2) edge [DataLine] (bear2)
+(ScipyOptimizeDriver-mat) edge [DataLine] (mat)
+(nac-ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver)
+(lss-ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver)
+(mb@fls-ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver)
+(bear1-lss) edge [DataLine] (lss)
+(bear1-mb@fls) edge [DataLine] (mb@fls)
+(bear1-nac) edge [DataLine] (nac)
+(bear2-lss) edge [DataLine] (lss)
+(bear2-mb@fls) edge [DataLine] (mb@fls)
+(bear2-nac) edge [DataLine] (nac)
+(gear-layout) edge [DataLine] (layout)
+(gear-lss) edge [DataLine] (lss)
+(gear-mb@fls) edge [DataLine] (mb@fls)
+(gear-nac) edge [DataLine] (nac)
+(layout-bear1) edge [DataLine] (bear1)
+(layout-bear2) edge [DataLine] (bear2)
+(layout-misc) edge [DataLine] (misc)
+(layout-nac) edge [DataLine] (nac)
+(layout-lss) edge [DataLine] (lss)
+(layout-mb@fls) edge [DataLine] (mb@fls)
+(mat-layout) edge [DataLine] (layout)
+(mat-lss) edge [DataLine] (lss)
+(misc-nac) edge [DataLine] (nac)
+(ScipyOptimizeDriver) edge [DataLine] (output_ScipyOptimizeDriver);
+\end{pgfonlayer}
+
+\end{tikzpicture}

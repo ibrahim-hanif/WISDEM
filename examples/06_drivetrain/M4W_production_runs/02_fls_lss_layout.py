@@ -26,6 +26,7 @@
 import os
 import numpy as np
 import openmdao.api as om
+import matplotlib.pyplot as plt
 # import scipy.io as sio # --- not used in here, but within imports
 # import pickle
 
@@ -51,16 +52,20 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 results_path = os.path.join(script_dir, results_dir)
 os.makedirs(results_path, exist_ok=True)
 
-# loc_cases = os.path.join(results_path, "cases_recorded.sql") #TODO
-# if os.path.exists( loc_cases ):
-#     os.remove( loc_cases)
-
-
 loc_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "02")
 loc_xdsm = os.path.join(results_path, 'xdsm_02')
+
+#%%
+# Record results?
+record_cases = False #TODO: add in final setup (full problem)
+if record_cases:
+    print(" ---- Recording cases using `SqliteRecorder` ---- ")
+    loc_cases = os.path.join(results_path, "cases_recorded.sql")
+    if os.path.exists( loc_cases ):
+        os.remove( loc_cases )
 
 #%% Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -221,7 +226,7 @@ class LSS_layout( om.Group ):
                 openfast_options=opt_openfast,
                 dlc_options=opt_DLC
                 ),
-            promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime"],
+            promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss"],
             promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
         )
         # -connecting = bear(1,2) -to- Analy_*
@@ -343,12 +348,13 @@ if flag_opt_GBO:
     prob.driver.options["tol"] = 1e-6 # comment to default (1e-6?)
     prob.driver.options["maxiter"] = 5 * 4
     prob.driver.options["disp"] = True
-    prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
+    # prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
     # prob.driver.options # disp for debugging
     # prob.set_solver_print(level=2)
 
-    # recorder = om.SqliteRecorder( loc_cases )     #TODO: add in final setup (full problem)
-    # prob.driver.add_recorder( recorder=recorder )
+    if record_cases:
+        recorder = om.SqliteRecorder( loc_cases )
+        prob.driver.add_recorder( recorder=recorder )
 
 elif flag_opt_GFO:
     print("=== running GFO ===")
@@ -378,7 +384,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     
     # Add design variables
     prob.model.add_design_var("L_12", lower=0.5, upper=10.0, ref=10.0, ref0=0.5)
-    prob.model.add_design_var("L_h1", lower=0.5, upper=5.0, ref=5.0, ref0=0.5)
+    prob.model.add_design_var("L_h1", lower=0.2, upper=5.0, ref=5.0, ref0=0.5)
     prob.model.add_design_var("lss_diameter", lower=0.5, upper=4.0, ref=4.0, ref0=0.5)
     prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.9, ref=1e-1) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
 
@@ -413,7 +419,7 @@ from omxdsm import write_xdsm
 write_xdsm(
     prob,
     filename=loc_xdsm,
-    out_format='pdf',
+    out_format='html', # pdf
     show_browser=True,
     quiet=False,
     output_side='left',
@@ -566,8 +572,8 @@ prob["lss_wall_thickness"] = myones * 0.1 #(def:0.1), 0.3
 # prob["gear_configuration"] = "eee"
 # prob["planet_numbers"] = np.array([5, 3, 0]) #ref.1
 prob["gear_ratio"] = 50 #.039
-#prob["gearbox_mass_user"] = 0.0 #(cf. defined default 0.0 line 156, gearbox.py)
-prob["gearbox_torque_density"] = 200.0 # (cf. line 210, gearbox.py)
+prob["gearbox_mass_user"] = 135.5*1e3 # D5.1 R2
+# prob["gearbox_torque_density"] = 200.0 # (cf. line 210, gearbox.py)
 
 prob["L_hss"] = 1.5
 prob["hss_diameter"] = 0.5 * myones
@@ -592,7 +598,8 @@ prob["L_generator"] = 4.2
 generator_mass_375rpm = 14482 #[kg] (cf. Made4Wind D5.1, Tab.9)
 
 # TODO: Ingeteam generator dimensions (email 15.12.25 from Bidane):
-m_generator = (3*1e3/8)*(prob["machine_rating"]/1e3) #[kg] 8 Tn per 8MW conversion line
+# Mass [kg] = 3 Tn per 8MW conversion line
+generator_mass_user = (3*1e3/8)*(prob["machine_rating"]/1e3)
 # Overall dimensions (est. very preliminary): 2400x800x4200 mm [HxWxL]
 H_generator, W_generator, L_generator = 2.4, 0.8, 4.2 # [m]
 
@@ -690,20 +697,128 @@ print(f"MSA mass: {prob["msa_mass"]}")
 
 list_driver_vars = prob.list_driver_vars()
 
+    #%%
+### Recorded cases
+if record_cases:
+    print("\n=== Recorded cases from the optimization ===\n")
+    results_dict = get_recorder_results( loc_cases, None, True )
+    print(results_dict);
+
+    #%%[markdown]
+    # ### Plot recorded results
+    # %%
+    # -------------------------
+    # Extract and squeeze data
+    # -------------------------
+    res = results_dict
+
+    msa_mass = res['msa_mass'].squeeze()
+    L_12 = res['L_12'].squeeze()
+    L_h1 = res['L_h1'].squeeze()
+
+    lss_diam = res['lss_diameter']
+    lss_t = res['lss_wall_thickness']
+
+    L10_mb1 = res['constr_L10_mb1'].squeeze()
+    L10_mb2 = res['constr_L10_mb2'].squeeze()
+
+    iters = np.arange(1, len(msa_mass) + 1)
+
+    # -------------------------
+    # Figure and layout
+    # -------------------------
+    fig = plt.figure(figsize=(12, 8))
+    gs = fig.add_gridspec(3, 2, hspace=0.35, wspace=0.25)
+
+    # ========= Row 1 (span both columns): msa_mass =========
+    ax1 = fig.add_subplot(gs[0, :])
+    ax1.plot(iters, msa_mass,
+            marker='o', linewidth=2, color='k',
+            label=r'$m_{msa}$')
+    ax1.set_ylabel(r'Mass [kg]')
+    # ax1.set_xlabel('Iteration')
+    ax1.set_xticks(iters)
+    ax1.grid(True)
+    ax1.legend()
+
+    # ========= Row 2, Col 1: L_12 and 10*L_h1 =========
+    ax2 = fig.add_subplot(gs[1, 0])
+    ax2.plot(iters, 10.0 * L_h1,
+            marker='s', color='#313694',
+            label=r'$L_{h1} \times 10$')
+    ax2.plot(iters, L_12,
+            marker='o', color='#A6CAEC',
+            label=r'$L_{12}$')
+    ax2.set_ylabel(r'Length [m]')
+    # ax2.set_xlabel('Iteration')
+    # ax2.set_xticks(iters)
+    ax2.grid(True)
+    ax2.legend()
+
+    # ========= Row 2, Col 2: diameter and thickness =========
+    ax3 = fig.add_subplot(gs[1, 1])
+    ax3.plot(iters, lss_diam[:, 0],
+            marker='o', color='#313694',
+            label=r'$D_{lss,1}$')
+    ax3.plot(iters, lss_diam[:, 1],
+            marker='o', color='#C00000',
+            label=r'$D_{lss,2}$')
+    ax3.plot(iters, 10.0 * lss_t[:, 0],
+            marker='s', color='#A6CAEC',
+            label=r'$t_{lss,1} \times 10$')
+    ax3.plot(iters, 10.0 * lss_t[:, 1],
+            marker='s', color='r',
+            label=r'$t_{lss,2} \times 10$')
+    ax3.set_ylabel(r'Dimensions [m]')
+    # ax3.set_xlabel('Iteration')
+    # ax3.set_xticks(iters)
+    ax3.grid(True)
+    # ax3.legend(ncol=2)
+    ax3.legend(loc='center left',bbox_to_anchor=(1,0.5))
+
+    # ========= Row 3 (span both columns): L10 constraints =========
+    ax4 = fig.add_subplot(gs[2, :])
+    ax4.plot(iters, L10_mb1,
+            marker='o', linewidth=2, color='#313694',
+            label=r'$L_{10}^{mb1}$')
+    ax4.plot(iters, L10_mb2,
+            marker='s', linewidth=2, color='#A6CAEC',
+            label=r'$L_{10}^{mb2}$')
+    ax4.axhline(1.0, color='k', linestyle='--', linewidth=1)
+    ax4.set_ylabel(r'Life constraint [-]')
+    ax4.set_xlabel('Optimizer iterations')
+    ax4.set_xticks(iters)
+    ax4.grid(True)
+    ax4.legend(loc='center left',bbox_to_anchor=(1,0.5))
+
+    # -------------------------
+    # options: Journal polish
+    # -------------------------
+    plt.rcParams.update({
+        "font.size": 16,
+        "axes.labelsize": 16,
+        "legend.fontsize": 16,
+        "lines.linewidth": 2,
+        "lines.markersize": 6,
+    })
+
+    # -------------------------
+    # Final layout
+    # -------------------------
+    # plt.tight_layout()
+
+    plot_path = results_path+"\\vars_with_iter.png"
+    plt.savefig(plot_path)
+
+    plt.show()
+
 #%%[markdown]
 # Driver scaling report 
 prob.driver.scaling_report(outfile=loc_scaling_report)
 
 #%%
-### Recorded cases #TODO
-# print("\n=== Recorded cases from the optimization ===\n")
-# results_dict = get_recorder_results( loc_cases, None, True )
-# results_dict
-# ===============================================================
-
-#%%
 save_data(loc_save_data, prob)
-
+# ===============================================================
 # %% [markdown]
 # ### Convergence/parametric study setup
 # 1. for LDD 'inconsistency' check
@@ -743,41 +858,47 @@ if flag_study_parametric and flag_opt_GBO:
     
     # set DVs and run driver
     for i in range(len_steps):
+        # MB
         set_MBs = steps_MBtype[i]
         print(f"=== type of bearing: {set_MBs} ===")
         prob["bear1.bearing_type"] = set_MBs[0]
         prob["bear2.bearing_type"] = set_MBs[1]
         print("-------------------- v ------------------")
+        # Layout / lss inputs
+        prob["L_h1"] = 0.5
+        prob["L_12"] = 7.0
+        prob["lss_diameter"] = myones * 2.0
+        prob["lss_wall_thickness"] = myones * 0.1
 
         # run driver = GBO
         prob.model.approx_totals() # TODO.
         prob.run_driver()
-
+        print( prob["L_h1"] ) # debugging
         # save outputs
         for key, val in outs_recorded.items():
             outs_recorded[key][i,:] = prob[key]
-
-outs_recorded
+#%%
+print(steps_MBtype);
+print(outs_recorded);
 """
-{'L_12': array([[7.11508108],
-        [4.86211493],
-        [5.00521375],
-        [2.5813102 ]]),
- 'L_h1': array([[0.5],
-        [0.5],
-        [0.5],
-        [0.5]]),
- 'lss_diameter': array([[2.9400542 , 1.69282221],
-        [0.82386622, 2.05669697],
-        [3.46496236, 1.73341613],
-        [1.06322768, 2.05570005]]),
- 'lss_wall_thickness': array([[0.00617199, 0.11922258],
-        [0.24435041, 0.08887677],
-        [0.004     , 0.10886274],
-        [0.21524046, 0.11465028]]),
- 'msa_mass': array([[70717.29939399],
-        [52712.3936233 ],
-        [66503.51114266],
-        [39964.99830566]])}
+{'L_12': array([[6.93563233],
+       [4.95328602],
+       [4.90916032 ],
+       [2.41317276]]),
+'L_h1': array([[0.26441632],
+       [0.2       ],
+       [0.30079521],
+       [0.2       ]]),
+'lss_diameter': array([[2.90729986, 1.67985956],
+       [0.82344261, 1.9916245 ],
+       [3.43984147, 1.74033424],
+       [1.12356334, 1.78972858]]),
+'lss_wall_thickness': array([[0.00609344, 0.12302497],
+       [0.24916403, 0.10025035],
+       [0.004    , 0.1101714],
+       [0.22114549, 0.17132604]]),
+'msa_mass': array([[68293.12376318],
+       [52305.38151471],
+       [64650.67674836],
+       [38386.64245769]])}
 """
-# %%
