@@ -468,7 +468,7 @@ properties:
                 properties:
                     DT:
                         type: number
-                        default: 0.025
+                        default: 0.05
                         description: Integration time step (s)
             openfast_dir:
                 type: string
