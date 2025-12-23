@@ -348,7 +348,7 @@ if flag_opt_GBO:
     prob.driver.options["tol"] = 1e-6 # comment to default (1e-6?)
     prob.driver.options["maxiter"] = 5 * 4
     prob.driver.options["disp"] = True
-    # prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
+    prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
     # prob.driver.options # disp for debugging
     # prob.set_solver_print(level=2)
 
@@ -384,7 +384,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     
     # Add design variables
     prob.model.add_design_var("L_12", lower=0.5, upper=10.0, ref=10.0, ref0=0.5)
-    prob.model.add_design_var("L_h1", lower=0.2, upper=5.0, ref=5.0, ref0=0.5)
+    prob.model.add_design_var("L_h1", lower=0.2, upper=5.0, ref=5.0, ref0=0.2)
     prob.model.add_design_var("lss_diameter", lower=0.5, upper=4.0, ref=4.0, ref0=0.5)
     prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.9, ref=1e-1) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
 
@@ -562,10 +562,10 @@ prob["bear2.mb_e"] = 3.5
 # prob["bear2.mb_p"] = 3.33
 
 # Layout / lss inputs
-prob["L_h1"] = 0.5 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
-prob["L_12"] = 7.0 #(def:1.2), 7.1
-prob["lss_diameter"] = myones * 2.0 #(def:1.0), 4.0
-prob["lss_wall_thickness"] = myones * 0.1 #(def:0.1), 0.3
+prob["L_h1"] = 0.264 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
+prob["L_12"] = 6.934 #(def:1.2), 7.1
+prob["lss_diameter"] = np.array([2.90, 1.68]) #(def:1.0), 4.0
+prob["lss_wall_thickness"] = np.array([0.006, 0.123]) #(def:0.1), 0.3
 
 # Gearbox inputs
 # prob["L_gearbox"] = 1.5 #(v) calc in gearbox.py
@@ -697,7 +697,7 @@ print(f"MSA mass: {prob["msa_mass"]}")
 
 list_driver_vars = prob.list_driver_vars()
 
-    #%%
+#%%
 ### Recorded cases
 if record_cases:
     print("\n=== Recorded cases from the optimization ===\n")
