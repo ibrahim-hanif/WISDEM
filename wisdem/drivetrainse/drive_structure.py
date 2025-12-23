@@ -2017,7 +2017,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
     --------------
     - DONE : implement as a openMDAO Explicit Component
     - DONE : make DLC load series (yaml; not local stored) compatible with WEIS iA
-    - TODO : modify for more_realisitc analy_MBforces: add relevant inputs
+    - DONE : modify for more_realisitc analy_MBforces: add relevant inputs
     - TODO : use log-space constraints?
     """
     
