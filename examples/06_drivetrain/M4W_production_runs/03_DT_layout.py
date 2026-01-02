@@ -386,8 +386,8 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     
     # === Add design variables === 
     # 1. LSS
-    prob.model.add_design_var("L_12", lower=0.5, upper=10.0, ref=10.0, ref0=0.5)
     prob.model.add_design_var("L_h1", lower=0.2, upper=5.0, ref=5.0, ref0=0.2)
+    prob.model.add_design_var("L_12", lower=0.5, upper=10.0, ref=10.0, ref0=0.5)
     prob.model.add_design_var("lss_diameter", lower=0.5, upper=4.0, ref=4.0, ref0=0.5)
     prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.9, ref=0.9, ref0=4e-3) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
 
@@ -675,7 +675,7 @@ prob["wohler_A_mat"] = 1e1 * np.ones(4)
 prob["unit_cost_mat"] = np.r_[0.7, 0.9, 0.5, 1.9]
 # - Material assignment
 prob["lss_material"] = prob["hss_material"] = "steel_drive"
-prob["bedplate_material"] = "steel"
+prob["bedplate_material"] = "steel_drive" # steel -> steel_drive
 prob["hub_material"] = "cast_iron"
 prob["spinner_material"] = "glass_uni"
 prob["material_names"] = ["steel", "steel_drive", "cast_iron", "glass_uni"]
@@ -714,7 +714,15 @@ print(" ", prob["F_mb1"], prob["F_mb2"] )
 print("M_mb*:")
 print(" ", prob["M_mb1"], prob["M_mb2"] )
 print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
+print("--- || constr_ || ---")
+print("- lss: ",
+      np.sqrt(np.sum(prob["constr_lss_vonmises"]**2))
+      )
+print("- bedplate: ",
+      np.sqrt(np.sum(prob["constr_bedplate_vonmises"]**2))
+      )
 #
+print("--- obj: masses ---")
 print(f"MSA mass: {prob["msa_mass"]}")
 print(f"nacelle mass: {prob["nacelle_mass"]}")
 
