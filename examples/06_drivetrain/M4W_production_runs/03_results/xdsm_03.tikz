@@ -19,7 +19,8 @@
 \matrix[MatrixSetup]{
 %Row 0
 &
-\node [DataIO] (output_ScipyOptimizeDriver) {$\begin{array}{c}L\_12^{(0)} \\ L\_h1^{(0)} \\ lss\_diameter^{(0)} \\ lss\_wall\_thickness^{(0)} \\ L\_hss^{(0)} \\ hss\_diameter^{(0)} \\ hss\_wall\_thickness^{(0)} \\ bedplate\_web\_thickness^{(0)} \\ bedplate\_flange\_thickness^{(0)} \\ bedplate\_flange\_width^{(0)}\end{array}$};&
+\node [DataIO] (output_ScipyOptimizeDriver) {$\begin{array}{c}L\_h1^{(0)} \\ L\_12^{(0)} \\ lss\_diameter^{(0)} \\ lss\_wall\_thickness^{(0)} \\ L\_hss^{(0)} \\ hss\_diameter^{(0)} \\ hss\_wall\_thickness^{(0)} \\ bedplate\_web\_thickness^{(0)} \\ bedplate\_flange\_thickness^{(0)} \\ bedplate\_flange\_width^{(0)}\end{array}$};&
+&
 &
 &
 &
@@ -39,28 +40,29 @@
 &
 \\
 %Row 1
-\node [DataIO] (left_output_ScipyOptimizeDriver) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
-\node [Optimization] (ScipyOptimizeDriver) {$\text{\text{0, 19 $ \rightarrow $ 1: ScipyOptimizeDriver}}$};&
-\node [DataInter] (ScipyOptimizeDriver-mat) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-gear) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-layout) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-bear1) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-bear2) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-brake) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-elec) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-yaw) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-rpm) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-gensimp) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-lss) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-mb@fls) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-hss) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-misc) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-nac) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-rna) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-bed) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataIO] (left_output_ScipyOptimizeDriver) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [Optimization] (ScipyOptimizeDriver) {$\text{\text{0, 20 $ \rightarrow $ 1: ScipyOptimizeDriver}}$};&
+\node [DataInter] (ScipyOptimizeDriver-mat) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-gear) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-layout) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-bear1) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-bear2) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-brake) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-elec) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-yaw) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-rpm) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-gensimp) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-lss) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-mb@fls) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-hss) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-misc) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-nac) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-rna) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-bed) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-dyn) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness \\ L\_hss \\ hss\_diameter \\ hss\_wall\_thickness \\ bedplate\_web\_thickness \\ bedplate\_flange\_thickness \\ bedplate\_flange\_width\end{array}$};&
 \\
 %Row 2
-\node [DataIO] (left_output_mat) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [DataIO] (left_output_mat) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
 &
 \node [Function] (mat) {$\text{\text{1: mat}}$};&
 &
@@ -79,9 +81,10 @@
 &
 &
 \node [DataInter] (mat-bed) {$\begin{array}{c}bedplate\_E \\ bedplate\_G \\ bedplate\_Xy \\ bedplate\_rho\end{array}$};&
+&
 \\
 %Row 3
-\node [DataIO] (left_output_gear) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [DataIO] (left_output_gear) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
 &
 &
 \node [Function] (gear) {$\text{\text{2: gear}}$};&
@@ -98,6 +101,7 @@
 &
 &
 \node [DataInter] (gear-nac) {$\begin{array}{c}gearbox\_I \\ gearbox\_mass\end{array}$};&
+&
 &
 &
 \\
@@ -121,9 +125,10 @@
 \node [DataInter] (layout-nac) {$\begin{array}{c}bedplate\_I \\ bedplate\_cm \\ bedplate\_mass \\ constr\_height \\ hss\_I \\ hss\_cm \\ hss\_mass \\ lss\_I \\ lss\_cm \\ lss\_mass \\ s\_gearbox \\ s\_generator \\ s\_mb1 \\ s\_mb2\end{array}$};&
 \node [DataInter] (layout-rna) {$\begin{array}{c}L\_drive\end{array}$};&
 \node [DataInter] (layout-bed) {$\begin{array}{c}bedplate\_web\_height \\ s\_drive \\ s\_gearbox \\ s\_generator \\ s\_mb1 \\ s\_mb2\end{array}$};&
+&
 \\
 %Row 5
-\node [DataIO] (left_output_bear1) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [DataIO] (left_output_bear1) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
 &
 &
 &
@@ -142,9 +147,10 @@
 \node [DataInter] (bear1-nac) {$\begin{array}{c}mb\_I \\ mb\_mass\end{array}$};&
 &
 \node [DataInter] (bear1-bed) {$\begin{array}{c}mb\_I \\ mb\_mass \\ mb\_max\_defl\_ang\end{array}$};&
+&
 \\
 %Row 6
-\node [DataIO] (left_output_bear2) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [DataIO] (left_output_bear2) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
 &
 &
 &
@@ -163,9 +169,10 @@
 \node [DataInter] (bear2-nac) {$\begin{array}{c}mb\_I \\ mb\_mass\end{array}$};&
 &
 \node [DataInter] (bear2-bed) {$\begin{array}{c}mb\_I \\ mb\_mass \\ mb\_max\_defl\_ang\end{array}$};&
+&
 \\
 %Row 7
-\node [DataIO] (left_output_brake) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [DataIO] (left_output_brake) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
 &
 &
 &
@@ -184,9 +191,10 @@
 \node [DataInter] (brake-nac) {$\begin{array}{c}brake\_I \\ brake\_cm \\ brake\_mass\end{array}$};&
 &
 &
+&
 \\
 %Row 8
-\node [DataIO] (left_output_elec) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [DataIO] (left_output_elec) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
 &
 &
 &
@@ -205,9 +213,10 @@
 \node [DataInter] (elec-nac) {$\begin{array}{c}converter\_I \\ converter\_cm \\ converter\_mass \\ transformer\_I \\ transformer\_cm \\ transformer\_mass\end{array}$};&
 &
 &
+&
 \\
 %Row 9
-\node [DataIO] (left_output_yaw) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [DataIO] (left_output_yaw) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
 &
 &
 &
@@ -226,9 +235,10 @@
 \node [DataInter] (yaw-nac) {$\begin{array}{c}yaw\_I \\ yaw\_cm \\ yaw\_mass\end{array}$};&
 &
 &
+&
 \\
 %Row 10
-\node [DataIO] (left_output_rpm) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [DataIO] (left_output_rpm) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
 &
 &
 &
@@ -247,9 +257,10 @@
 &
 &
 &
+&
 \\
 %Row 11
-\node [DataIO] (left_output_gensimp) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [DataIO] (left_output_gensimp) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
 &
 &
 &
@@ -266,6 +277,7 @@
 \node [DataInter] (gensimp-hss) {$\begin{array}{c}generator\_I \\ generator\_mass\end{array}$};&
 \node [DataInter] (gensimp-misc) {$\begin{array}{c}R\_generator\end{array}$};&
 \node [DataInter] (gensimp-nac) {$\begin{array}{c}generator\_I \\ generator\_mass \\ generator\_rotor\_I \\ generator\_rotor\_mass \\ generator\_stator\_I \\ generator\_stator\_mass\end{array}$};&
+&
 &
 &
 \\
@@ -289,6 +301,7 @@
 &
 &
 \node [DataInter] (lss-bed) {$\begin{array}{c}F\_mb1 \\ F\_mb2 \\ F\_torq \\ M\_mb1 \\ M\_mb2 \\ M\_torq\end{array}$};&
+\node [DataInter] (lss-dyn) {$\begin{array}{c}lss\_spring\_constant\end{array}$};&
 \\
 %Row 13
 \node [DataIO] (left_output_mb@fls) {$\begin{array}{c}constr\_L10\_mb1^{*} \\ constr\_L10\_mb2^{*}\end{array}$};&
@@ -305,6 +318,7 @@
 &
 &
 \node [Function] (mb@fls) {$\text{\text{12: mb\_fls}}$};&
+&
 &
 &
 &
@@ -331,9 +345,10 @@
 &
 &
 \node [DataInter] (hss-bed) {$\begin{array}{c}F\_generator \\ M\_generator\end{array}$};&
+\node [DataInter] (hss-dyn) {$\begin{array}{c}hss\_spring\_constant\end{array}$};&
 \\
 %Row 15
-\node [DataIO] (left_output_misc) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [DataIO] (left_output_misc) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
 &
 &
 &
@@ -350,6 +365,7 @@
 &
 \node [Function] (misc) {$\text{\text{14: misc}}$};&
 \node [DataInter] (misc-nac) {$\begin{array}{c}cover\_I \\ cover\_cm \\ cover\_mass \\ hvac\_I \\ hvac\_cm \\ hvac\_mass \\ platform\_I \\ platform\_cm \\ platform\_mass\end{array}$};&
+&
 &
 &
 \\
@@ -373,9 +389,10 @@
 \node [Function] (nac) {$\text{\text{15: nac}}$};&
 \node [DataInter] (nac-rna) {$\begin{array}{c}nacelle\_I\_TT \\ nacelle\_cm \\ nacelle\_mass \\ shaft\_start\end{array}$};&
 \node [DataInter] (nac-bed) {$\begin{array}{c}other\_mass\end{array}$};&
+&
 \\
 %Row 17
-\node [DataIO] (left_output_rna) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+\node [DataIO] (left_output_rna) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
 &
 &
 &
@@ -394,10 +411,11 @@
 &
 \node [Function] (rna) {$\text{\text{16: rna}}$};&
 &
+&
 \\
 %Row 18
-\node [DataIO] (left_output_bed) {$\begin{array}{c}constr\_bedplate\_vonmises^{*} \\ constr\_mb1\_defl^{*} \\ constr\_mb2\_defl^{*} \\ constr\_stator\_deflection^{*} \\ constr\_stator\_angle^{*}\end{array}$};&
-\node [DataInter] (bed-ScipyOptimizeDriver) {$\begin{array}{c}constr\_bedplate\_vonmises \\ constr\_mb1\_defl \\ constr\_mb2\_defl \\ constr\_stator\_deflection \\ constr\_stator\_angle\end{array}$};&
+\node [DataIO] (left_output_bed) {$\begin{array}{c}constr\_bedplate\_vonmises^{*} \\ constr\_mb1\_defl^{*} \\ constr\_mb2\_defl^{*}\end{array}$};&
+\node [DataInter] (bed-ScipyOptimizeDriver) {$\begin{array}{c}constr\_bedplate\_vonmises \\ constr\_mb1\_defl \\ constr\_mb2\_defl\end{array}$};&
 &
 &
 &
@@ -415,8 +433,32 @@
 &
 &
 \node [Function] (bed) {$\text{\text{17: bed}}$};&
+&
 \\
 %Row 19
+\node [DataIO] (left_output_dyn) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*} \\ L\_hss^{*} \\ hss\_diameter^{*} \\ hss\_wall\_thickness^{*} \\ bedplate\_web\_thickness^{*} \\ bedplate\_flange\_thickness^{*} \\ bedplate\_flange\_width^{*}\end{array}$};&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+\node [Function] (dyn) {$\text{\text{18: dyn}}$};&
+\\
+%Row 20
+&
 &
 &
 &
@@ -460,6 +502,7 @@
 \chainin (nac) [join=by ProcessHV];
 \chainin (rna) [join=by ProcessHV];
 \chainin (bed) [join=by ProcessHV];
+\chainin (dyn) [join=by ProcessHV];
 \chainin (ScipyOptimizeDriver) [join=by ProcessHV];
 \end{pgfonlayer}
 }
@@ -469,19 +512,20 @@
 % Horizontal edges
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-bear1)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-bed)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-layout)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-brake)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-elec)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-gear)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-gensimp)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-yaw)
-(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-misc)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-dyn)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-hss)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-rpm)
-(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-layout)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-lss)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-rna)
+(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-misc)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-bear2)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-mb@fls)
-(ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-rna)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-mat)
 (ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver-nac)
 (nac) edge [DataLine] (nac-ScipyOptimizeDriver)
@@ -511,6 +555,7 @@
 (gensimp) edge [DataLine] (gensimp-nac)
 (gensimp) edge [DataLine] (gensimp-lss)
 (hss) edge [DataLine] (hss-bed)
+(hss) edge [DataLine] (hss-dyn)
 (layout) edge [DataLine] (layout-bear1)
 (layout) edge [DataLine] (layout-bear2)
 (layout) edge [DataLine] (layout-misc)
@@ -522,6 +567,7 @@
 (layout) edge [DataLine] (layout-lss)
 (layout) edge [DataLine] (layout-mb@fls)
 (lss) edge [DataLine] (lss-bed)
+(lss) edge [DataLine] (lss-dyn)
 (mat) edge [DataLine] (mat-bed)
 (mat) edge [DataLine] (mat-layout)
 (mat) edge [DataLine] (mat-yaw)
@@ -535,37 +581,39 @@
 (bear1) edge [DataLine] (left_output_bear1)
 (ScipyOptimizeDriver) edge [DataLine] (left_output_ScipyOptimizeDriver)
 (bed) edge [DataLine] (left_output_bed)
+(layout) edge [DataLine] (left_output_layout)
 (brake) edge [DataLine] (left_output_brake)
 (elec) edge [DataLine] (left_output_elec)
 (gear) edge [DataLine] (left_output_gear)
 (gensimp) edge [DataLine] (left_output_gensimp)
 (yaw) edge [DataLine] (left_output_yaw)
-(misc) edge [DataLine] (left_output_misc)
+(dyn) edge [DataLine] (left_output_dyn)
 (hss) edge [DataLine] (left_output_hss)
 (rpm) edge [DataLine] (left_output_rpm)
-(layout) edge [DataLine] (left_output_layout)
 (lss) edge [DataLine] (left_output_lss)
+(rna) edge [DataLine] (left_output_rna)
+(misc) edge [DataLine] (left_output_misc)
 (bear2) edge [DataLine] (left_output_bear2)
 (mb@fls) edge [DataLine] (left_output_mb@fls)
-(rna) edge [DataLine] (left_output_rna)
 (mat) edge [DataLine] (left_output_mat)
 (nac) edge [DataLine] (left_output_nac)
 % Vertical edges
 (ScipyOptimizeDriver-bear1) edge [DataLine] (bear1)
 (ScipyOptimizeDriver-bed) edge [DataLine] (bed)
+(ScipyOptimizeDriver-layout) edge [DataLine] (layout)
 (ScipyOptimizeDriver-brake) edge [DataLine] (brake)
 (ScipyOptimizeDriver-elec) edge [DataLine] (elec)
 (ScipyOptimizeDriver-gear) edge [DataLine] (gear)
 (ScipyOptimizeDriver-gensimp) edge [DataLine] (gensimp)
 (ScipyOptimizeDriver-yaw) edge [DataLine] (yaw)
-(ScipyOptimizeDriver-misc) edge [DataLine] (misc)
+(ScipyOptimizeDriver-dyn) edge [DataLine] (dyn)
 (ScipyOptimizeDriver-hss) edge [DataLine] (hss)
 (ScipyOptimizeDriver-rpm) edge [DataLine] (rpm)
-(ScipyOptimizeDriver-layout) edge [DataLine] (layout)
 (ScipyOptimizeDriver-lss) edge [DataLine] (lss)
+(ScipyOptimizeDriver-rna) edge [DataLine] (rna)
+(ScipyOptimizeDriver-misc) edge [DataLine] (misc)
 (ScipyOptimizeDriver-bear2) edge [DataLine] (bear2)
 (ScipyOptimizeDriver-mb@fls) edge [DataLine] (mb@fls)
-(ScipyOptimizeDriver-rna) edge [DataLine] (rna)
 (ScipyOptimizeDriver-mat) edge [DataLine] (mat)
 (ScipyOptimizeDriver-nac) edge [DataLine] (nac)
 (nac-ScipyOptimizeDriver) edge [DataLine] (ScipyOptimizeDriver)
@@ -595,6 +643,7 @@
 (gensimp-nac) edge [DataLine] (nac)
 (gensimp-lss) edge [DataLine] (lss)
 (hss-bed) edge [DataLine] (bed)
+(hss-dyn) edge [DataLine] (dyn)
 (layout-bear1) edge [DataLine] (bear1)
 (layout-bear2) edge [DataLine] (bear2)
 (layout-misc) edge [DataLine] (misc)
@@ -606,6 +655,7 @@
 (layout-lss) edge [DataLine] (lss)
 (layout-mb@fls) edge [DataLine] (mb@fls)
 (lss-bed) edge [DataLine] (bed)
+(lss-dyn) edge [DataLine] (dyn)
 (mat-bed) edge [DataLine] (bed)
 (mat-layout) edge [DataLine] (layout)
 (mat-yaw) edge [DataLine] (yaw)

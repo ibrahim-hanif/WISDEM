@@ -7,14 +7,14 @@
 #
 # - objective: (1) `nacelle_mass` minimization (`NacelleSystemAdder`)
 #
-# - DVs: (4) `L_h1, L_12, lss_diameter, lss_wall_thickness`
+# - DVs (10): dims of LSS, HSS, Bedplate
 #
-# - constraints: (5) lss stresses, deflections (linear, angle), DT dims, L10 MBs FLS
+# - constraints (13): all, except bedplate-end (stator) defl and ang 
+#
+# - CONVERGED Alhamdolillah! need 80 optim iters!
 #
 # ### TODO:
-# - think 🤔 and add DVs, constrs etc.
-# - test LSS DVs and add 2 more constrs: mb* defl_ang
-# - add M4W generator data (now using simple empirical gen)
+# - 
 # 
 # references
 # 1. 2020_Wang_NTNU - on design modelling and analysis of 10MW
@@ -60,7 +60,9 @@ loc_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "03")
-loc_xdsm = os.path.join(results_path, 'xdsm_03')
+
+make_xdsm = False
+if make_xdsm: loc_xdsm = os.path.join(results_path, 'xdsm_03')
 
 #%%
 # Record results?
@@ -143,195 +145,6 @@ opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17.
 opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332 , 0.05894909, 0.03942148, 0.02472593, 0.01457773, 0.00466888]
 
 # %% [markdown]
-# ### Defining the model `problem class`:
-# as an openMDAO group that uses DrivetrainSE classes as components
-# class DrivetrainSE_M4W( om.Group ):
-#     """
-#     Group containing components for the layout of the LSS components
-#     """
-#     def initialize(self):
-#         self.options.declare("modeling_options")
-
-#     def setup(self):
-#         opt_drivese = self.options["modeling_options"]["WISDEM"]["DriveSE"]
-#         # OpenFAST: containing 1. simulation DT and 2. MS loads dir
-#         opt_openfast = self.options["modeling_options"]["OpenFAST"]
-#         # DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
-#         opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
-
-#         n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
-#         direct = opt_drivese["direct"]
-#         if direct:
-#             use_gb_torque_density = False
-#         else:
-#             use_gb_torque_density = opt_drivese["use_gb_torque_density"]
-            
-#         dogen = self.options["modeling_options"]["flags"]["generator"]
-#         n_pc = self.options["modeling_options"]["WISDEM"]["RotorSE"]["n_pc"]
-#         flag_hub = self.options["modeling_options"]["flags"]["hub"] #TODO: this modified; remove and add hub as legacy
-        
-#         # print flag information
-#         print("=== Problem 'DrivetrainSE_M4W' setting up ===")
-#         print(f"flag info: use_gb_torque_density={use_gb_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
-
-#         # self.set_input_defaults("machine_rating", units="kW")
-#         #self.set_input_defaults("hvac_mass_coeff", 0.025, units="kg/kW/m")
-
-#         # Materials prep
-#         self.add_subsystem(
-#             "mat",
-#             DriveMaterials(direct=direct, n_mat=self.options["modeling_options"]["materials"]["n_mat"]),
-#                 promotes=["*"]
-#             )
-#         # - for 'layout' component: need = lss_rho, bedplate_rho, hss_rho 
-
-#         # Before the layout, need to do these first
-#         # 1. hub system (perf hub system optimization)
-#         if flag_hub: # bypass rn, TODO later
-#             self.add_subsystem(
-#                 "hub", Hub_System(modeling_options=opt_drivese["hub"]),
-#                     promotes=["*"]
-#                 )
-        
-#         # # 2. gearbox
-#         self.add_subsystem(
-#             "gear", Gearbox(direct_drive=direct, use_gb_torque_density=use_gb_torque_density),
-#                 promotes=["*"]
-#             )
-
-#         # Layout (just discretization of DT and each compn, output 's_drive', etc.)
-#         #if not direct:
-#         self.add_subsystem(
-#             'layout', lay.GearedLayout(),
-#                 promotes=["*"]
-#             )
-        
-#         # All smaller components (from `dc`; empirical no load analysis)
-#         # - required by `Hub_Rotor_LSS_Frame`
-#         # 0. Main Bearings
-#         self.add_subsystem("bear1", dc.MainBearing())
-#         self.add_subsystem("bear2", dc.MainBearing())
-#         # -connecting = GearedLayout -to- bear(1,2) (NEW)
-#         self.connect("Dshaft_mb1", "bear1.D_shaft") #DONE: impl later
-#         self.connect("Dshaft_mb2", "bear2.D_shaft") #DONE: impl later
-#         # 1. brake system
-#         self.add_subsystem(
-#             "brake", dc.Brake(direct_drive=direct),
-#                 promotes=["*"]
-#             )
-#         # 2. electronics
-#         self.add_subsystem(
-#             "elec", dc.Electronics(),
-#             promotes=["*"]
-#             )
-#         # 3. yaw system
-#         self.add_subsystem(
-#             "yaw", dc.YawSystem(),
-#             promotes=["yaw_mass", "yaw_mass_user", "yaw_I", "yaw_cm", "rotor_diameter", "D_top"]
-#             )
-        
-#         # Generator (simple for now)
-#         self.add_subsystem(
-#             "rpm", dc.RPM_Input(n_pc=n_pc),
-#             promotes=["*"]
-#             )
-#         # - TODO: add M4W gen data / `if dogen:`
-#         self.add_subsystem(
-#             "gensimp", dc.GeneratorSimple(direct_drive=direct, n_pc=n_pc),
-#             promotes=["*"]
-#             )
-
-#         # Hub_Rotor_LSS_Frame:
-#         self.add_subsystem(
-#             "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt_drivese),
-#                 promotes=["*"]
-#             )
-#         # -connecting = bear(1,2) -to- Hub_Rotor_LSS_Frame (NEW)
-#         self.connect("bear1.face_width", "mb1_face_width") # mb_fw(s) shifted from GearedLayout to Hub_* to avoid cycle
-#         self.connect("bear2.face_width", "mb2_face_width")
-#         self.connect("bear1.mb_Reactions", "mb1_Reactions")
-#         self.connect("bear2.mb_Reactions", "mb2_Reactions")
-        
-#         # FLS MBs (Analytical); TODO: input opt_openfast and opt_DLC.
-#         self.add_subsystem(
-#             "mb_fls", ds.Analytical_FLS_Bearing_Life(
-#                 modeling_options=opt_drivese,
-#                 openfast_options=opt_openfast,
-#                 dlc_options=opt_DLC
-#                 ),
-#             promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss"],
-#             promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
-#         )
-#         # -connecting = bear(1,2) -to- Analy_*
-#         self.connect("bear2.mb_e", "mb_fls.e_mb") # same for both MBs ---
-#         self.connect("bear2.mb_p", "mb_fls.p_mb")
-#         self.connect("bear2.mb_X1", "mb_fls.X1_mb")
-#         self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
-#         self.connect("bear2.mb_X2", "mb_fls.X2_mb")
-#         self.connect("bear2.mb_Y2", "mb_fls.Y2_mb") # ---
-#         self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
-#         self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
-
-#         # HSS
-#         self.add_subsystem(
-#             "hss", ds.HSS_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
-#             promotes=["*"]
-#             )
-
-#         # Final tallying (mass summation)
-#         self.add_subsystem(
-#             "misc", dc.MiscNacelleComponents(direct_drive=direct),
-#             promotes=["*"]
-#             )
-#         self.add_subsystem(
-#             "nac", dc.NacelleSystemAdder(direct_drive=direct),
-#             promotes=["*"]
-#             )
-#         # -connecting NacelleSystemAdder to Layout
-#         self.connect("s_mb1", "mb1_cm") # mb*_cm is the s_* itself
-#         self.connect("s_mb2", "mb2_cm")
-#         self.connect("s_gearbox", "gearbox_cm")
-#         self.connect("s_generator", "generator_cm")
-#         # -connecting = bear(1,2) -to- NacelleSystemAdder
-#         # -- already done with Bedplate_* (below; to avoid a cycle)
-#         self.add_subsystem(
-#             "rna", dc.RNA_Adder(),
-#             promotes=["*"]
-#             )
-        
-#         # Bedplate_IBeam_Frame:
-#         self.add_subsystem(
-#             "bed", ds.Bedplate_IBeam_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
-#                 promotes=["*"]
-#             )
-#         # -connecting = bear(1,2) -to- Bedplate_*
-#         self.connect("bear1.mb_mass", "mb1_mass")
-#         # self.connect("bear1.mb_cm", "mb1_cm")
-#         self.connect("bear1.mb_I", "mb1_I")
-#         self.connect("bear1.mb_max_defl_ang", "mb1_max_defl_ang")
-#         self.connect("bear2.mb_mass", "mb2_mass")
-#         # self.connect("bear2.mb_cm", "mb2_cm")
-#         self.connect("bear2.mb_I", "mb2_I")
-#         self.connect("bear2.mb_max_defl_ang", "mb2_max_defl_ang")
-#         # -connecting = Bedplate_* to Yaw*
-#         self.connect("bedplate_rho", "yaw.rho")
-
-#         # = mat -to- hub
-#         if flag_hub:
-#             self.connect("bedplate_rho", ["pitch_system.rho", "spinner.metal_rho"])
-#             self.connect("bedplate_Xy", ["pitch_system.Xy", "spinner.Xy"])
-#             self.connect("bedplate_mat_cost", "spinner.metal_cost")
-#             self.connect("hub_rho", "hub_shell.rho")
-#             self.connect("hub_Xy", "hub_shell.Xy")
-#             self.connect("hub_mat_cost", "hub_shell.metal_cost")
-#             self.connect("spinner_rho", "spinner.composite_rho")
-#             self.connect("spinner_Xt", "spinner.composite_Xt")
-#             self.connect("spinner_mat_cost", "spinner.composite_cost")
-
-#             self.connect("hub_rho", "rho_castiron")
-#             self.connect("spinner_rho", "rho_fiberglass")
-
-# %% [markdown]
 # ### Setup the problem
 # Define the problem
 prob = om.Problem(reports=False)
@@ -349,7 +162,7 @@ if flag_opt_GBO:
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
     prob.driver.options["tol"] = 1e-4 # default: 1e-6
-    prob.driver.options["maxiter"] = 5 * 6
+    prob.driver.options["maxiter"] = 5 * 20 # needs 80 iters to converge
     prob.driver.options["disp"] = True
     prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
     # prob.driver.options # disp for debugging
@@ -422,8 +235,8 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     prob.model.add_constraint("constr_mb1_defl", upper=1.0)                 #DONE: add next
     prob.model.add_constraint("constr_mb2_defl", upper=1.0)                 #DONE: add next
     # --- bedplate # TODO: add later if needed (gen stator / max bedplate end defl)
-    prob.model.add_constraint("constr_stator_deflection", upper=1.0)
-    prob.model.add_constraint("constr_stator_angle", upper=1.0)
+    # prob.model.add_constraint("constr_stator_deflection", upper=1.0)
+    # prob.model.add_constraint("constr_stator_angle", upper=1.0)
 
     # 3. length: target overhang, hub height and LSS wrt. MBs
     prob.model.add_constraint("constr_length", lower=0.0)               #DONE: add later
@@ -442,18 +255,18 @@ prob.setup()
 #%%[markdown]
 ### pyXDSM trial
 #%%
-from omxdsm import write_xdsm
-
-write_xdsm(
-    prob,
-    filename=loc_xdsm,
-    out_format='pdf', # pdf / html
-    show_browser=True,
-    quiet=False,
-    output_side='left',
-    include_indepvarcomps=False,
-    class_names=False
-)
+if make_xdsm:
+    from omxdsm import write_xdsm
+    write_xdsm(
+        prob,
+        filename=loc_xdsm,
+        out_format='pdf', # pdf / html
+        show_browser=True,
+        quiet=False,
+        output_side='left',
+        include_indepvarcomps=False,
+        class_names=False
+    )
 # -----
 
 # %%[markdown]
@@ -486,7 +299,7 @@ prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
 prob["upwind"] = True
 prob["D_top"] = 6.5 #tower top diameter
 prob["hub_diameter"] = 7.94
-prob["overhang"] = 11.35 #ref.2 = 11.35 ; geo_schema = 12.0313 
+prob["overhang"] = 12.0313 #ref.2 = 11.35 ; geo_schema = 12.0313 
 prob["tilt"] = 6.0 #[deg] ref.3
 
 #%%[markdown]
@@ -584,18 +397,15 @@ myones = np.ones(2)
 # Main Bearing inputs
 prob["bear1.bearing_type"] = "CRB" # 1. floating MB
 prob["bear2.bearing_type"] = "TRB2" # 2. fixed MB
-# prob["bear1.D_shaft"] = 2.0 #(def:2.0), 4.0
-# prob["bear2.D_shaft"] = 2.0 #(def:2.0), 3.2
 prob["bear1.mb_e"] = 3.5 # from 3.5-4.0 (TODO: find ref.)
 prob["bear2.mb_e"] = 3.5
-# prob["bear1.mb_p"] = 3.33
-# prob["bear2.mb_p"] = 3.33
+prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 
 # Layout / lss inputs
-prob["L_h1"] = 0.52 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
-prob["L_12"] = 4.91 #(def:1.2), 7.1
-prob["lss_diameter"] = np.array([3.48486711, 2.10441671]) #(def:1.0), 4.0
-prob["lss_wall_thickness"] = np.array([0.01697175, 0.07193763]) #(def:0.1), 0.3
+prob["L_h1"] = 0.30257846 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
+prob["L_12"] = 4.97997913 #(def:1.2), 7.1
+prob["lss_diameter"] = np.array([3.45251832, 1.84746306]) #(def:1.0), 4.0
+prob["lss_wall_thickness"] = np.array([0.00993331, 0.09636164]) #(def:0.1), 0.3
 
 # Gearbox inputs
 # prob["L_gearbox"] = 1.5 #(v) calc in gearbox.py
@@ -606,9 +416,9 @@ prob["gearbox_mass_user"] = 135.5*1e3 # D5.1 R2
 # prob["gearbox_torque_density"] = 200.0 # (cf. line 210, gearbox.py)
 
 # HSS (TODO: consider as DV if needed)
-prob["L_hss"] = 0.25
-prob["hss_diameter"] = np.array([0.7357321 , 0.83711182])
-prob["hss_wall_thickness"] = np.array([0.07117872, 0.05547198])
+prob["L_hss"] = 0.10583234
+prob["hss_diameter"] = np.array([0.66189239, 0.5389038 ])
+prob["hss_wall_thickness"] = np.array([0.03501625, 0.04238025])
 
 # Generator inputs (TODO: add compn later)
 # - needed by Bedplate_IBeam_Frame in drive_structure.py, output of HSS_Frame
@@ -649,9 +459,9 @@ prob["drive_height"] = 5.614 # (def: 5.614 for 15MW DD)
 
 # bedplate: Hub:_Rotor_LSS_Frame, Bedplate_IBeam_Frame inputs
 # --- below vals from ONLY bedplate optim (desvars, constr) for nacelle mass min
-prob["bedplate_flange_width"] = 1.6
-prob["bedplate_flange_thickness"] = 0.040
-prob["bedplate_web_thickness"] = 0.02
+prob["bedplate_flange_width"] = 1.86222287
+prob["bedplate_flange_thickness"] = 0.02098218
+prob["bedplate_web_thickness"] = 0.02323379
 
 # `Hub_*` requires:
 prob["shaft_deflection_allowable"] = 1e-4 # within Hub_Rotor_LSS_Frame (below): Deflections and rotations at GB attachment
@@ -714,12 +524,12 @@ print(" ", prob["F_mb1"], prob["F_mb2"] )
 print("M_mb*:")
 print(" ", prob["M_mb1"], prob["M_mb2"] )
 print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
-print("--- || constr_ || ---")
+print("--- constr_ max ---")
 print("- lss: ",
-      np.sqrt(np.sum(prob["constr_lss_vonmises"]**2))
+      np.max(prob["constr_lss_vonmises"])
       )
 print("- bedplate: ",
-      np.sqrt(np.sum(prob["constr_bedplate_vonmises"]**2))
+      np.max(prob["constr_bedplate_vonmises"])
       )
 #
 print("--- obj: masses ---")
