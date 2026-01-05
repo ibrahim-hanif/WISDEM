@@ -56,7 +56,9 @@ loc_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "02")
-loc_xdsm = os.path.join(results_path, 'xdsm_02')
+
+make_xdsm = False
+if make_xdsm: loc_xdsm = os.path.join(results_path, 'xdsm_02')
 
 #%%
 # Record results?
@@ -121,6 +123,7 @@ opts["materials"]["n_mat"] = 4
 opts["flags"] = {}
 dogen = opts["flags"]["generator"] = False
 dohub = opts["flags"]["hub"] = False #(v)
+doMBfls = opts["flags"]["mb_fls"] = True
 
 opts["OpenFAST"] = {}
 opts["OpenFAST"]["simulation"] = {}
@@ -164,10 +167,11 @@ class LSS_layout( om.Group ):
         dogen = self.options["modeling_options"]["flags"]["generator"]
         n_pc = self.options["modeling_options"]["WISDEM"]["RotorSE"]["n_pc"]
         flag_hub = self.options["modeling_options"]["flags"]["hub"]
-        
+        doMBfls = self.options["modeling_options"]["flags"]["mb_fls"]
+
         # print flag information
         print("=== Problem 'LSS_layout' setting up ===")
-        print(f"flag info: use_gb_torque_density={use_gb_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
+        print(f"flag info: doMBfls={doMBfls}, use_gb_torque_density={use_gb_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
 
         # self.set_input_defaults("machine_rating", units="kW")
         #self.set_input_defaults("hvac_mass_coeff", 0.025, units="kg/kW/m")
@@ -220,24 +224,24 @@ class LSS_layout( om.Group ):
         self.connect("bear2.mb_Reactions", "mb2_Reactions")
         
         # FLS MBs (Analytical)
-        self.add_subsystem(
-            "mb_fls", ds.Analytical_FLS_Bearing_Life(
-                modeling_options=opt_drivese,
-                openfast_options=opt_openfast,
-                dlc_options=opt_DLC
-                ),
-            promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss"],
-            promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
-        )
-        # -connecting = bear(1,2) -to- Analy_*
-        self.connect("bear2.mb_e", "mb_fls.e_mb") # same for both MBs ---
-        self.connect("bear2.mb_p", "mb_fls.p_mb")
-        self.connect("bear2.mb_X1", "mb_fls.X1_mb")
-        self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
-        self.connect("bear2.mb_X2", "mb_fls.X2_mb")
-        self.connect("bear2.mb_Y2", "mb_fls.Y2_mb") # ---
-        self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
-        self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
+        if doMBfls:
+            self.add_subsystem(
+                "mb_fls", ds.Analytical_FLS_Bearing_Life(
+                    modeling_options=opt_drivese,
+                    openfast_options=opt_openfast,
+                    dlc_options=opt_DLC
+                    ),
+                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss"],
+                promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
+            )
+            # -connecting = bear(1,2) -to- Analy_*
+            self.connect("bear2.mb_p", "mb_fls.p_mb") # same for both MBs ---
+            self.connect("bear2.mb_X1", "mb_fls.X1_mb")
+            self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
+            self.connect("bear2.mb_X2", "mb_fls.X2_mb")
+            self.connect("bear2.mb_Y2", "mb_fls.Y2_mb") # ---
+            self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
+            self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
 
 
         # # Final tallying (mass summation)
@@ -346,7 +350,7 @@ if flag_opt_GBO:
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
     prob.driver.options["tol"] = 1e-6 # comment to default (1e-6?)
-    prob.driver.options["maxiter"] = 5 * 4
+    prob.driver.options["maxiter"] = 5 * 6
     prob.driver.options["disp"] = True
     prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
     # prob.driver.options # disp for debugging
@@ -383,8 +387,8 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # - NOTE: effectively 'lss_mass' minimization
     
     # Add design variables
-    prob.model.add_design_var("L_12", lower=0.5, upper=10.0, ref=10.0, ref0=0.5)
-    prob.model.add_design_var("L_h1", lower=0.2, upper=5.0, ref=5.0, ref0=0.2)
+    prob.model.add_design_var("L_h1", lower=0.1, upper=5.0, ref=5.0, ref0=0.2)
+    prob.model.add_design_var("L_12", lower=0.1, upper=10.0, ref=10.0, ref0=0.5)
     prob.model.add_design_var("lss_diameter", lower=0.5, upper=4.0, ref=4.0, ref0=0.5)
     prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.9, ref=1e-1) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
 
@@ -398,8 +402,9 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # 2. deflection (main bearing: max perm is angle, + fls) #NOTE: scaling is better
     prob.model.add_constraint("constr_shaft_deflection", upper=1.0)     #DONE: add next
     prob.model.add_constraint("constr_shaft_angle", upper=1.0, ref=1e-3)          #DONE: add next
-    prob.model.add_constraint("constr_L10_mb1", lower=1.0)
-    prob.model.add_constraint("constr_L10_mb2", lower=1.0)
+    if doMBfls:
+        prob.model.add_constraint("constr_L10_mb1", lower=1.0)
+        prob.model.add_constraint("constr_L10_mb2", lower=1.0)
 
     # 3. target overhang and hub height
     # prob.model.add_constraint("constr_length", lower=0.0)               #DONE: add later
@@ -414,18 +419,18 @@ prob.setup()
 #%%[markdown]
 ### pyXDSM trial
 #%%
-from omxdsm import write_xdsm
-
-write_xdsm(
-    prob,
-    filename=loc_xdsm,
-    out_format='html', # pdf
-    show_browser=True,
-    quiet=False,
-    output_side='left',
-    include_indepvarcomps=False,
-    class_names=False
-)
+if make_xdsm:
+    from omxdsm import write_xdsm
+    write_xdsm(
+        prob,
+        filename=loc_xdsm,
+        out_format='html', # pdf
+        show_browser=True,
+        quiet=False,
+        output_side='left',
+        include_indepvarcomps=False,
+        class_names=False
+    )
 # -----
 
 # %%[markdown]
@@ -456,7 +461,7 @@ prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
 prob["upwind"] = True
 prob["D_top"] = 6.5 #tower top diameter
 prob["hub_diameter"] = 7.94
-prob["overhang"] = 11.35 #ref.2
+prob["overhang"] = 12.0313 #ref.2
 prob["tilt"] = 6.0 #[deg] ref.3
 
 #%%[markdown]
@@ -558,12 +563,12 @@ prob["bear2.bearing_type"] = "TRB2" # 2. fixed MB
 # prob["bear2.D_shaft"] = 2.0 #(def:2.0), 3.2
 prob["bear1.mb_e"] = 3.5 # from 3.5-4.0 (TODO: find ref.)
 prob["bear2.mb_e"] = 3.5
-# prob["bear1.mb_p"] = 3.33
-# prob["bear2.mb_p"] = 3.33
+if doMBfls:
+    prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 
 # Layout / lss inputs
 prob["L_h1"] = 0.264 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
-prob["L_12"] = 6.934 #(def:1.2), 7.1
+prob["L_12"] = 6.935 #(def:1.2), 7.1
 prob["lss_diameter"] = np.array([2.90, 1.68]) #(def:1.0), 4.0
 prob["lss_wall_thickness"] = np.array([0.006, 0.123]) #(def:0.1), 0.3
 
@@ -682,9 +687,14 @@ print("F_mb*:")
 print(" ", prob["F_mb1"], prob["F_mb2"] )
 print("M_mb*:")
 print(" ", prob["M_mb1"], prob["M_mb2"] )
-print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
+if doMBfls:
+    print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
+print("--- constr_ max ---")
+print("- lss: ",
+      np.max(prob["constr_lss_vonmises"])
+      )
 #
-mass_lss_mbs = (prob["lss_mass"]+ prob["mb1_mass"]+ prob["mb2_mass"])
+print("--- obj: masses ---")
 print(f"MSA mass: {prob["msa_mass"]}")
 # Hub_*
 # [[4803196.5959757 ] [1369699.99999982] [ -99247.94301496]]
