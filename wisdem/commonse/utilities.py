@@ -1088,8 +1088,8 @@ def pdf_norm_int_using_cdf( ws_pts, coeff_weibull=(1.95,11.6) ):
     return pdf
 
 # ---------------
-def bin_counting_of_load(load_series, ws, 
-                         p=10/3, coeff_weibull=(1.95,11.6), nBins=100):
+def bin_counting_of_load(load_series, ws, probabilities, 
+                         p=10/3, nBins=100):
     """
     Compute equivalent load using bin counting method (histogram).
     NOTE: BINNING BAD WITHIN OPTIMIZATION, TODO: DOCUMENT FAILURE AND SOLUTION!
@@ -1098,12 +1098,12 @@ def bin_counting_of_load(load_series, ws,
     -------
     load_series : array[ # of time steps , # of wind speeds ]
         Time series of loads (forces or moments); for FLS, shape=(72e4,10)
-    p : float
-        Exponent for equivalent load calculation (default 10/3 for bearings)
-    ws : array[ # of wind speeds ]
+    ws : array[ 1, # of wind speeds ]
         Wind speed bins corresponding to load_series columns, shape=(1,10)
-    coeff_weibull : tuple
-        Coefficients of Weibull distribution for site (c, scale)
+    probabilities : array[ 1, # of wind speeds ]
+        Probability of occurance of each wind speed
+    p : float
+        Exponent for equivalent load calculation (default: 10/3 for roller bearings)
     nBins : int
         Number of bins to use for histogramming the load data
     
@@ -1111,10 +1111,18 @@ def bin_counting_of_load(load_series, ws,
     -------
     load_eq : array[ # of wind speeds ]
         Equivalent load per wind speed bin, shape=(10,)
+
+    Internal Progress
+    ______
+    - DONE : implementation
+    - DONE : replace coeff_weibull with ws probabilities directly as input
+    - TODO : CORRECT this wrong implementation 
     """
     # init
     P = load_series  # shape=(72e4,10)
-    ws_pdf = pdf_norm_int_using_cdf(ws, coeff_weibull) # (1,10)
+    n_t, n_w = P.shape[0], P.shape[1] # 72e3, 11
+    # ws_pdf = pdf_norm_int_using_cdf(ws, coeff_weibull) # (1,10)
+    ws_pdf = probabilities.reshape(1,n_w)
     
     Pmax = np.max(P) if np.max(P) > 0 else np.finfo(float).eps
     
@@ -1125,7 +1133,7 @@ def bin_counting_of_load(load_series, ws,
     for ec in range(len(ws)):
         hist_count, _ = np.histogram(P[:, ec], bins=edges_P, density=True) #density, for it is PDF
         # hist_count = hist_count / np.sum(hist_count) if np.sum(hist_count) > 0 else hist_count #divide to normalize (sum=1), not needed coz density=True
-        P_hist += ws_pdf[ec] * hist_count
+        P_hist += ws_pdf[0,ec] * hist_count
 
     P_sum = (np.sum((centers_P ** (p)) * P_hist)) ** (1/p)
     return P_sum
