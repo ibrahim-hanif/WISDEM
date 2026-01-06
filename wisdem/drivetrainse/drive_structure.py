@@ -705,7 +705,7 @@ class HSS_Frame(om.ExplicitComponent):
             # Put all together and run
             myframe.addLoadCase(load)
 
-        # myframe.write('myframe2.3dd') # Debugging
+        # myframe.write('myframe_hss_frame.3dd') # Debugging
         displacements, forces, reactions, internalForces, mass3dd, modal = myframe.run()
 
         # Loop over DLCs and append to outputs
@@ -1059,7 +1059,7 @@ class Nose_Stator_Bedplate_Frame(om.ExplicitComponent):
             # Put all together and run
             myframe.addLoadCase(load)
 
-        # myframe.write('myframe3.3dd') # Debugging
+        # myframe.write('myframe_nose_DDstator_bed.3dd') # Debugging
         displacements, forces, reactions, internalForces, mass3dd, modal = myframe.run()
 
         # ------------ Bedplate "curved beam" geometry for post-processing -------------
@@ -1488,7 +1488,7 @@ class Bedplate_IBeam_Frame(om.ExplicitComponent):
             # Put all together and run
             myframe.addLoadCase(load)
 
-        # myframe.write('myframe4.3dd') # Debugging
+        myframe.write('myframe_bedplate.3dd') # Debugging
         displacements, forces, reactions, internalForces, mass3dd, modal = myframe.run()
 
         # Loop over DLCs and append to outputs
@@ -2046,7 +2046,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input('X2_mb', val=1.0, desc='Bearing heavy coefficient for P calculation')
         self.add_input('Y2_mb', val=1.0, desc='Bearing heavy coefficient for P calculation')
         # - 3. operational
-        self.add_input('rated_rpm', val=7.56, desc='Nominal/rated rotational speed', units='rpm')
+        self.add_input('rated_rpm', val=0.0, desc='Nominal/rated rotational speed', units='rpm')
         self.add_input('lifetime', val=25.0, desc='Wind turbine design life')
         # - 4. drivetrain
         self.add_input("carrier_mass", 0.0, units="kg")
@@ -2076,7 +2076,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # LSS
         L_12 = inputs['L_12']
         L_h1 = inputs['L_h1']
-        n0 = inputs['rated_rpm']
+        n0 = inputs['rated_rpm'] + 1e-6 # div by 0.0 (def), avoid by 1e-6
         # drivetrain
         tilt_rad = float(np.deg2rad(inputs["tilt"][0]))
         m_carrier = float(inputs["carrier_mass"][0])
@@ -2121,8 +2121,8 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
 
         # Bin counting: depr. and removed due to non-smoothness within optimization
         # nBins = self.options['modeling_options']['nBins']
-        # P_mb1_sum = bin_counting_of_load(P_mb1, ws, p, coeff_weibull, nBins)
-        # P_mb2_sum = bin_counting_of_load(P_mb2, ws, p, coeff_weibull, nBins)
+        # P_mb1_sum = bin_counting_of_load(P_mb1, ws, probabilities, p)
+        # P_mb2_sum = bin_counting_of_load(P_mb2, ws, probabilities, p)
 
         # DEL calculation
         # print('ws: ', ws) # debugging
