@@ -46,6 +46,31 @@ from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from
 from wisdem.commonse.fileIO import save_data
 
 # %% [markdown]
+# ### Define flags
+# post-processing results
+make_xdsm = False # html-show or detailed pdf
+record_cases = False #TODO: add in final setup (full problem)
+plot_cases = False   #NOTE: saved, not changing now (commented)
+flag_scaling_show_browser = False
+flag_save_new_data = False
+
+# Loading `openFAST` hub loads from a saved file
+part_loads = True 
+load_fls_loads = False
+# False: full loads (72e4,10) (200 Hz sampled, 60mins)
+# True: part loads (72e3,11) (20 Hz sampled, 60mins)
+dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
+
+# Optimization flags
+flag_opt_GBO = True        # GBO: gradient based optimizer
+flag_DOE = False        # DOE: design of experiments
+flag_opt_GFO = False     # GFO: gradient free optimizer
+
+# Parametric study
+flag_study_parametric = True
+param_for_study = "LDD" # "MB" or "LDD"
+
+#%%[markdown]
 # ### Defining results directory and files
 results_dir = "02_results"
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -57,12 +82,9 @@ loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "02")
 
-make_xdsm = False
 if make_xdsm: loc_xdsm = os.path.join(results_path, 'xdsm_02')
 
-#%%
 # Record results?
-record_cases = False #TODO: add in final setup (full problem)
 if record_cases:
     print(" ---- Recording cases using `SqliteRecorder` ---- ")
     loc_cases = os.path.join(results_path, "cases_recorded.sql")
@@ -70,13 +92,6 @@ if record_cases:
         os.remove( loc_cases )
 
 #%% Loading `openFAST` hub loads from a saved file
-part_loads = True 
-load_fls_loads = False
-# False: full loads (72e4,10) (200 Hz sampled, 60mins)
-# True: part loads (72e3,11) (20 Hz sampled, 60mins)
-
-dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
-
 if part_loads: # define paths
     loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
@@ -89,10 +104,6 @@ else: # define paths
             loc_FLS_loads_mat_file, loc_ULS_loads_mat_file)
 # %% [markdown]
 # ### Defining options (`modelling_options`), flags
-
-flag_opt_GBO = True        # GBO: gradient based optimizer
-flag_DOE = False        # DOE: design of experiments
-flag_opt_GFO = False     # GFO: gradient free optimizer
 
 # define `modelling_options`
 opts = {}
@@ -449,8 +460,8 @@ prob.model.list_outputs();
 # %% [markdown]
 # ### Defining input values
 # after calling `prob.setup()` (on the openMDAO `prob` defined) and before calling `prob.run_driver()`
-
-# 1. High-level Inputs
+#%%
+# ==== 1. High-level Inputs ====
 prob.set_val("machine_rating", 15.0, units="MW")
 prob["rotor_diameter"] = 240.0
 prob["rated_torque"] = 21.03*1e6 # [Nm] ref.2, tab.5-4
@@ -464,11 +475,9 @@ prob["hub_diameter"] = 7.94
 prob["overhang"] = 12.0313 #ref.2
 prob["tilt"] = 6.0 #[deg] ref.3
 
-#%%[markdown]
-# Loading `openFAST` hub loads from a saved file
+# ==== Loading `openFAST` hub loads from a saved file ====
+# Loads assignment (ULS, FLS)
 #
-# Snew, keys_all = mainshaft_loads_from_mat_to_dict(loc_FLS_loads_mat_file, loc_ULS_loads_mat_file)
-#%% Loads assignment (ULS, FLS)
 # ## ULS load loads (xD), input to Analy_*
 # - NOTE: these are predscribed 50-yr extremes from extr DLCs (5.1,6.1,6.3) 
 # prob["F_aero_hub"] = np.array([5.3995*1e6, 1.3697*1e6, 5.5742*1e6]).reshape((3, 1))
@@ -505,8 +514,7 @@ if load_fls_loads:
 # TODO: update using pCrunch's rainflow
 # ---
 
-# %% [markdown]
-# 2. Blade properties and hub design options
+# ==== 2. Blade properties and hub design options ====
 # - cf. `opts["flags"]["hub"]`
 
 # Hub_Rotor_LSS_Frame inputs
@@ -550,8 +558,7 @@ if True: #NOTE: True with `Hub_*`
 
 # TODO: cm & I (hub_system_ & blades_) will change with DVs (L in lss)
 
-# %% [markdown]
-# 3. Drivetrain configuration and sizing inputs
+# ==== 3. Drivetrain configuration and sizing inputs ====
 
 myones = np.ones(2)
 # - init condn for some design vars
@@ -567,10 +574,10 @@ if doMBfls:
     prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 
 # Layout / lss inputs
-prob["L_h1"] = 0.264 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
-prob["L_12"] = 6.935 #(def:1.2), 7.1
-prob["lss_diameter"] = np.array([2.90, 1.68]) #(def:1.0), 4.0
-prob["lss_wall_thickness"] = np.array([0.006, 0.123]) #(def:0.1), 0.3
+prob["L_h1"] = 0.264 #(def: 2.0), 4.25; converg: 0.264
+prob["L_12"] = 6.935 #(def:1.2), 7.1; converg: 6.935
+prob["lss_diameter"] = np.array([2.90, 1.68]) #(def:1.0), 4.0; converg: np.array([2.90, 1.68])
+prob["lss_wall_thickness"] = np.array([0.006, 0.123]) #(def:0.1), 0.3; converg: np.array([0.006, 0.123])
 
 # Gearbox inputs
 # prob["L_gearbox"] = 1.5 #(v) calc in gearbox.py
@@ -634,8 +641,8 @@ prob["shaft_angle_allowable"] = 1e-3
 # prob["stator_deflection_allowable"] = 1e-4 # within Bedplate_IBeam_Frame (below)
 # prob["stator_angle_allowable"] = 1e-3
 
-# %% [markdown]
-# 4. Material properties (discrete_inputs to `DriveMaterials`)
+# ==== 4. Material properties ==== 
+#  (discrete_inputs to `DriveMaterials`)
 
 # DriveMaterials inputs
 prob["E_mat"] = np.c_[200e9 * np.ones(3), 205e9 * np.ones(3), 118e9 * np.ones(3), [4.46e10, 1.7e10, 1.67e10]].T
@@ -679,6 +686,8 @@ else:
     prob.run_model()
 
 # %%[markdown]
+# # _____ Post-processing _____
+#%%
 # Print the results
 print("LSS desvars:")
 print(" ", prob["L_h1"], prob["L_12"], prob["lss_diameter"], prob["lss_wall_thickness"] )
@@ -714,9 +723,29 @@ if record_cases:
     results_dict = get_recorder_results( loc_cases, None, True )
     print(results_dict);
 
-    #%%[markdown]
-    # ### Plot recorded results
-    # %%
+#%%[markdown]
+# ### Plot recorded results
+#%%
+# main colors
+clr_blueDark = '#313694'
+clr_blueLight = '#A6CAEC'
+clr_redDark = '#C00000'
+clr_redLight = 'r'
+# -------------------------
+# options: Journal polish
+# plot rc params
+params_plot_rc = {
+        "font.size": 16,
+        "axes.labelsize": 16,
+        "legend.fontsize": 16,
+        "lines.linewidth": 2,
+        "lines.markersize": 6,
+    }
+plt.rcParams.update( params_plot_rc )
+
+# %%
+if record_cases and plot_cases:
+    print(" NOTE: DV converg iter plot for testing now; not being saved")
     # -------------------------
     # Extract and squeeze data
     # -------------------------
@@ -754,10 +783,10 @@ if record_cases:
     # ========= Row 2, Col 1: L_12 and 10*L_h1 =========
     ax2 = fig.add_subplot(gs[1, 0])
     ax2.plot(iters, 10.0 * L_h1,
-            marker='s', color='#313694',
+            marker='s', color=clr_blueDark,
             label=r'$L_{h1} \times 10$')
     ax2.plot(iters, L_12,
-            marker='o', color='#A6CAEC',
+            marker='o', color=clr_blueLight,
             label=r'$L_{12}$')
     ax2.set_ylabel(r'Length [m]')
     # ax2.set_xlabel('Iteration')
@@ -768,16 +797,16 @@ if record_cases:
     # ========= Row 2, Col 2: diameter and thickness =========
     ax3 = fig.add_subplot(gs[1, 1])
     ax3.plot(iters, lss_diam[:, 0],
-            marker='o', color='#313694',
+            marker='o', color=clr_blueDark,
             label=r'$D_{lss,1}$')
     ax3.plot(iters, lss_diam[:, 1],
-            marker='o', color='#C00000',
+            marker='o', color=clr_redDark,
             label=r'$D_{lss,2}$')
     ax3.plot(iters, 10.0 * lss_t[:, 0],
-            marker='s', color='#A6CAEC',
+            marker='s', color=clr_blueLight,
             label=r'$t_{lss,1} \times 10$')
     ax3.plot(iters, 10.0 * lss_t[:, 1],
-            marker='s', color='r',
+            marker='s', color=clr_redLight,
             label=r'$t_{lss,2} \times 10$')
     ax3.set_ylabel(r'Dimensions [m]')
     # ax3.set_xlabel('Iteration')
@@ -789,10 +818,10 @@ if record_cases:
     # ========= Row 3 (span both columns): L10 constraints =========
     ax4 = fig.add_subplot(gs[2, :])
     ax4.plot(iters, L10_mb1,
-            marker='o', linewidth=2, color='#313694',
+            marker='o', linewidth=2, color=clr_blueDark,
             label=r'$L_{10}^{mb1}$')
     ax4.plot(iters, L10_mb2,
-            marker='s', linewidth=2, color='#A6CAEC',
+            marker='s', linewidth=2, color=clr_blueLight,
             label=r'$L_{10}^{mb2}$')
     ax4.axhline(1.0, color='k', linestyle='--', linewidth=1)
     ax4.set_ylabel(r'Life constraint [-]')
@@ -802,61 +831,85 @@ if record_cases:
     ax4.legend(loc='center left',bbox_to_anchor=(1,0.5))
 
     # -------------------------
-    # options: Journal polish
-    # -------------------------
-    plt.rcParams.update({
-        "font.size": 16,
-        "axes.labelsize": 16,
-        "legend.fontsize": 16,
-        "lines.linewidth": 2,
-        "lines.markersize": 6,
-    })
-
-    # -------------------------
     # Final layout
     # -------------------------
     # plt.tight_layout()
 
+    # -------------------------
+    # save
+    # -------------------------
     plot_path = results_path+"\\vars_with_iter.png"
-    plt.savefig(plot_path)
+    # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 
     plt.show()
 
 #%%[markdown]
 # Driver scaling report 
-prob.driver.scaling_report(outfile=loc_scaling_report)
-
+prob.driver.scaling_report(
+    outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
+);
 #%%
-save_data(loc_save_data, prob)
+if flag_save_new_data: save_data(loc_save_data, prob)
 # ===============================================================
+
 # %% [markdown]
 # ### Convergence/parametric study setup
 # 1. for LDD 'inconsistency' check
 # 2. for MB types / layout optimization
 # - vary DVs over a grid, and record outputs
-flag_study_parametric = True
 #%%
 if flag_study_parametric and flag_opt_GBO:
     print("===== parametric study =====")
-    # inputs: param vary stepping values
-    # steps_L_h1 = np.array([2.0,4.0])
-    # steps_L_12 = np.array([1.2,7.0])
-    # steps_lss_diameter = np.array([[1.0,4.0],[1.0,4.0]])
-    # steps_lss_wall_thickness = np.array([[0.1,0.3],[0.1,0.3]])
-    # TODO: make grid later
 
-    # # MB type combinations to study
-    steps_MBtype = [
-        ("CRB","TRB2"),
-        ("CARB","TRB2"),
-        ("CRB","SRB"),
-        ("CARB","SRB")
+    # ==== Initialize: Combinations to study ====
+    if param_for_study.lower() == "mb":
+        steps_MBtype = [
+            ("CRB","TRB2"),
+            ("CARB","TRB2"),
+            ("CRB","SRB"),
+            ("CARB","SRB")
+            ]
+        print(" - MB types: ", steps_MBtype);
+        # length: total num of param varying steps
+        len_steps = len(steps_MBtype)
+
+    elif param_for_study.lower() == "ldd":
+        # L_h1 (0,5.0)      : 1.25, 3.75
+        # L_12 (0,10.0))    : 2.5, 7.5
+
+        # TODO: make grid later ?
+        # inputs: param vary stepping values
+        # steps_L_h1 = np.array([2.0,4.0])
+        # steps_L_12 = np.array([1.2,7.0])
+        # steps_lss_diameter = np.array([[1.0,4.0],[1.0,4.0]])
+        # steps_lss_wall_thickness = np.array([[0.1,0.3],[0.1,0.3]])
+
+        steps_L = [
+            (1.25, 2.5),
+            (3.75, 2.5),
+            (1.25, 7.5),
+            (3.75, 7.5)
         ]
-    # length: total num of param varying steps
-    len_steps = len(steps_MBtype)
+        print("- L values: ", steps_L);
+        # length: total num of param varying steps
+        len_steps = len(steps_L)
+
+        # # Recorded cases: convergence for each parameter in study
+        if record_cases:
+            # each's recorded cases: save loc and dict
+            loc_cases_all = [
+                "case_ldd_set_" + str(i) + ".sql" for i in range(
+                    1,len_steps+1)
+                ]
+            # all's
+            results_list_of_dicts = [] # array of dict(s)
+
+    else:
+        ValueError('Incorrect parameter value for the study: choose "MB" or "LDD"')
 
     # saving DVs+obj as outputs dict
     # - init to 0
+    # - TODO: constr (size 2) are not here, so they become 1 long array
     outs_recorded = {}
     lst_dvs = prob.driver.get_design_var_values()
     for key, val in lst_dvs.items():
@@ -865,31 +918,67 @@ if flag_study_parametric and flag_opt_GBO:
     name_obj = list(prob.model.get_objectives().keys())[0]
     outs_recorded[name_obj] = np.zeros((len_steps,1))
     outs_recorded
-    
+
+    # ==== Run parametric study loop ====
     # set DVs and run driver
     for i in range(len_steps):
-        # MB
-        set_MBs = steps_MBtype[i]
-        print(f"=== type of bearing: {set_MBs} ===")
-        prob["bear1.bearing_type"] = set_MBs[0]
-        prob["bear2.bearing_type"] = set_MBs[1]
-        print("-------------------- v ------------------")
-        # Layout / lss inputs
-        prob["L_h1"] = 0.5
-        prob["L_12"] = 7.0
-        prob["lss_diameter"] = myones * 2.0
-        prob["lss_wall_thickness"] = myones * 0.1
+        
+        # MB param study
+        if param_for_study.lower() == "mb":
+            # set MB type
+            set_MBs = steps_MBtype[i]
+            print(f"=== type of bearing: {set_MBs} ===")
+            prob["bear1.bearing_type"] = set_MBs[0]
+            prob["bear2.bearing_type"] = set_MBs[1]
+            print("-------------------- v ------------------")
+            # set L val: DONE above
+            # prob["L_h1"] = 0.5
+            # prob["L_12"] = 7.0
 
-        # run driver = GBO
-        prob.model.approx_totals() # TODO.
+        # LDD param study
+        elif param_for_study.lower() == "ldd":
+
+            if record_cases:
+                # loc: define for this iter
+                loc_case_i = os.path.join(results_path, loc_cases_all[i])
+                if os.path.exists( loc_case_i ):
+                    os.remove( loc_case_i )
+                # driver: change recorder
+                recorder = om.SqliteRecorder( loc_case_i )
+                prob.driver.add_recorder( recorder=recorder )
+
+            # set MB type: DONE above
+            # prob["bear1.bearing_type"] = "CRB"
+            # prob["bear2.bearing_type"] = "TRB2"
+            # set L val
+            set_Ls = steps_L[i]
+            print(f"=== value of L: {set_Ls} ===")
+            prob["L_h1"] = set_Ls[0]
+            prob["L_12"] = set_Ls[1]
+            print("---------- v ----------")
+        
+        # redef ? dia/thick :
+        # prob["lss_diameter"] = myones * 4.0
+        # prob["lss_wall_thickness"] = myones * 0.3
+
+        # ===== RUN driver (GBO) =====
+        prob.model.approx_totals()
         prob.run_driver()
-        print( prob["L_h1"] ) # debugging
+        # print( "L_h1 = ", prob["L_h1"] ) # debugging
+        
+        # ===== post-processing =====
         # save outputs
         for key, val in outs_recorded.items():
             outs_recorded[key][i,:] = prob[key]
-#%%
-print(steps_MBtype);
+
+        # Recorded cases
+        if param_for_study.lower() == "ldd" and record_cases:
+            results_list_of_dicts.append(
+                get_recorder_results( loc_case_i, None, True ) #out=dict
+                )
+
 print(outs_recorded);
+#%%
 """
 {'L_12': array([[6.93563233],
        [4.95328602],
@@ -912,3 +1001,170 @@ print(outs_recorded);
        [64650.67674836],
        [38386.64245769]])}
 """
+# %%
+if (param_for_study.lower() == "ldd") and (
+    record_cases and plot_cases):
+    print(" NOTE: 2D multi-start converg plot for testing now; not being saved")
+    # -------------------------
+    # Figure
+    # -------------------------
+    fig, ax = plt.subplots(figsize=(6.5, 6))
+
+    for i, res in enumerate(results_list_of_dicts):
+
+        # Extract & squeeze
+        L_h1 = res['L_h1'].squeeze()
+        L_12 = res['L_12'].squeeze()
+
+        # Path (iterations)
+        ax.plot(
+            L_h1,
+            L_12,
+            color='0.7',
+            linewidth=1.5,
+            zorder=1
+        )
+
+        # Intermediate points
+        ax.scatter(
+            L_h1[:-1],
+            L_12[:-1],
+            color='0.7',
+            s=25,
+            zorder=2
+        )
+
+        # Starting point
+        ax.scatter(
+            L_h1[0],
+            L_12[0],
+            color=clr_blueLight,
+            s=80,
+            zorder=4,
+            label='Start' if i == 0 else None
+        )
+
+        # Final (converged) point
+        ax.scatter(
+            L_h1[-1],
+            L_12[-1],
+            color=clr_blueDark,
+            marker='x',
+            s=100,
+            zorder=4,
+            label='Converged' if i == 0 else None
+        )
+
+    # -------------------------
+    # Axes formatting
+    # -------------------------
+    ax.set_xlabel(r'$L_{h1}\ \mathrm{[m]}$')
+    ax.set_ylabel(r'$L_{12}\ \mathrm{[m]}$')
+
+    ax.grid(True)
+    ax.legend(loc='center')
+    # supported values are 'best', 'upper right', 'upper left', 'lower left', 'lower right', 'right', 'center left', 'center right', 'lower center', 'upper center', 'center'
+    # ax.set_title('2D optimization convergence path')
+    
+    # -------------------------
+    # Final layout
+    plt.tight_layout()
+    # -------------------------
+    # Save plot
+    plot_path = results_path+"\\del_multiStart_optim_path.png"
+    # plt.savefig(plot_path) # NOTE: saved, so don't change now 
+    
+    plt.show()
+
+# %%
+if (param_for_study.lower() == "ldd") and (
+    record_cases and plot_cases):
+    print(" NOTE: 3D multi-start converg plot for testing now; not being saved")
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+    # -------------------------
+    # Figure
+    # -------------------------
+    fig = plt.figure(figsize=(7.5, 6.5))
+    ax = fig.add_subplot(111, projection='3d')
+
+    for i, res in enumerate(results_list_of_dicts):
+
+        # Extract & squeeze
+        L_h1 = res['L_h1'].squeeze()
+        L_12 = res['L_12'].squeeze()
+        m_msa = res['msa_mass'].squeeze()
+
+        # Trajectory
+        ax.plot(
+            L_h1,
+            L_12,
+            m_msa,
+            color='0.7',
+            linewidth=1.5,
+            zorder=1
+        )
+
+        # Intermediate points
+        ax.scatter(
+            L_h1[:-1],
+            L_12[:-1],
+            m_msa[:-1],
+            color='0.7',
+            s=25,
+            zorder=2
+        )
+
+        # Starting point
+        ax.scatter(
+            L_h1[0],
+            L_12[0],
+            m_msa[0],
+            color=clr_blueLight,
+            s=80,
+            zorder=3,
+            label='Start' if i == 0 else None
+        )
+
+        # Label start with set number
+        ax.text(
+            L_h1[0],
+            L_12[0],
+            m_msa[0],
+            f'{i+1}',
+            fontsize=16,
+            color='k'
+        )
+
+        # Converged point
+        ax.scatter(
+            L_h1[-1],
+            L_12[-1],
+            m_msa[-1],
+            color=clr_blueDark,
+            marker='x',
+            s=100,
+            zorder=4,
+            label='Converged' if i == 0 else None
+        )
+
+    # -------------------------
+    # Axes formatting
+    # -------------------------
+    ax.set_xlabel(r'$L_{h1}\ \mathrm{[m]}$')
+    ax.set_ylabel(r'$L_{12}\ \mathrm{[m]}$')
+    ax.set_zlabel(r'$m_{\mathrm{MSA}}\ \mathrm{[kg]}$')
+
+    # ax.set_title('3D optimization convergence path')
+    ax.legend(loc='best')
+
+    # -------------------------
+    # Final layout
+    plt.tight_layout()
+    # -------------------------
+    # Save plot
+    plot_path = results_path+"\\del_multiStart3D_optim_path.png"
+    # plt.savefig(plot_path) # NOTE: saved, so don't change now 
+
+    plt.show()
+
+# %%
