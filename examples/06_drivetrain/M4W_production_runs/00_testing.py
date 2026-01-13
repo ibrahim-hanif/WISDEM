@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 
 import wisdem.drivetrainse.drive_structure as ds
 
-from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, pdf_norm_int_using_cdf
+from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, pdf_norm_int_using_cdf, bin_counting_of_load, compute_LRD, compute_LRD_matrix_vectorized
 # from wisdem.commonse.fileIO import save_data
 
 #%% Loading `openFAST` hub loads from a saved file
@@ -58,7 +58,8 @@ Fx, Fy, Fz = myForces, myForces, myForces
 Mx, My, Mz = myForces, myForces, myForces
 
 # %% F_* computation
-L_h1 = 2; L_12 = 5
+L_h1 = 0.264 # test: 2; converg: 0.264
+L_12 = 6.935 # test: 5; converg: 6.935
 Fmb1, Fmb2, dFmb1dLh1, dFmb1dL12, dFmb2dLh1, dFmb2dL12 = ds.analytical_MB_Forces(
     Fx,Fy,Fz,Mx,My,Mz,L_h1,L_12, flag_jac=True)
 
@@ -71,12 +72,13 @@ m_shrink_disc = (machine_rating*1e-3)/3.0
 m_carrier = 8e3
 carrier_mass = m_shrink_disc + m_carrier
 
-Fmb1_real, Fmb2_real = ds.analy_more_realistic_MBforces(
+Fmb1_real, Fmb2_real = ds.analytical_MBforces_realistic(
     Fx,Fy,Fz,Mx,My,Mz,
     m_carrier, delta, tilt_rad,
     L_h1,L_12, flag_jac=False)
 
-# %% P_* computation
+# %%
+# P_* computation
 P = Fmb1[3,:,:]
 n_t, n_w = P.shape[0], P.shape[1]
 ws_full = S_all['mean_wind_speed']; ws = ws_full[0,:n_w]
@@ -88,13 +90,23 @@ dP_dLh1 = dFmb1dLh1[3,:,:]
 dP_dL12 = dFmb1dL12[3,:,:]
 
 # %%
+# ws pdf computation
 coeff_weibull = (1.95, 11.6)
 pdf_ws = pdf_norm_int_using_cdf( ws, coeff_weibull )
-pdf_ws
+pdf_ws_full = pdf_norm_int_using_cdf( ws_full, coeff_weibull )
+print(f"pdf_ws = {pdf_ws}" )
+print(f"pdf_ws_full = {pdf_ws_full}" )
 
 #%%
+# P_eq (LDD, LRD, DEL) computation
+P_LDD = bin_counting_of_load( P, ws, pdf_ws )
+print(f"P_LDD = {P_LDD}")
+
+P_LRD = compute_LRD_matrix_vectorized( P, dt, omega, pdf_ws, 10/3, 3)
+print(f"P_LRD = {P_LRD}")
+
 DEL = ds.del_bearing_computation( P, ws, dt, omega, pdf_ws, p )
-DEL
+print(f"DEL = {DEL}")
 
 #%%
 # P=10; ws=np.array([[10]]); dt=0.1
