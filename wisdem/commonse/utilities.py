@@ -1138,6 +1138,161 @@ def bin_counting_of_load(load_series, ws, probabilities,
     P_sum = (np.sum((centers_P ** (p)) * P_hist)) ** (1/p)
     return P_sum
 
+# --------------
+def compute_LRD(load_series, omega, p=10/3, dt=0.05, n_bins=100):
+    """
+    Compute Load-Revolution Distribution (LRD) for one wind speed bin
+
+    Parameters
+    ----------
+    load_series : array
+        Equivalent bearing load time series
+    omega : array
+        Revolutions per minute
+    p : float
+        Bearing life exponent; default 10/3 for roller bearings
+    dt : float
+        time step (of integration); default 0.05 for 20Hz sampling
+    n_bins : int
+        Number of load bins
+
+    Returns
+    -------
+    P_bin_center : array
+        Load bin centers
+    N_rev_bin : array
+        Number of revolutions per load bin
+    """
+    # RPM to RPS to R per time step
+    rev = (omega/60)*dt
+
+    # Load bins
+    P_bins = np.linspace(
+        load_series.min(), load_series.max(),
+        n_bins + 1 )
+    P_bin_center = 0.5 * (P_bins[:-1] + P_bins[1:])
+
+    # Assign each load sample to a bin
+    bin_idx = np.digitize(load_series, P_bins) - 1
+    bin_idx = np.clip(bin_idx, 0, n_bins - 1)
+
+    # Accumulate revolutions
+    N_rev_bin = np.zeros(n_bins)
+    np.add.at(N_rev_bin, bin_idx, rev) # .at = in-place operation
+
+    # Compute equivalent load
+    # - total revs
+    N_rev_tot = np.sum(N_rev_bin, axis=0)
+    Peq_j = (np.sum(
+        N_rev_bin * (P_bin_center**p),
+        axis=0
+        ) / N_rev_tot)**(1.0/p)
+
+    return Peq_j
+# --------------
+
+# --------------
+def compute_LRD_matrix_vectorized(
+        loads_DLC, dt, omega,
+        probabilities=[], p=10/3, n_bins=100, P_bins=None):
+    """
+    Fully vectorized Load-Revolution Distribution (LRD) for HPC,
+    without any wind-speed loop
+    method: flatten → encode → accumulate → reshape
+    Advantages:
+    - ~10 ~ 20x faster than looping
+    - Safe inside optimization
+    Limitations:
+    - Exact analytical partials through binning are non-smooth (enhancement: smoothed LRD (Gaussian kernel bins))
+      use Rainflow or damage equivalent load formulation instead
+    
+    Inputs
+    ----------
+    loads_DLC : array[ # time steps, # wind speeds ]
+        full set of DLC loads: at main shaft-hub (output of openFAST)
+    dt : float, [s]
+        Time step used for integration
+    omega  : array[ # time steps, # wind speeds ]
+        rotations per minute (of main shaft/bearings)
+    probabilities : array[ # wind speeds ]
+        wind speed probabilities
+    p : float
+        Bearing life exponent; default 10/3 for roller bearings
+    n_bins : int
+        number of bins for counting
+    P_bins : array or None
+        (optional) predefined load bins
+
+    Outputs
+    -------
+    if probabilities == []
+        P_bin_center : array (n_bins,)
+        N_rev : array (n_bins, Nws)
+    else
+        equivalent load over all wind speeds
+
+    Internal Progress
+    _________________
+    - DONE : implementation
+    """
+    # ---- init and sanity check
+    Nt, Nws = loads_DLC.shape
+    rev = (omega/60)*dt # RPM to RPS to R per time step
+    if len(probabilities) == 0: output_P_eq = False
+    else: output_P_eq = True; pdf_ws = probabilities.reshape(1,Nws)
+
+    # ---- Load bins (shared across all wind speeds)
+    if P_bins is None:
+        P_min = loads_DLC.min()
+        P_max = loads_DLC.max()
+        P_bins = np.linspace(P_min, P_max, n_bins + 1)
+
+    P_bin_center = 0.5 * (P_bins[:-1] + P_bins[1:])
+
+    # ---- Flatten everything
+    # ----- representing (i_t, i_ws)
+    P_flat = loads_DLC.ravel()
+    rev_flat = rev.ravel()
+
+    # ---- Bin index (not count) for loads
+    load_bin = np.digitize(P_flat, P_bins) - 1
+    load_bin = np.clip(load_bin, 0, n_bins - 1)
+
+    # ---- Wind speed index per flattened entry
+    ws_idx = np.tile(np.arange(Nws), Nt)
+
+    # ---- 2D bin index → 1D linear index
+    # ----- global bin mapping: (i_load * n_ws) + ws_idx
+    # ----- coz of (n_bins*Nws) in var `N_rev_flat` below
+    lin_idx = load_bin * Nws + ws_idx
+
+    # ---- Accumulate revolutions
+    N_rev_flat = np.zeros(n_bins * Nws)
+    np.add.at(N_rev_flat, lin_idx, rev_flat)
+
+    # ---- Reshape back
+    N_rev_bin = N_rev_flat.reshape(n_bins, Nws)
+
+    # ---- return now, without computing equivalent load
+    if not output_P_eq:
+        return P_bin_center, N_rev_bin
+    
+    # ---- P_eq from LRD
+    else:
+        # total revs
+        N_rev_tot = np.sum(N_rev_bin, axis=0)
+        P_bin_center = np.reshape(P_bin_center,(n_bins,1))
+        # compute P_eq^p for each wind speed
+        Peq_j_raised_p = np.sum(
+            N_rev_bin * (P_bin_center**p),
+                axis=0
+            ) / N_rev_tot
+        # compute overall P_eq
+        P_eq_LRD = np.sum(Peq_j_raised_p * pdf_ws)**(1.0/p)
+
+        return P_eq_LRD
+# --------------
+
 # ---------------
 def scale_bounds_for_driver( lb, ub ):
     """

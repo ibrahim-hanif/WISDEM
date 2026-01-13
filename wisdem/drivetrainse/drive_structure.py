@@ -10,7 +10,7 @@ import wisdem.pyframe3dd.pyframe3dd as frame3dd
 from wisdem.commonse import gravity
 from wisdem.commonse.csystem import DirectionVector
 from wisdem.commonse.utilities import find_nearest, nodal2sectional, smooth_abs
-from wisdem.commonse.utilities import pdf_norm_int_using_cdf, bin_counting_of_load, load_all_mat_to_dict #(v)
+from wisdem.commonse.utilities import bin_counting_of_load, load_all_mat_to_dict, compute_LRD_matrix_vectorized #(v)
 from wisdem.commonse.cross_sections import Tube, IBeam
 from wisdem.commonse.utilization_constraints import TubevonMisesStressUtilization
 from scipy.stats import weibull_min #(v)
@@ -2034,8 +2034,8 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # here coz runs only once per model build
         
         # - 1. LSS parameters (from Layout, Hub_Rotor_LSS_Frame)
-        self.add_input('L_12', val=5.0, desc='Main bearing span', units='m')
-        self.add_input('L_h1', val=1.0, desc='Rotor bearing distance', units='m')
+        self.add_input('L_12', val=0.0, desc='Main bearing span', units='m')
+        self.add_input('L_h1', val=0.0, desc='Rotor bearing distance', units='m')
         # - 2. bearing parameters (from MainBearing)
         self.add_input('Cr_mb1', val=1e7, units='N', desc='Dynamic load rating MB1')
         self.add_input('Cr_mb2', val=1e7, units='N', desc='Dynamic load rating MB2')
@@ -2119,10 +2119,9 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         P_mb1 = F_mb1_rad # (= radial loads coz radial bearing CRB)
         self.P_mb1 = P_mb1
 
-        # Bin counting: depr. and removed due to non-smoothness within optimization
-        # nBins = self.options['modeling_options']['nBins']
-        # P_mb1_sum = bin_counting_of_load(P_mb1, ws, probabilities, p)
-        # P_mb2_sum = bin_counting_of_load(P_mb2, ws, probabilities, p)
+        # LRD bin-counting
+        # P_mb1_sum = compute_LRD_matrix_vectorized(P_mb1,dt,omega,probabilities,p)
+        # P_mb2_sum = compute_LRD_matrix_vectorized(P_mb2,dt,omega,probabilities,p)
 
         # DEL calculation
         # print('ws: ', ws) # debugging
