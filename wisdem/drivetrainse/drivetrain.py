@@ -296,6 +296,11 @@ class DrivetrainSE(om.Group):
 class DrivetrainSE_M4W( om.Group ):
     """
     Group containing components for the layout of the LSS components
+
+    Internal Progress
+    _________________
+    - DONE : implement final version into drivetrain.py
+    - TODO : add modules for 'direct' (DD) and 'dogen'
     """
     def initialize(self):
         self.options.declare("modeling_options")
@@ -411,8 +416,7 @@ class DrivetrainSE_M4W( om.Group ):
             promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
         )
         # -connecting = bear(1,2) -to- Analy_*
-        self.connect("bear2.mb_e", "mb_fls.e_mb") # same for both MBs ---
-        self.connect("bear2.mb_p", "mb_fls.p_mb")
+        self.connect("bear2.mb_p", "mb_fls.p_mb") # same for both MBs ---
         self.connect("bear2.mb_X1", "mb_fls.X1_mb")
         self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
         self.connect("bear2.mb_X2", "mb_fls.X2_mb")
@@ -431,6 +435,10 @@ class DrivetrainSE_M4W( om.Group ):
             "misc", dc.MiscNacelleComponents(direct_drive=direct),
             promotes=["*"]
             )
+        # - connecting DriveMaterials -to- MiscNacelleComponents 
+        self.connect("spinner_rho", "rho_fiberglass")
+        self.connect("hub_rho", "rho_castiron")
+
         self.add_subsystem(
             "nac", dc.NacelleSystemAdder(direct_drive=direct),
             promotes=["*"]
@@ -464,6 +472,9 @@ class DrivetrainSE_M4W( om.Group ):
         # -connecting = Bedplate_* to Yaw*
         self.connect("bedplate_rho", "yaw.rho")
 
+        # Dynamics
+        self.add_subsystem("dyn", dc.DriveDynamics(), promotes=["*"])
+
         # = mat -to- hub
         if flag_hub:
             self.connect("bedplate_rho", ["pitch_system.rho", "spinner.metal_rho"])
@@ -475,6 +486,3 @@ class DrivetrainSE_M4W( om.Group ):
             self.connect("spinner_rho", "spinner.composite_rho")
             self.connect("spinner_Xt", "spinner.composite_Xt")
             self.connect("spinner_mat_cost", "spinner.composite_cost")
-
-            self.connect("hub_rho", "rho_castiron")
-            self.connect("spinner_rho", "rho_fiberglass")
