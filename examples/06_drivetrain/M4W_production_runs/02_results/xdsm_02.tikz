@@ -19,7 +19,7 @@
 \matrix[MatrixSetup]{
 %Row 0
 &
-\node [DataIO] (output_ScipyOptimizeDriver) {$\begin{array}{c}L\_12^{(0)} \\ L\_h1^{(0)} \\ lss\_diameter^{(0)} \\ lss\_wall\_thickness^{(0)}\end{array}$};&
+\node [DataIO] (output_ScipyOptimizeDriver) {$\begin{array}{c}L\_h1^{(0)} \\ L\_12^{(0)} \\ lss\_diameter^{(0)} \\ lss\_wall\_thickness^{(0)}\end{array}$};&
 &
 &
 &
@@ -31,20 +31,20 @@
 &
 \\
 %Row 1
-\node [DataIO] (left_output_ScipyOptimizeDriver) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+\node [DataIO] (left_output_ScipyOptimizeDriver) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
 \node [Optimization] (ScipyOptimizeDriver) {$\text{\text{0, 11 $ \rightarrow $ 1: ScipyOptimizeDriver}}$};&
-\node [DataInter] (ScipyOptimizeDriver-mat) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-gear) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-layout) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-bear1) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-bear2) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-lss) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-mb@fls) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-misc) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
-\node [DataInter] (ScipyOptimizeDriver-nac) {$\begin{array}{c}L\_12 \\ L\_h1 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-mat) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-gear) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-layout) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-bear1) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-bear2) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-lss) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-mb@fls) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-misc) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
+\node [DataInter] (ScipyOptimizeDriver-nac) {$\begin{array}{c}L\_h1 \\ L\_12 \\ lss\_diameter \\ lss\_wall\_thickness\end{array}$};&
 \\
 %Row 2
-\node [DataIO] (left_output_mat) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+\node [DataIO] (left_output_mat) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
 &
 \node [Function] (mat) {$\text{\text{1: mat}}$};&
 &
@@ -57,7 +57,7 @@
 &
 \\
 %Row 3
-\node [DataIO] (left_output_gear) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+\node [DataIO] (left_output_gear) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
 &
 &
 \node [Function] (gear) {$\text{\text{2: gear}}$};&
@@ -70,7 +70,7 @@
 \node [DataInter] (gear-nac) {$\begin{array}{c}gearbox\_I \\ gearbox\_mass\end{array}$};&
 \\
 %Row 4
-\node [DataIO] (left_output_layout) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+\node [DataIO] (left_output_layout) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
 &
 &
 &
@@ -83,7 +83,7 @@
 \node [DataInter] (layout-nac) {$\begin{array}{c}bedplate\_I \\ bedplate\_cm \\ bedplate\_mass \\ constr\_height \\ hss\_I \\ hss\_cm \\ hss\_mass \\ lss\_I \\ lss\_cm \\ lss\_mass\end{array}$};&
 \\
 %Row 5
-\node [DataIO] (left_output_bear1) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+\node [DataIO] (left_output_bear1) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
 &
 &
 &
@@ -96,7 +96,7 @@
 \node [DataInter] (bear1-nac) {$\begin{array}{c}mb\_I \\ mb\_mass\end{array}$};&
 \\
 %Row 6
-\node [DataIO] (left_output_bear2) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+\node [DataIO] (left_output_bear2) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
 &
 &
 &
@@ -135,7 +135,7 @@
 &
 \\
 %Row 9
-\node [DataIO] (left_output_misc) {$\begin{array}{c}L\_12^{*} \\ L\_h1^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
+\node [DataIO] (left_output_misc) {$\begin{array}{c}L\_h1^{*} \\ L\_12^{*} \\ lss\_diameter^{*} \\ lss\_wall\_thickness^{*}\end{array}$};&
 &
 &
 &

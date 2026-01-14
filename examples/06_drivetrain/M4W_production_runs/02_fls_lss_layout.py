@@ -27,6 +27,7 @@ import os
 import numpy as np
 import openmdao.api as om
 import matplotlib.pyplot as plt
+import time
 # import scipy.io as sio # --- not used in here, but within imports
 # import pickle
 
@@ -44,13 +45,13 @@ import wisdem.drivetrainse.drive_structure as ds
 
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict
 from wisdem.commonse.fileIO import save_data
-
+from wisdem.commonse.cross_sections import Tube
 # %% [markdown]
 # ### Define flags
 # post-processing results
-make_xdsm = False # html-show or detailed pdf
-record_cases = False #TODO: add in final setup (full problem)
-plot_cases = False   #NOTE: saved, not changing now (commented)
+make_xdsm = True       # html-show or detailed pdf
+record_cases = True    #TODO: add in final setup (full problem)
+plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
 
@@ -62,13 +63,14 @@ load_fls_loads = False
 dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
 
 # Optimization flags
-flag_opt_GBO = True        # GBO: gradient based optimizer
+flag_opt_GBO = True     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
-flag_opt_GFO = False     # GFO: gradient free optimizer
+flag_opt_GFO = False    # GFO: gradient free optimizer
 
 # Parametric study
 flag_study_parametric = True
-param_for_study = "LDD" # "MB" or "LDD"
+param_for_study = "LDD"     # "MB" (types) / "LDD" (MS' L_*)
+meth_Peq = "DEL".lower()    # "LRD" or "DEL"
 
 #%%[markdown]
 # ### Defining results directory and files
@@ -87,7 +89,8 @@ if make_xdsm: loc_xdsm = os.path.join(results_path, 'xdsm_02')
 # Record results?
 if record_cases:
     print(" ---- Recording cases using `SqliteRecorder` ---- ")
-    loc_cases = os.path.join(results_path, "cases_recorded.sql")
+    loc_cases = os.path.join(results_path,
+        "cases_recorded_"+meth_Peq+".sql")
     if os.path.exists( loc_cases ):
         os.remove( loc_cases )
 
@@ -435,7 +438,7 @@ if make_xdsm:
     write_xdsm(
         prob,
         filename=loc_xdsm,
-        out_format='html', # pdf
+        out_format='pdf', # pdf
         show_browser=True,
         quiet=False,
         output_side='left',
@@ -463,7 +466,7 @@ prob.model.list_outputs();
 #%%
 # ==== 1. High-level Inputs ====
 prob.set_val("machine_rating", 15.0, units="MW")
-prob["rotor_diameter"] = 240.0
+D_rotor = prob["rotor_diameter"] = 240.0
 prob["rated_torque"] = 21.03*1e6 # [Nm] ref.2, tab.5-4
 # prob["minimum_rpm"] = 5
 prob["rated_rpm"] = 7.56
@@ -574,10 +577,13 @@ if doMBfls:
     prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 
 # Layout / lss inputs
-prob["L_h1"] = 0.264 #(def: 2.0), 4.25; converg: 0.264
-prob["L_12"] = 6.935 #(def:1.2), 7.1; converg: 6.935
-prob["lss_diameter"] = np.array([2.90, 1.68]) #(def:1.0), 4.0; converg: np.array([2.90, 1.68])
-prob["lss_wall_thickness"] = np.array([0.006, 0.123]) #(def:0.1), 0.3; converg: np.array([0.006, 0.123])
+prob["L_h1"] = 0.5 #(def: 2.0), 4.25; converg: 0.264
+prob["L_12"] = 1.0 #(def:1.2), 7.1; converg: 6.935
+prob["lss_diameter"] = np.array([2, 2]) #(def:1.0), 4.0; converg: np.array([2.90, 1.68])
+prob["lss_wall_thickness"] = np.array([0.1, 0.1]) #(def:0.1), 0.3; converg: np.array([0.006, 0.123])
+
+flange_MS_length = 0.3*(D_rotor/100)**2 - 0.1*(D_rotor/100) + 0.4
+print(f"   - flange length at main-shaft = {flange_MS_length}")
 
 # Gearbox inputs
 # prob["L_gearbox"] = 1.5 #(v) calc in gearbox.py
@@ -674,8 +680,13 @@ om.n2(prob, outfile=loc_n2, show_browser=True);
 
 if flag_opt_GBO or flag_DOE:
     # Run GBO or DOE
+    t0 = time.time()
+    # main GBO
     prob.model.approx_totals() # TODO.
     prob.run_driver()
+    
+    t1 = time.time()
+    print(" - WISDEM run completed in,", t1-t0, "seconds")
 
 elif flag_opt_GFO:
     # Run the GFO
@@ -692,6 +703,10 @@ else:
 print("LSS desvars:")
 print(" ", prob["L_h1"], prob["L_12"], prob["lss_diameter"], prob["lss_wall_thickness"] )
 # [3.48132032] [1.] [4. 4.] [0.32635334 0.29289825]
+flangeCyl = Tube( prob["lss_diameter"][0], prob["lss_wall_thickness"][0] )
+flange_mass = (flangeCyl.Area * flange_MS_length * prob["lss_rho"])[0]
+print(f"   flange mass, est.: {flange_mass} kg. use `dohub` for accurate est.")
+
 print("F_mb*:")
 print(" ", prob["F_mb1"], prob["F_mb2"] )
 print("M_mb*:")
@@ -715,7 +730,7 @@ print(f"MSA mass: {prob["msa_mass"]}")
 # [[  5399500.        ] [-13191517.6056338 ] [ 18473288.73239437]]
 
 list_driver_vars = prob.list_driver_vars()
-
+# ==========================================================
 #%%
 ### Recorded cases
 if record_cases:
@@ -735,9 +750,9 @@ clr_redLight = 'r'
 # options: Journal polish
 # plot rc params
 params_plot_rc = {
-        "font.size": 16,
-        "axes.labelsize": 16,
-        "legend.fontsize": 16,
+        "font.size": 24,
+        "axes.labelsize": 24,
+        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
         "lines.linewidth": 2,
         "lines.markersize": 6,
     }
@@ -752,6 +767,9 @@ if record_cases and plot_cases:
     res = results_dict
 
     msa_mass = res['msa_mass'].squeeze()
+    scale_m_msa = 1e3;
+    msa_mass = msa_mass / scale_m_msa
+
     L_12 = res['L_12'].squeeze()
     L_h1 = res['L_h1'].squeeze()
 
@@ -762,11 +780,15 @@ if record_cases and plot_cases:
     L10_mb2 = res['constr_L10_mb2'].squeeze()
 
     iters = np.arange(1, len(msa_mass) + 1)
+    # -------------------------
+    # obj func val converg: diff in change per iter; TODO
+    del_obj_func = msa_mass
+    del_obj_func = del_obj_func[1:] - del_obj_func[:-1]
 
     # -------------------------
     # Figure and layout
     # -------------------------
-    fig = plt.figure(figsize=(12, 8))
+    fig = plt.figure(figsize=(20, 12))
     gs = fig.add_gridspec(3, 2, hspace=0.35, wspace=0.25)
 
     # ========= Row 1 (span both columns): msa_mass =========
@@ -774,7 +796,7 @@ if record_cases and plot_cases:
     ax1.plot(iters, msa_mass,
             marker='o', linewidth=2, color='k',
             label=r'$m_{msa}$')
-    ax1.set_ylabel(r'Mass [kg]')
+    ax1.set_ylabel(r'Mass [t]')
     # ax1.set_xlabel('Iteration')
     ax1.set_xticks(iters)
     ax1.grid(True)
@@ -833,13 +855,14 @@ if record_cases and plot_cases:
     # -------------------------
     # Final layout
     # -------------------------
-    # plt.tight_layout()
+    fig.tight_layout()
 
     # -------------------------
     # save
     # -------------------------
-    plot_path = results_path+"\\vars_with_iter.png"
-    # plt.savefig(plot_path) # NOTE: saved, so don't change now 
+    plot_path = os.path.join(results_path,
+            "vars_with_iter_"+meth_Peq+".pdf")
+    plt.savefig(plot_path) # NOTE: saved, so don't change now 
 
     plt.show()
 
@@ -897,8 +920,9 @@ if flag_study_parametric and flag_opt_GBO:
         # # Recorded cases: convergence for each parameter in study
         if record_cases:
             # each's recorded cases: save loc and dict
+            # TODO: change file name based on analy: ldd or del
             loc_cases_all = [
-                "case_ldd_set_" + str(i) + ".sql" for i in range(
+                "case_"+meth_Peq+"_set_" + str(i) + ".sql" for i in range(
                     1,len_steps+1)
                 ]
             # all's
@@ -943,7 +967,7 @@ if flag_study_parametric and flag_opt_GBO:
                 loc_case_i = os.path.join(results_path, loc_cases_all[i])
                 if os.path.exists( loc_case_i ):
                     os.remove( loc_case_i )
-                # driver: change recorder
+                # driver: change recorder; TODO: problematic with saved sql files
                 recorder = om.SqliteRecorder( loc_case_i )
                 prob.driver.add_recorder( recorder=recorder )
 
@@ -978,8 +1002,10 @@ if flag_study_parametric and flag_opt_GBO:
                 )
 
 print(outs_recorded);
-#%%
-"""
+#%% [markdown]
+# ## Result outputs
+# ==== 1. MB type vary
+""" 
 {'L_12': array([[6.93563233],
        [4.95328602],
        [4.90916032 ],
@@ -1000,6 +1026,29 @@ print(outs_recorded);
        [52305.38151471],
        [64650.67674836],
        [38386.64245769]])}
+"""
+# ==== 2. L_ vary: LRD (DEL gives same results :D AL)
+"""
+{'L_h1': array([[0.27704792],
+       [0.2508921 ],
+       [0.26512019],
+       [0.26235498]]),
+'L_12': array([[6.01097366],
+       [8.51422035],
+       [6.87448905],
+       [7.12632589]]),
+'lss_diameter': array([[3.093676  , 1.66591795],
+       [2.70852189, 1.72255716],
+       [2.91765771, 1.67859259],
+       [2.8769373 , 1.68417007]]),
+'lss_wall_thickness': array([[0.00435108, 0.12454809],
+       [0.00841746, 0.1164297 ],
+       [0.00598669, 0.12320443],
+       [0.00641597, 0.12239033]]),
+'msa_mass': array([[68904.24992945],
+       [69354.65015087],
+       [68297.18048801],
+       [68315.09627046]])}
 """
 # %%
 if (param_for_study.lower() == "ldd") and (
@@ -1071,7 +1120,8 @@ if (param_for_study.lower() == "ldd") and (
     plt.tight_layout()
     # -------------------------
     # Save plot
-    plot_path = results_path+"\\del_multiStart_optim_path.png"
+    plot_path = os.path.join(results_path,
+        meth_Peq+"_multiStart_optim_path.png")
     # plt.savefig(plot_path) # NOTE: saved, so don't change now 
     
     plt.show()
@@ -1080,11 +1130,13 @@ if (param_for_study.lower() == "ldd") and (
 if (param_for_study.lower() == "ldd") and (
     record_cases and plot_cases):
     print(" NOTE: 3D multi-start converg plot for testing now; not being saved")
+    print("NOTE: matplotlib [Bug]: zlabel on 3D axes cut off when using `%matplotlib inline` in Jupyter #28117")
+    # imports
     from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
     # -------------------------
     # Figure
     # -------------------------
-    fig = plt.figure(figsize=(7.5, 6.5))
+    fig = plt.figure(figsize=(7,6))
     ax = fig.add_subplot(111, projection='3d')
 
     for i, res in enumerate(results_list_of_dicts):
@@ -1093,6 +1145,8 @@ if (param_for_study.lower() == "ldd") and (
         L_h1 = res['L_h1'].squeeze()
         L_12 = res['L_12'].squeeze()
         m_msa = res['msa_mass'].squeeze()
+        msa_scale = 1e3  # kg -> tonnes
+        m_msa = m_msa / msa_scale # z_plot
 
         # Trajectory
         ax.plot(
@@ -1144,15 +1198,16 @@ if (param_for_study.lower() == "ldd") and (
             marker='x',
             s=100,
             zorder=4,
+            depthshade=False,
             label='Converged' if i == 0 else None
         )
 
     # -------------------------
     # Axes formatting
     # -------------------------
-    ax.set_xlabel(r'$L_{h1}\ \mathrm{[m]}$')
+    ax.set_xlabel(r'$L_{h1}\ \mathrm{[m]}$', labelpad=10)
     ax.set_ylabel(r'$L_{12}\ \mathrm{[m]}$')
-    ax.set_zlabel(r'$m_{\mathrm{MSA}}\ \mathrm{[kg]}$')
+    ax.set_zlabel(r'$m_{\mathrm{MSA}}\ \mathrm{[t]}$')
 
     # ax.set_title('3D optimization convergence path')
     ax.legend(loc='best')
@@ -1161,10 +1216,30 @@ if (param_for_study.lower() == "ldd") and (
     # Final layout
     plt.tight_layout()
     # -------------------------
+    # rotate view (via camera angles)
+    # def: (30,-60), print(ax.elev, ax.azim)
+    if meth_Peq=="lrd": ax.view_init(elev=40, azim=-20)
+    # plt.ion() # interactive
+    # ------------------------
     # Save plot
-    plot_path = results_path+"\\del_multiStart3D_optim_path.png"
+    plot_path = os.path.join(results_path,
+        meth_Peq+"_multiStart3D_optim_path.png")
     # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 
     plt.show()
-
+# =============================================================
+#%% [markdown]
+# ### use recorded cases for recording
+#%%
+len_steps = 4
+results_list_of_dicts = [] # array of dict(s)
+loc_cases_all = [
+                "case_"+meth_Peq+"_set_" + str(i) + ".sql" for i in range(
+                    1,len_steps+1)
+                ]
+for i in range(len_steps):
+    loc_case_i = os.path.join(results_path, loc_cases_all[i])
+    results_list_of_dicts.append(
+        get_recorder_results( loc_case_i, None, True ) #out=dict
+        )
 # %%
