@@ -301,6 +301,7 @@ class DrivetrainSE_M4W( om.Group ):
     _________________
     - DONE : implement final version into drivetrain.py
     - TODO : add modules for 'direct' (DD) and 'dogen'
+    - DONE : add a flag for mb_fls
     """
     def initialize(self):
         self.options.declare("modeling_options")
@@ -322,10 +323,11 @@ class DrivetrainSE_M4W( om.Group ):
         dogen = self.options["modeling_options"]["flags"]["generator"]
         n_pc = self.options["modeling_options"]["WISDEM"]["RotorSE"]["n_pc"]
         flag_hub = self.options["modeling_options"]["flags"]["hub"] #TODO: this modified; remove and add hub as legacy
+        doMBfls = self.options["modeling_options"]["flags"]["mb_fls"]
         
         # print flag information
         print("=== Problem 'DrivetrainSE_M4W' setting up ===")
-        print(f"flag info: use_gb_torque_density={use_gb_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
+        print(f"flag info: doMBfls={doMBfls}, use_gb_torque_density={use_gb_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
 
         # self.set_input_defaults("machine_rating", units="kW")
         #self.set_input_defaults("hvac_mass_coeff", 0.025, units="kg/kW/m")
@@ -405,24 +407,25 @@ class DrivetrainSE_M4W( om.Group ):
         self.connect("bear1.mb_Reactions", "mb1_Reactions")
         self.connect("bear2.mb_Reactions", "mb2_Reactions")
         
-        # FLS MBs (Analytical); TODO: input opt_openfast and opt_DLC.
-        self.add_subsystem(
-            "mb_fls", ds.Analytical_FLS_Bearing_Life(
-                modeling_options=opt_drivese,
-                openfast_options=opt_openfast,
-                dlc_options=opt_DLC
-                ),
-            promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss"],
-            promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
-        )
-        # -connecting = bear(1,2) -to- Analy_*
-        self.connect("bear2.mb_p", "mb_fls.p_mb") # same for both MBs ---
-        self.connect("bear2.mb_X1", "mb_fls.X1_mb")
-        self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
-        self.connect("bear2.mb_X2", "mb_fls.X2_mb")
-        self.connect("bear2.mb_Y2", "mb_fls.Y2_mb") # ---
-        self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
-        self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
+        # FLS MBs (Analytical)
+        if doMBfls:
+            self.add_subsystem(
+                "mb_fls", ds.Analytical_FLS_Bearing_Life(
+                    modeling_options=opt_drivese,
+                    openfast_options=opt_openfast,
+                    dlc_options=opt_DLC
+                    ),
+                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss"],
+                promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
+            )
+            # -connecting = bear(1,2) -to- Analy_*
+            self.connect("bear2.mb_p", "mb_fls.p_mb") # same for both MBs ---
+            self.connect("bear2.mb_X1", "mb_fls.X1_mb")
+            self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
+            self.connect("bear2.mb_X2", "mb_fls.X2_mb")
+            self.connect("bear2.mb_Y2", "mb_fls.Y2_mb") # ---
+            self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
+            self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
 
         # HSS
         self.add_subsystem(
