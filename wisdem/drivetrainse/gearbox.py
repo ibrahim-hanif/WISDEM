@@ -190,7 +190,7 @@ class Gearbox(om.ExplicitComponent):
         # Other gearbox elements that are just estimates: shrink disc and carrier
         m_shrink_disc = rating / 3.0
         m_carrier = 8e3
-        outputs["carrier_mass"] = m_shrink_disc + m_carrier
+        # outputs["carrier_mass"] = m_shrink_disc + m_carrier #(v) (=13 ton for 15mw); commented: now m_carrier = 20% m_gearbox (below)
         
         # calculate mass properties + radius and length based on regression
         D_rotor = float(inputs["rotor_diameter"][0])
@@ -334,3 +334,4 @@ class Gearbox(om.ExplicitComponent):
         # Store outputs
         outputs["gearbox_mass"] = m_gearbox
         outputs["gearbox_I"] = I * m_gearbox
+        outputs["carrier_mass"] = 0.2 * m_gearbox #(v)
