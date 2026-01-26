@@ -26,6 +26,8 @@
 import os
 import numpy as np
 import openmdao.api as om
+import time
+import matplotlib.pyplot as plt
 # import scipy.io as sio # --- not used in here, but within imports
 # import pickle
 
@@ -43,6 +45,31 @@ import wisdem.drivetrainse.drive_structure as ds
 
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict
 from wisdem.commonse.fileIO import save_data
+# %% [markdown]
+# ### Define flags
+# post-processing results
+make_xdsm = False       # html-show or detailed pdf
+record_cases = False    #TODO: add in final setup (full problem)
+plot_cases = False      #NOTE: saved, not changing now (commented)
+flag_scaling_show_browser = False
+flag_save_new_data = False
+
+# Loading `openFAST` hub loads from a saved file
+part_loads = True 
+load_fls_loads = False
+# False: full loads (72e4,10) (200 Hz sampled, 60mins)
+# True: part loads (72e3,11) (20 Hz sampled, 60mins)
+dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
+
+# Optimization flags
+flag_opt_GBO = True     # GBO: gradient based optimizer
+flag_DOE = False        # DOE: design of experiments
+flag_opt_GFO = False    # GFO: gradient free optimizer
+
+# Parametric study
+flag_study_parametric = True
+param_for_study = "LDD"     # "MB" (types) / "LDD" (MS' L_*)
+meth_Peq = "DEL".lower()    # "LRD" or "DEL"
 
 # %% [markdown]
 # ### Defining results directory and files
@@ -51,36 +78,22 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 results_path = os.path.join(script_dir, results_dir)
 os.makedirs(results_path, exist_ok=True)
 
-# loc_cases = os.path.join(results_path, "cases_recorded.sql") #TODO
-# if os.path.exists( loc_cases ):
-#     os.remove( loc_cases)
-
-
 loc_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "03")
 
-make_xdsm = False
 if make_xdsm: loc_xdsm = os.path.join(results_path, 'xdsm_03')
 
-#%%
 # Record results?
-record_cases = False #TODO: add in final setup (full problem)
 if record_cases:
     print(" ---- Recording cases using `SqliteRecorder` ---- ")
-    loc_cases = os.path.join(results_path, "cases_recorded.sql")
+    loc_cases = os.path.join(results_path,
+        "cases_recorded_"+meth_Peq+".sql")
     if os.path.exists( loc_cases ):
         os.remove( loc_cases )
 
 #%% Loading `openFAST` hub loads from a saved file
-part_loads = True 
-load_fls_loads = False
-# False: full loads (72e4,10) (200 Hz sampled, 60mins)
-# True: part loads (72e3,11) (20 Hz sampled, 60mins)
-
-dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
-
 if part_loads: # define paths
     loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
@@ -94,10 +107,6 @@ else: # define paths
 
 # %% [markdown]
 # ### Defining options (`modelling_options`), flags
-
-flag_opt_GBO = True        # GBO: gradient based optimizer
-flag_DOE = False        # DOE: design of experiments
-flag_opt_GFO = False     # GFO: gradient free optimizer
 
 # define `modelling_options`
 opts = {}
@@ -127,7 +136,8 @@ opts["materials"]["n_mat"] = 4
 
 opts["flags"] = {}
 dogen = opts["flags"]["generator"] = False
-dohub = opts["flags"]["hub"] = False #(v)
+dohub = opts["flags"]["hub"] = True #(v)
+doMBfls = opts["flags"]["mb_fls"] = True
 
 opts["OpenFAST"] = {}
 opts["OpenFAST"]["simulation"] = {}
@@ -229,8 +239,9 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     prob.model.add_constraint("constr_shaft_deflection", upper=1.0)         #DONE: add next
     prob.model.add_constraint("constr_shaft_angle", upper=1.0, ref=1e-3)    #DONE: add next
     # --- MBs (main bearing: max perm is angle, + fls)
-    prob.model.add_constraint("constr_L10_mb1", lower=1.0)                  #DONE: add next
-    prob.model.add_constraint("constr_L10_mb2", lower=1.0)                  #DONE: add next
+    if doMBfls:
+        prob.model.add_constraint("constr_L10_mb1", lower=1.0)                  #DONE: add next
+        prob.model.add_constraint("constr_L10_mb2", lower=1.0)                  #DONE: add next
     # ----- bearing angular deflections (from Bedplate_*)
     prob.model.add_constraint("constr_mb1_defl", upper=1.0)                 #DONE: add next
     prob.model.add_constraint("constr_mb2_defl", upper=1.0)                 #DONE: add next
@@ -294,7 +305,8 @@ prob["rotor_diameter"] = 240.0 # TODO: ref.1 = 240, geo_schema = 241.35064632
 prob["rated_torque"] = 21.03*1e6 # [Nm] ref.2, tab.5-4
 prob["minimum_rpm"] = 5.0 # needed by RPM_Input
 prob["rated_rpm"] = 7.56
-prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
+if doMBfls:
+    prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
 
 prob["upwind"] = True
 prob["D_top"] = 6.5 #tower top diameter
@@ -358,9 +370,9 @@ if True: #NOTE: True with `Hub_*`
 
     # if run HUB module within DrivetrainSE
     if dohub:
-        prob["flange_t2shell_t"] = 6.0
+        prob["flange_t2shell_t"] = 6.0      # ---- flange MS data ----
         prob["flange_OD2hub_D"] = 0.6
-        prob["flange_ID2flange_OD"] = 0.8
+        prob["flange_ID2flange_OD"] = 0.8   # ----
         prob["hub_in2out_circ"] = 1.2
         prob["hub_stress_concentration"] = 3.0
         prob["n_front_brackets"] = 5
@@ -399,13 +411,14 @@ prob["bear1.bearing_type"] = "CRB" # 1. floating MB
 prob["bear2.bearing_type"] = "TRB2" # 2. fixed MB
 prob["bear1.mb_e"] = 3.5 # from 3.5-4.0 (TODO: find ref.)
 prob["bear2.mb_e"] = 3.5
-prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
+if doMBfls:
+    prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 
 # Layout / lss inputs
-prob["L_h1"] = 0.30257846 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
-prob["L_12"] = 4.97997913 #(def:1.2), 7.1
-prob["lss_diameter"] = np.array([3.45251832, 1.84746306]) #(def:1.0), 4.0
-prob["lss_wall_thickness"] = np.array([0.00993331, 0.09636164]) #(def:0.1), 0.3
+prob["L_h1"] = 0.301 #(def: 2.0), 4.25; cf. L_rb in main_shaft_sizing code
+prob["L_12"] = 5.063 #(def:1.2), 7.1
+prob["lss_diameter"] = np.array([3.402, 1.816]) #(def:1.0), 4.0
+prob["lss_wall_thickness"] = np.array([0.011, 0.102]) #(def:0.1), 0.3
 
 # Gearbox inputs
 # prob["L_gearbox"] = 1.5 #(v) calc in gearbox.py
@@ -415,33 +428,41 @@ prob["gear_ratio"] = 50 #.039
 prob["gearbox_mass_user"] = 135.5*1e3 # D5.1 R2
 # prob["gearbox_torque_density"] = 200.0 # (cf. line 210, gearbox.py)
 
-# HSS (TODO: consider as DV if needed)
-prob["L_hss"] = 0.10583234
-prob["hss_diameter"] = np.array([0.66189239, 0.5389038 ])
-prob["hss_wall_thickness"] = np.array([0.03501625, 0.04238025])
+# HSS (DONE: consider as DV if needed)
+prob["L_hss"] = 0.101
+prob["hss_diameter"] = np.array([0.638, 1.095])
+prob["hss_wall_thickness"] = np.array([0.034, 0.047])
 
-# Generator inputs (TODO: add compn later)
+# === Generator inputs (DONE: add compn later)
 # - needed by Bedplate_IBeam_Frame in drive_structure.py, output of HSS_Frame
-# prob["R_generator"] = 1.7999999999999998
-prob["L_generator"] = 4.2
 # TODO: opts:
-# --- 1. input from gen design (ingeteam),
+# --- 1. input from gen design (indar's ismael),
 # --- 2. maybe calc in generator.py?,
 # --- 3. 11.98398883842414 (from drivetrain_example.csv),
 # --- 4. 2.0 (drivetrain_geared) or 2.15 (drivetrain_direct)
 
+# prob["R_generator"] = 1.7999999999999998
 # prob["generator_cm"] = -0.09998102618633065
 # prob["generator_rotor_mass"] = 26437.71371233699
 # prob["generator_rotor_I"] = np.array([42829.09621398592, 31598.575743266098, 31598.575743266098])
 # prob["F_generator"] = np.array([[-55905.04536116102], [-0.0], [-531900.9765713954]])
 # prob["M_generator"] = np.array([[420611.2199999999], [-1687869.5522841304], [-0.0]])
 
-# TODO: Ingeteam generator dimensions (email 15.12.25 from Bidane):
-# Mass [kg] = 3 Tn per 8MW conversion line
-prob["generator_mass_user"] = (3*1e3/8)*(
-    prob["machine_rating"]/1e3)
-# Overall dimensions (est. very preliminary): 2400x800x4200 mm [HxWxL]
-H_generator, W_generator, L_generator = 2.4, 0.8, 4.2 # [m]
+# TODO: Indar generator dimensions (D5.4):
+prob["generator_mass_user"] = 34.8*1e3 # D5.4, tab.9
+# # Overall dimensions TODO: wrong! correct!!
+# H_generator, W_generator, L_generator = 2.4, 0.8, 4.2 #[m]
+prob["L_generator"] = 2.15
+# # -- make an equivalent cylinder from the cuboid with the SAME (mass) MoI
+# prob["R_generator"] = np.sqrt( (H_generator**2 + W_generator**2)/6 ) # 1.0328
+gen_eff = 0.9805
+prob["generator_efficiency_user"] = np.array([ [0.0,1.0],[gen_eff,gen_eff] ])
+
+# === Electronics input (ING: converter, transformer)
+# converter mass = 3 Tn per 8MW conversion line (ING Bidane's email)
+prob["converter_mass_user"] = (3*1e3*15)/8 # 5,625 [kg]
+# overall dims (est. very preliminary): 2400x800x4200 mm [HxWxL]
+H_converter, W_converter, L_converter = 2.4, 0.8, 4.2 # [m]
 
 # 'drive_height' : derive from the high-level inputs
 # - needed by layout.py (line 123)
@@ -459,9 +480,9 @@ prob["drive_height"] = 5.614 # (def: 5.614 for 15MW DD)
 
 # bedplate: Hub:_Rotor_LSS_Frame, Bedplate_IBeam_Frame inputs
 # --- below vals from ONLY bedplate optim (desvars, constr) for nacelle mass min
-prob["bedplate_flange_width"] = 1.86222287
-prob["bedplate_flange_thickness"] = 0.02098218
-prob["bedplate_web_thickness"] = 0.02323379
+prob["bedplate_flange_width"] = 1.998
+prob["bedplate_flange_thickness"] = 0.023
+prob["bedplate_web_thickness"] = 0.023
 
 # `Hub_*` requires:
 prob["shaft_deflection_allowable"] = 1e-4 # within Hub_Rotor_LSS_Frame (below): Deflections and rotations at GB attachment
@@ -500,11 +521,16 @@ om.n2(prob, outfile=loc_n2, show_browser=True);
 # %% [markdown]
 # ### Run: Optimization / DOE / Analysis
 # `_driver` (optimization) / `_model` (analysis)
-
+#%%
 if flag_opt_GBO or flag_DOE:
     # Run GBO or DOE
+    t0 = time.time()
+    # main GBO
     prob.model.approx_totals() # TODO.
     prob.run_driver()
+    
+    t1 = time.time()
+    print(" - WISDEM run completed in,", t1-t0, "seconds")
 
 elif flag_opt_GFO:
     # Run the GFO
@@ -515,18 +541,30 @@ else:
     prob.run_model()
 
 # %%[markdown]
+# # _____ Post-processing _____
+
+# %%
 # Print the results
 print("LSS desvars:")
 print(" ", prob["L_h1"], prob["L_12"], prob["lss_diameter"], prob["lss_wall_thickness"] )
-# [3.48132032] [1.] [4. 4.] [0.32635334 0.29289825]
+# TODO: for flange mass, dohub (cf. var `flange_t2shell_t`)
+print("HSS desvars:")
+print(" ", prob["L_hss"], prob["hss_diameter"], prob["hss_wall_thickness"] )
+print("Bedplate desvars:")
+print(" ", prob["bedplate_flange_width"], prob["bedplate_flange_thickness"], prob["bedplate_web_thickness"] )
+print(" ")
 print("F_mb*:")
 print(" ", prob["F_mb1"], prob["F_mb2"] )
 print("M_mb*:")
 print(" ", prob["M_mb1"], prob["M_mb2"] )
-print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
+if doMBfls:
+    print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
 print("--- constr_ max ---")
 print("- lss: ",
       np.max(prob["constr_lss_vonmises"])
+      )
+print("- hss: ",
+      np.max(prob["constr_hss_vonmises"])
       )
 print("- bedplate: ",
       np.max(prob["constr_bedplate_vonmises"])
@@ -537,12 +575,13 @@ print(f"MSA mass: {prob["msa_mass"]}")
 print(f"nacelle mass: {prob["nacelle_mass"]}")
 
 
-list_driver_vars = prob.list_driver_vars()
+# list_driver_vars = prob.list_driver_vars()
 
 #%%[markdown]
 # Driver scaling report 
-prob.driver.scaling_report(outfile=loc_scaling_report);
-
+prob.driver.scaling_report(
+    outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
+);
 #%%
 ### Recorded cases
 if record_cases:
@@ -553,6 +592,175 @@ if record_cases:
 # ### Plot recorded results TODO
 
 #%%
-save_data(loc_save_data, prob)
+if flag_save_new_data: save_data(loc_save_data, prob)
 # ===============================================================
-# %%
+#%%[markdown]
+# # Plot recorded results
+#%%
+# main colors
+clr_blueDark = '#313694'
+clr_blueLight = '#A6CAEC'
+clr_redDark = '#C00000'
+clr_redLight = 'r'
+# -------------------------
+# options: Journal polish
+# plot rc params
+params_plot_rc = {
+        "font.size": 24,
+        "axes.labelsize": 24,
+        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+        "lines.linewidth": 2,
+        "lines.markersize": 6,
+    }
+plt.rcParams.update( params_plot_rc )
+
+fontsize = 18
+
+#%%[markdown]
+# ### Drivetrain mass comparison (IEA and M4W)
+#%%
+if plot_cases:
+    # --------------------------------------------------
+    # Data (example values, replace with your real ones)
+    # --------------------------------------------------
+    components = [
+        "Main shaft",
+        "Turret nose",
+        "Main bearings",
+        "Gearbox",
+        "High-speed shaft",
+        "Brake",
+        "Generator",
+        "Converter",
+        "Transformer",
+        "Misc. components",
+        "Bedplate",
+        "Yaw system",
+    ]
+
+    # Masses in tonnes [t]
+    mass_IEA = {
+        "Main shaft":       15.734,
+        "Turret nose":      11.394,
+        "Main bearings":    7.894,
+        "Gearbox":          0.0,
+        "High-speed shaft": 0.0,
+        "Brake":            0.0,        # TODO
+        "Generator":        371.592,
+        "Converter":        0.0,        # TODO
+        "Transformer":      0.0,        # TODO
+        "Misc. components": 50.0,
+        "Bedplate":         70.329,
+        "Yaw system":       100.0,
+    }
+
+    mass_M4W = {
+        "Main shaft":       prob["lss_mass"][0] / 1e3,
+        "Turret nose":      0.0,
+        "Main bearings":    2.0*prob["mean_bearing_mass"][0] / 1e3,
+        "Gearbox":          prob["gearbox_mass"][0] / 1e3,
+        "High-speed shaft": prob["hss_mass"][0] / 1e3,
+        "Brake":            prob["brake_mass"][0] / 1e3,
+        "Generator":        prob["generator_mass"][0] / 1e3,
+        "Converter":        prob["converter_mass"][0] / 1e3,
+        "Transformer":      prob["transformer_mass"][0] / 1e3,
+        "Misc. components": (prob["hvac_mass"][0]+prob["platform_mass"][0]+prob["cover_mass"][0]) / 1e3,
+        "Bedplate":         prob["bedplate_mass"][0] / 1e3,
+        "Yaw system":       prob["yaw_mass"][0] / 1e3,
+    }
+
+    total_IEA = sum(mass_IEA.values())
+    total_M4W = sum(mass_M4W.values())
+
+    # --------------------------------------------------
+    # Styling (colors + hatching)
+    # --------------------------------------------------
+    # Consistent hatching / coloring
+    hatches = ['/', '\\', 'x', '-', '+', 'o', 'O', '.', '*', '//', 'xx', '++']
+    tab10 = plt.cm.tab10.colors
+    colors = list(tab10) + list(tab10[:2])  # extend to 12 components
+
+    # --------------------------------------------------
+    # Figure
+    # --------------------------------------------------
+    # --- Figure setup ---
+    fig, ax = plt.subplots(figsize=(9, 16))
+
+    x = np.array([0, 1])
+    labels = ["IEA 15 MW", "MADE4WIND 15 MW"]
+    bar_width = 0.45
+
+    # --- Stacking ---
+    bottom_IEA = 0.0
+    bottom_M4W = 0.0
+    tops_IEA, tops_M4W = [], []
+
+    for i, comp in enumerate(components):
+        ax.bar(
+            x[0], mass_IEA[comp], bottom=bottom_IEA,
+            width=bar_width, color=colors[i],
+            hatch=hatches[i], edgecolor="black",
+            label=comp,
+        )
+
+        ax.bar(
+            x[1], mass_M4W[comp], bottom=bottom_M4W,
+            width=bar_width, color=colors[i],
+            hatch=hatches[i], edgecolor="black",
+        )
+
+        tops_IEA.append(bottom_IEA + mass_IEA[comp])
+        tops_M4W.append(bottom_M4W + mass_M4W[comp])
+
+        bottom_IEA += mass_IEA[comp]
+        bottom_M4W += mass_M4W[comp]
+
+    # --- Dotted connectors (top of each component) ---
+    for y_iea, y_m4w in zip(tops_IEA, tops_M4W):
+        ax.plot(
+            [x[0] + bar_width / 2, x[1] - bar_width / 2],
+            [y_iea, y_m4w],
+            linestyle=":", color="black", linewidth=1.2
+        )
+
+    # --- Total mass labels ---
+    total_IEA = sum(mass_IEA.values())
+    total_M4W = sum(mass_M4W.values())
+    offset = 8.0
+
+    ax.text(x[0], total_IEA + offset, rf"${total_IEA:.0f}\,\mathrm{{t}}$",
+            ha="center", va="bottom", fontsize=fontsize, fontweight="bold")
+    ax.text(x[1], total_M4W + offset, rf"${total_M4W:.0f}\,\mathrm{{t}}$",
+            ha="center", va="bottom", fontsize=fontsize, fontweight="bold")
+
+    # --- Formatting ---
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel(r"Mass [t]")
+    ax.set_title("Comparison of nacelle mass distribution")
+    ax.legend(
+        loc="upper right",
+        fontsize=fontsize, frameon=True
+    )
+    ax.grid(axis="y", alpha=0.3)
+
+    plt.tight_layout()
+
+    # -------------------------
+    # save
+    # -------------------------
+    plot_path = os.path.join(results_path,
+            "compare_mass_"+meth_Peq+".png")
+    # plt.savefig(plot_path) # NOTE: saved, so don't change now 
+
+    plt.show()
+
+#%%[markdown]
+# ### Convergence/parametric study setup
+# 1. vary chosen GRs (and rspt. GB and gen weights)
+# -- and save results for nacelle mass optim
+# -- so varied= `gear_ratio`, `gearbox_mass_user`, `generator_mass_user`
+#%%
+gearbox_ratios = [300, 375, 500, 600]/7.56
+gearbox_weights = [98842.8719028457, 99161.5464738645, 99766.6156499942, 100767.901889412]
+generator_weights = [ 43.1, 34.8, 26.69, 22.57 ] * 1e3 #[kg] (D5.4, tab.10)
