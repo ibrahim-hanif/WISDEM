@@ -337,6 +337,7 @@ class BearingCost2015(om.ExplicitComponent):
     ----------
     main_bearing_mass : float, [kg]
         component mass
+        (v) connected to "mean_bearing_mass" from drivese inside WindPark; thus the factor of 2 added below
     bearing_mass_cost_coeff : float, [USD/kg]
         main bearing mass-cost coeff
 
@@ -357,7 +358,7 @@ class BearingCost2015(om.ExplicitComponent):
         main_bearing_mass = inputs["main_bearing_mass"]
         bearing_mass_cost_coeff = inputs["bearing_mass_cost_coeff"]
 
-        outputs["main_bearing_cost"] = bearing_mass_cost_coeff * main_bearing_mass
+        outputs["main_bearing_cost"] = bearing_mass_cost_coeff * main_bearing_mass * 2 #(v) x 2, additional
 
 
 # -------------------------------------------------------------------------------
