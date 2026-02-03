@@ -1022,7 +1022,7 @@ class NacelleSystemCostAdder2015(om.ExplicitComponent):
             + cover_mass
             + platforms_mass
             + transformer_mass
-        )
+        )                       #(v) NOTE/TODO: doesn't include "nose_mass" (as used in NacelleSystemAdder within DrivetrainSE)
         partsCost = (
             lss_cost
             + main_bearing_number * main_bearing_cost
@@ -1421,7 +1421,7 @@ class Outputs2Screen(om.ExplicitComponent):
             )
             print(
                 "Main bearing cost       %.3f k USD       mass %.3f kg"
-                % (inputs["main_bearing_cost"][0] * 1.0e-003, inputs["main_bearing_mass"][0])
+                % (inputs["main_bearing_cost"][0] * 1.0e-003, inputs["main_bearing_mass"][0]*2) #(v) x2, coz "main_bearing_mass" connected to (hence = ) "mean_bearing_mass" from drivese
             )
             print(
                 "Gearbox cost            %.3f k USD       mass %.3f kg"
