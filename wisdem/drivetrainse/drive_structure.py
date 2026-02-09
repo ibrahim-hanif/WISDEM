@@ -2027,12 +2027,29 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.options.declare("dlc_options")      # opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
         
     def setup(self):
-        # Inputs
-        # - loads & operational:
+        # Extract options + sanity check.
+        # ---- DLC loads & operational ----
         dir_loads = self.options['openfast_options']['openfast_dir'] # directory of MS loads
-        self.loads_dict, _ = load_all_mat_to_dict(dir_loads)
+        loads_dict, _ = load_all_mat_to_dict(dir_loads)
         # here coz runs only once per model build
-        
+        # - a. loads
+        self.Fx = loads_dict['Fx']
+        # print(f"Fx[:2,:2]: {Fx[:2,:2]}, Fx shape: {Fx.shape}") # debugging: check mags wrt. units
+        self.Fy = loads_dict['Fy']
+        self.Fz = loads_dict['Fz']
+        self.Mx = loads_dict['Mx']
+        self.My = loads_dict['My']
+        self.Mz = loads_dict['Mz']
+        self.omega = loads_dict['rot_speed']
+        # - b. openfast (Wind statistics)
+        ws = self.options['dlc_options']['wind_speed'] # shape=(1,10)
+        n_ws = len(ws)
+        self.ws = np.reshape( ws, (1,n_ws))
+        self.probabilities = np.reshape( self.options['dlc_options']['probabilities'], (1,n_ws))
+        # - c. DLC
+        self.dt = self.options['openfast_options']['simulation']['DT'] # 0.05 (20 Hz)
+        # ----
+
         # - 1. LSS parameters (from Layout, Hub_Rotor_LSS_Frame)
         self.add_input('L_12', val=0.0, desc='Main bearing span', units='m')
         self.add_input('L_h1', val=0.0, desc='Rotor bearing distance', units='m')
@@ -2060,15 +2077,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # self.add_output('constr_L10_mb_all', val=0.0, desc='Minimum safety factor')
         
     def compute(self, inputs, outputs):
-        # Extract options + sanity check
-        # - 1. openfast (Wind statistics)
-        ws = self.options['dlc_options']['wind_speed'] # shape=(1,10)
-        n_ws = len(ws)
-        ws = np.reshape( ws, (1,n_ws))
-        probabilities = np.reshape( self.options['dlc_options']['probabilities'], (1,n_ws))
-        # - 2. DLC
-        dt = self.options['openfast_options']['simulation']['DT'] # 0.05 (20 Hz)
-        
+        # ---- Inputs ----
         # ISO 281 parameters (from MainBearing)
         e, p = inputs['e_mb'], inputs['p_mb']
         X1, Y1 = inputs['X1_mb'], inputs['Y1_mb']
@@ -2082,24 +2091,13 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         m_carrier = float(inputs["carrier_mass"][0])
         s_lss = inputs["s_lss"]
         delta = float(s_lss[1]-s_lss[0])
-
-        # loads: extract from self, cf. setup()
-        loads_dict = self.loads_dict
-        Fx = loads_dict['Fx']
-        # print(f"Fx[:2,:2]: {Fx[:2,:2]}, Fx shape: {Fx.shape}") # debugging: check mags wrt. units
-        Fy = loads_dict['Fy']
-        Fz = loads_dict['Fz']
-        Mx = loads_dict['Mx']
-        My = loads_dict['My']
-        Mz = loads_dict['Mz']
-        omega = loads_dict['rot_speed']
-
+        # --------
         # Bearing loads (analytical) calculation: shape=(4, 72000, 11)
         # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MB_Forces(
         #     Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=True )
         # --- more realistic
         Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MBforces_realistic(
-            Fx,Fy,Fz,Mx,My,Mz,
+            self.Fx,self.Fy,self.Fz,self.Mx,self.My,self.Mz,
             m_carrier,delta,tilt_rad,
             L_h1,L_12,flag_jac=True)
         # ----- extract axial and radial forces
@@ -2120,13 +2118,17 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.P_mb1 = P_mb1
 
         # LRD bin-counting
-        # P_mb1_sum = compute_LRD_matrix_vectorized(P_mb1,dt,omega,probabilities,p)
-        # P_mb2_sum = compute_LRD_matrix_vectorized(P_mb2,dt,omega,probabilities,p)
+        # P_mb1_sum = compute_LRD_matrix_vectorized(P_mb1,
+        #         self.dt,self.omega,self.probabilities,p)
+        # P_mb2_sum = compute_LRD_matrix_vectorized(P_mb2,
+        #         self.dt,self.omega,self.probabilities,p)
 
         # DEL calculation
         # print('ws: ', ws) # debugging
-        P_mb1_sum = del_bearing_computation(P_mb1, ws, dt, omega, probabilities, p)
-        P_mb2_sum = del_bearing_computation(P_mb2, ws, dt, omega, probabilities, p)
+        P_mb1_sum = del_bearing_computation(P_mb1,
+            self.ws, self.dt, self.omega, self.probabilities, p)
+        P_mb2_sum = del_bearing_computation(P_mb2,
+            self.ws, self.dt, self.omega, self.probabilities, p)
 
         # L10 life calculation
         Cr1 = inputs['Cr_mb1']
