@@ -49,9 +49,9 @@ from wisdem.commonse.cross_sections import Tube
 # %% [markdown]
 # ### Define flags
 # post-processing results
-make_xdsm = True       # html-show or detailed pdf
-record_cases = True    #TODO: add in final setup (full problem)
-plot_cases = True      #NOTE: saved, not changing now (commented)
+make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
+record_cases = False    #TODO: add in final setup (full problem)
+plot_cases = False      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
 
@@ -68,7 +68,7 @@ flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 
 # Parametric study
-flag_study_parametric = True
+flag_study_parametric = False
 param_for_study = "LDD"     # "MB" (types) / "LDD" (MS' L_*)
 meth_Peq = "DEL".lower()    # "LRD" or "DEL"
 
@@ -83,8 +83,7 @@ loc_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "02")
-
-if make_xdsm: loc_xdsm = os.path.join(results_path, 'xdsm_02')
+loc_xdsm = os.path.join(results_path, 'xdsm_02')
 
 # Record results?
 if record_cases:
@@ -220,8 +219,8 @@ class LSS_layout( om.Group ):
             )
         
         # Main Bearings
-        self.add_subsystem("bear1", dc.MainBearing())
-        self.add_subsystem("bear2", dc.MainBearing())
+        self.add_subsystem("bear1", dc.MainBearing_withDerivatives())
+        self.add_subsystem("bear2", dc.MainBearing_withDerivatives())
         # -connecting = GearedLayout -to- bear(1,2) (NEW)
         self.connect("Dshaft_mb1", "bear1.D_shaft") #DONE: impl later
         self.connect("Dshaft_mb2", "bear2.D_shaft") #DONE: impl later
@@ -438,7 +437,7 @@ if make_xdsm:
     write_xdsm(
         prob,
         filename=loc_xdsm,
-        out_format='pdf', # pdf
+        out_format= xdsm_type, # html or pdf
         show_browser=True,
         quiet=False,
         output_side='left',
@@ -577,9 +576,9 @@ if doMBfls:
     prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 
 # Layout / lss inputs
-prob["L_h1"] = 0.5 #(def: 2.0), 4.25; converg: 0.264
-prob["L_12"] = 1.0 #(def:1.2), 7.1; converg: 6.935
-prob["lss_diameter"] = np.array([2, 2]) #(def:1.0), 4.0; converg: np.array([2.90, 1.68])
+prob["L_h1"] = 0.5 #(def: 0.5), 4.25; converg: 0.264
+prob["L_12"] = 2.0 #(def: 2.0), 7.1; converg: 6.936
+prob["lss_diameter"] = np.array([2.0, 2.0]) #(def:2.0), 4.0; converg: np.array([2.907, 1.679])
 prob["lss_wall_thickness"] = np.array([0.1, 0.1]) #(def:0.1), 0.3; converg: np.array([0.006, 0.123])
 
 flange_MS_length = 0.3*(D_rotor/100)**2 - 0.1*(D_rotor/100) + 0.4
@@ -694,7 +693,11 @@ elif flag_opt_GFO:
 
 else:
     # Run the analysis
+    t0 = time.time()
+    # run
     prob.run_model()
+    t1 = time.time()
+    print(" - WISDEM run completed in,", t1-t0, "seconds")
 
 # %%[markdown]
 # # _____ Post-processing _____

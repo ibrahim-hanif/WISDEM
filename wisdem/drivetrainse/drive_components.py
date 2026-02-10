@@ -492,7 +492,7 @@ class Electronics(om.ExplicitComponent):
 
         # CM location, just assume off to the side of the bedplate
         cm = np.zeros(3)
-        sides = 0.015 * D_rotor
+        sides = 0.015 * D_rotor #(v) assumed square
         cm[1] = 0.5 * D_top + 0.5 * sides
         cm[2] = 0.5 * sides
 
@@ -661,6 +661,7 @@ class MiscNacelleComponents(om.ExplicitComponent):
         self.add_output("cover_mass", 0.0, units="kg")
         self.add_output("cover_cm", np.zeros(3), units="m")
         self.add_output("cover_I", np.zeros(3), units="m")
+        self.add_output("misc_component_mass", 0.0, units="kg")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Unpack inputs
@@ -965,7 +966,7 @@ class NacelleSystemAdder(om.ExplicitComponent):  # added to drive to include ele
             "bedplate",
             "platform",
             "cover",
-        ]
+        ]   #(v) `yaw` also added in line 1041
         if discrete_inputs["uptower"]:
             components.extend(["transformer", "converter"])
 
@@ -1275,4 +1276,236 @@ class DriveDynamics(om.ExplicitComponent):
         c_crit = 2.0 * np.sqrt(k_drive * rotor_I[0])
         outputs["drivetrain_damping_coefficient"] = c_user if c_user != 0.0 else zeta * c_crit
 
+# --------------------------------------------
+
+# (v) --------------------------------------------
+class MainBearing_withDerivatives(om.ExplicitComponent):
+    """
+    TODO: description
+
+    Internal Progress
+    _________________
+    - TODO : implement and check
+    - TODO : change to high-load values (now: some low, some high)
+    """
+    # ------------------------------------------------------------
+    # Setup
+    # ------------------------------------------------------------
+    def setup(self):
+
+        self.add_discrete_input("bearing_type", "CARB")
+
+        self.add_input("D_bearing", -1.0, units="m")
+        self.add_input("D_shaft", 0.0, units="m")
+        self.add_input("mb_mass_user", -1.0, units="kg")
+        self.add_input("mb_e", 3.5)
+
+        self.add_output("face_width", 0.0, units="m")
+        self.add_output("mb_mass", 0.0, units="kg")
+        self.add_output("mb_Cr", 0.0, units="N")
+        self.add_output("mb_I", np.zeros(3), units="kg*m**2")
+        self.add_output("mb_max_defl_ang", 0.0, units="rad")
+
+        # constants (no derivatives needed)
+        self.add_output("mb_p", 10/3)
+        self.add_output("mb_X1", 0.0)
+        self.add_output("mb_Y1", 0.0) # TODO check wrt. e
+        self.add_output("mb_X2", 0.0) # TODO check wrt. e
+        self.add_output("mb_Y2", 0.0)
+        self.add_output("mb_Reactions", np.zeros(6, dtype=int))
+
+        # --------------------------------------------------------
+        # partials
+        # --------------------------------------------------------
+        # wrt. D_shaft
+        wrt = ["D_shaft"]
+        self.declare_partials("face_width", wrt)
+        self.declare_partials("mb_mass", wrt)
+        self.declare_partials("mb_Cr", wrt)
+        self.declare_partials("mb_I", wrt)
+        # wrt. D_bearing
+        self.declare_partials("mb_I", "D_bearing")
+        # wrt. mb_e
+        self.declare_partials("mb_Y1", "mb_e")
+        self.declare_partials("mb_Y2", "mb_e")
+
+    # ------------------------------------------------------------
+    # Bearing database (clean + extendable)
+    # width = a*D + b
+    # mass  = k*D^n
+    # Cr    = c*D^m
+    # ----
+    # NOTE: `BEARINGS` dict not inside self, but stored at class/module level:
+    # - coz static data (same for all components, independent of inputs/outputs)
+    # - so its loads once per python process, and shared across all instances (and MPI ranks)
+    # - if in self = inefficient: rebuild same dict repeatedly coz setup exec per instance.
+    # ------------------------------------------------------------
+    BEARINGS = {
+
+        "CARB":
+            dict(a=0.2663, b=0.0435, k=1561.4, n=2.6007, c=16676, m=1.4746,
+                 max_ang=np.deg2rad(0.5), reactions=[0,1,1,0,0,0]),
+
+        "CRB":
+            dict(a=0.157,  b=0.0849, k=1070.8, n=1.8278, c=4526.5, m=0.9556,
+                 max_ang=np.deg2rad(4/60), reactions=[0,1,1,0,0,0]),
+
+        "SRB":
+            dict(a=0.2762, b=0.0, k=876.7,  n=1.7195, c=13878, m=1.0796,
+                 max_ang=0.078, reactions=[1,1,1,0,0,0]),
+
+        "TRB":
+            dict(a=0.1499, b=0.0,    k=543.01, n=1.9043, c=1993.8, m=0.318,
+                 max_ang=np.deg2rad(3/60), reactions=[1,1,1,0,1,1]),
+
+        "TRB2":
+            dict(a=0.1541, b=0.2087, k=1442.6, n=1.8932, c=6579.9, m=0.8592,
+                 max_ang=np.deg2rad((0.06+0.02)/2), reactions=[1,1,1,0,1,1]),
+    }
+
+    housing_factor = 1 + 80.0/27.0
+    kN_to_N = 1e3
+
+    # ------------------------------------------------------------
+    # compute
+    # ------------------------------------------------------------
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+
+        D_shaft = inputs["D_shaft"]
+        D_bearing_input = inputs["D_bearing"]
+        mass_user = inputs["mb_mass_user"]
+        e = inputs["mb_e"]
+
+        btype = discrete_inputs["bearing_type"].upper()
+        data = self.BEARINGS[btype]
+
+        a, b = data["a"], data["b"]         # face width
+        k, n = data["k"], data["n"]         # mass
+        c, m = data["c"], data["m"]         # Cr
+        # reactions
+        FREE, RIGID = 0, 1
+        mb_Reactions = np.array([FREE]*6) # ([ Rx, Ry, Rz, Rxx, Ryy, Rzz ])
+        mb_Reactions[:] = data["reactions"]
+        if mb_Reactions[3] == RIGID: mb_Reactions[3] = FREE
+
+        # -----------------------------
+        # analytic formulas
+        # -----------------------------
+        self.face_width = face = a * D_shaft + b
+        self.Cr = Cr   = (c * (D_shaft**m)) * self.kN_to_N
+
+        # mass
+        if mass_user > 0:
+            self._mass = mass = mass_user
+            self._dmass_dmUser = 1.0
+            self._dmass_dDs = 0.0
+        else:
+            self._mass = mass = (k * D_shaft**n) * self.housing_factor
+            self._dmass_dmUser = 0.0
+            self._dmass_dDs = (n*mass)/D_shaft
+
+        # bearing diameter
+        if D_bearing_input > 0:
+            self._Db = Db = D_bearing_input
+            self._dDb_dDbearing = 1.0
+            self._dDb_dDs = 0.0
+            
+        else:
+            self._Db = Db = face
+            self._dDb_dDbearing = 0.0
+            self._dDb_dDs = a
+        
+        # inertia
+        # I0 = (1/4) * mass * (4 * (0.5 * D_shaft) ** 2 + 3 * (0.5 * Db) ** 2)
+        self._A0 = A0 = ( D_shaft**2 + 0.75*Db**2 )
+        I0 = 0.25 * mass * A0
+        # I1 = (1/8) * mass * (4 * (0.5 * D_shaft) ** 2 + 5 * (0.5 * Db) ** 2)
+        self._A1 = A1 = ( D_shaft**2 + 1.25*Db**2 )
+        I1 = 0.125 * mass * A1
+        I = np.r_[I0, I1, I1]
+
+        # -----------------------------
+        # outputs
+        # -----------------------------
+        outputs["face_width"] = face
+        outputs["mb_mass"] = mass
+        outputs["mb_Cr"] = Cr
+        outputs["mb_I"] = I
+        outputs["mb_max_defl_ang"] = data["max_ang"]
+        outputs["mb_Reactions"] = mb_Reactions
+
+        # ISO factors
+        alpha = np.arctan(e/1.5)
+        outputs["mb_X1"] = 1.0
+        outputs["mb_Y1"] = 0.45/np.tan(alpha)
+        outputs["mb_X2"] = 0.67
+        outputs["mb_Y2"] = outputs["mb_X2"]/np.tan(alpha)
+        outputs["mb_p"] = 10/3
+
+    # ------------------------------------------------------------
+    # compute_partials (exact)
+    # ------------------------------------------------------------
+    def compute_partials(self, inputs, J, discrete_inputs):
+
+        Ds = inputs["D_shaft"]
+        D_bearing = inputs["D_bearing"]
+        mass_user = inputs["mb_mass_user"]
+
+        btype = discrete_inputs["bearing_type"].upper()
+        data = self.BEARINGS[btype]
+
+        a, b = data["a"], data["b"]     # face width
+        k, n = data["k"], data["n"]     # mass
+        c, m = data["c"], data["m"]     # Cr
+
+        # width
+        J["face_width", "D_shaft"] = a
+        # Cr
+        J["mb_Cr", "D_shaft"] = (m*self.Cr)/Ds
+
+        # mass
+        mass = self._mass
+        dmass_dDs = self._dmass_dDs
+        dmass_dmUser = self._dmass_dmUser
+        J["mb_mass", "D_shaft"] = dmass_dDs
+
+        # bearing diameter
+        Db = self._Db
+        dDb_dDbearing = self._dDb_dDbearing
+        dDb_dDs = self._dDb_dDs
+
+        # inertia
+        A0 = self._A0
+        A1 = self._A1
+
+        dA0_dDs = 2*Ds + 0.75*2*Db*dDb_dDs
+        dA1_dDs = 2*Ds + 1.25*2*Db*dDb_dDs
+
+        dI0_dDs = 0.25*(dmass_dDs*A0 + mass*dA0_dDs)
+        dI1_dDs = 0.125*(dmass_dDs*A1 + mass*dA1_dDs)
+
+        J["mb_I", "D_shaft"] = np.array([dI0_dDs, dI1_dDs, dI1_dDs])
+
+        # inertia wrt. D_bearing
+        dI0_dDb = (0.25)*mass*(0.75)*2*Db*dDb_dDbearing
+        dI1_dDb = (0.125)*mass*(1.25)*2*Db*dDb_dDbearing
+        J["mb_I", "D_bearing"] = np.array([dI0_dDb, dI1_dDb, dI1_dDb])
+
+        # Y1, Y2 wrt. mb_e
+        e = inputs["mb_e"]
+
+        alpha = np.arctan(e/1.5)
+        t = np.tan(alpha)
+
+        dalpha_de = (1/(1+(e/1.5)**2))*(1/1.5)
+        dtdalpha = 1 + t**2
+
+        C1 = 0.45
+        C2 = 0.67
+
+        dY1_de = -C1/t**2 * dtdalpha * dalpha_de
+        dY2_de = -C2/t**2 * dtdalpha * dalpha_de
+
+        J["mb_Y1","mb_e"] = dY1_de
+        J["mb_Y2","mb_e"] = dY2_de
 # --------------------------------------------
