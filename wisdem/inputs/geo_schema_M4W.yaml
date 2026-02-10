@@ -799,13 +799,13 @@ properties:
                                 minimum: 0.0
                             mb1_e:              #(v) new
                                 type: number
-                                default: 3.5
+                                default: 0.0
                                 units: none
                                 description: limiting value of Fa/Fr for the applicability of different values of factors X and Y (ISO 281)
                                 minimum: 0.0
                             mb2_e:              #(v) new
                                 type: number
-                                default: 3.5
+                                default: 0.0
                                 units: none
                                 description: limiting value of Fa/Fr for the applicability of different values of factors X and Y (ISO 281)
                                 minimum: 0.0
