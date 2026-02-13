@@ -8,9 +8,9 @@ import operator
 from openmdao.utils.mpi import MPI
 
 #(v) changed schemas from default legacy to M4W
-fschema_geom = os.path.join(os.path.dirname(os.path.realpath(__file__)), "geo_schema_M4W.yaml")     # def: geometry_schema.yaml
-fschema_model = os.path.join(os.path.dirname(os.path.realpath(__file__)), "model_schema_M4W.yaml")  # def: modeling_schema.yaml
-fschema_opt = os.path.join(os.path.dirname(os.path.realpath(__file__)), "analy_schema_M4W.yaml")    # def: analysis_schema.yaml
+fschema_geom = os.path.join(os.path.dirname(os.path.realpath(__file__)), "geo_schema_M4W.yaml")     # def: geometry_schema.yaml | geo_schema_M4W.yaml
+fschema_model = os.path.join(os.path.dirname(os.path.realpath(__file__)), "model_schema_M4W.yaml")  # def: modeling_schema.yaml | model_schema_M4W.yaml
+fschema_opt = os.path.join(os.path.dirname(os.path.realpath(__file__)), "analy_schema_M4W.yaml")    # def: analysis_schema.yaml | analy_schema_M4W.yaml
 
 
 def load_yaml(fname_input : str) -> dict:
