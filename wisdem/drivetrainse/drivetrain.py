@@ -232,6 +232,11 @@ class DrivetrainSE(om.Group):
         self.add_subsystem(
             "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt, direct_drive=direct), promotes=["*"]
         )
+        # -connecting = bear(1,2) -to- Hub_Rotor_LSS_Frame (v: NEW)
+        self.connect("bear1.face_width", "mb1_face_width") # mb_fw(s) shifted from GearedLayout to Hub_* to avoid cycle
+        self.connect("bear2.face_width", "mb2_face_width")
+        self.connect("bear1.mb_Reactions", "mb1_Reactions")
+        self.connect("bear2.mb_Reactions", "mb2_Reactions")
         if direct:
             self.add_subsystem(
                 "nose", ds.Nose_Stator_Bedplate_Frame(modeling_options=opt, n_dlcs=n_dlcs), promotes=["*"]
@@ -325,7 +330,7 @@ class DrivetrainSE_M4W( om.Group ):
         flag_hub = self.options["modeling_options"]["flags"]["hub"] #TODO: this modified; remove and add hub as legacy
         doMBfls = self.options["modeling_options"]["flags"]["mb_fls"]
         
-        # print flag information
+        # print flag information (debugging)
         print("=== Problem 'DrivetrainSE_M4W' setting up ===")
         print(f"flag info: doMBfls={doMBfls}, use_gb_torque_density={use_gb_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
 
@@ -398,7 +403,7 @@ class DrivetrainSE_M4W( om.Group ):
 
         # Hub_Rotor_LSS_Frame:
         self.add_subsystem(
-            "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt_drivese),
+            "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt_drivese, direct_drive=direct),
                 promotes=["*"]
             )
         # -connecting = bear(1,2) -to- Hub_Rotor_LSS_Frame (NEW)
