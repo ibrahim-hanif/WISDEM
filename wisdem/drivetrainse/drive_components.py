@@ -1509,3 +1509,94 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
         J["mb_Y1","mb_e"] = dY1_de
         J["mb_Y2","mb_e"] = dY2_de
 # --------------------------------------------
+
+class Nacelle_MOO_withDerivatives(om.ExplicitComponent):
+    """
+    Takes nacelle mass and center wrt. tower-top and computes a multi-objective function
+    for optimization. The function is a weighted sum of the nacelle mass and
+    the distance of the nacelle center of mass from the tower top center
+    (which is a surrogate for minimizing loads on the tower).
+    The user can specify the weights to place on each component of the objective.
+
+    Parameters
+    ----------
+    nacelle_mass : float, [kg]
+        Mass of the nacelle
+    nacelle_cm : numpy array[3], [m]
+        Center of mass of the nacelle relative to tower top in yaw-aligned c.s.
+    moo_weight : float, [0-1]
+        Weighting factor for multi-objective function.
+            0 = only minimize distance, 1 = only minimize mass,
+            values in between give a weighted sum of the two.
+
+    Outputs
+    -------
+    nacelle_moo : float
+        Multi-objective function value for nacelle design, to be minimized in optimization.
+    """
+
+    def setup(self):
+        self.add_input("nacelle_mass", 0.0, units="kg")
+        self.add_input("nacelle_cm", np.zeros(3), units="m")
+        self.add_input("moo_weight", 1.0)
+
+        self.add_output("nacelle_moo", 0.0)
+
+        # Declare partials
+        self.declare_partials("nacelle_moo", "nacelle_mass")
+        self.declare_partials("nacelle_moo", "nacelle_cm")
+        self.declare_partials("nacelle_moo", "moo_weight")
+
+    # ------------------------------------------------------------
+    # compute
+    # ------------------------------------------------------------
+    def compute(self, inputs, outputs):
+
+        mass = inputs["nacelle_mass"]
+        cm = inputs["nacelle_cm"]
+        w = inputs["moo_weight"]
+
+        mass_scale = 1e5 # scale mass to be on same order as distance for better numerical behavior in optimization
+
+        r = np.linalg.norm(cm) # Distance of nacelle CoM from tower centerline (assuming tower at 0,0,0)
+
+        # Store for partials
+        self._mass = mass
+        self._cm = cm
+        self._w = w
+        self._r = r
+        self._mass_scale = mass_scale
+
+        # Multi-objective function: weighted sum of mass and distance
+        outputs["nacelle_moo"] = (
+            (w * mass/mass_scale) +
+            (1.0-w) * r
+        )
+
+    # ------------------------------------------------------------
+    # compute_partials
+    # ------------------------------------------------------------
+    def compute_partials(self, inputs, J):
+
+        mass = self._mass
+        cm = self._cm
+        w = self._w
+        r = self._r
+        mass_scale = self._mass_scale
+
+        eps = 1e-16
+        r_safe = max(r, eps) # If cm = [0,0,0], derivative is undefined (division by zero). Must protect against that. <- standard practice in optimization.
+
+        # wrt mass
+        J["nacelle_moo", "nacelle_mass"] = (w / mass_scale)
+
+        # wrt weight
+        J["nacelle_moo", "moo_weight"] = (
+            (mass/mass_scale) - r
+        )
+
+        # wrt nacelle_cm (vector)
+        J["nacelle_moo", "nacelle_cm"] = (
+            (1.0-w) * (cm / r_safe)
+        )
+# --------------------------------------------

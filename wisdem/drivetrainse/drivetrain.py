@@ -483,6 +483,9 @@ class DrivetrainSE_M4W( om.Group ):
         # Dynamics
         self.add_subsystem("dyn", dc.DriveDynamics(), promotes=["*"])
 
+        # MOO
+        self.add_subsystem("moo", dc.Nacelle_MOO_withDerivatives(), promotes=["*"])
+
         # = mat -to- hub
         if flag_hub:
             self.connect("bedplate_rho", ["pitch_system.rho", "spinner.metal_rho"])
