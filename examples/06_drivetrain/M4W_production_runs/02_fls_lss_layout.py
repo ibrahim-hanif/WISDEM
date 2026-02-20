@@ -43,14 +43,14 @@ import wisdem.drivetrainse.drive_components as dc
 
 import wisdem.drivetrainse.drive_structure as ds
 
-from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict
+from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, read_color_scheme
 from wisdem.commonse.fileIO import save_data
 from wisdem.commonse.cross_sections import Tube
 # %% [markdown]
 # ### Define flags
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
-record_cases = False    #TODO: add in final setup (full problem)
+record_cases = True    #TODO: add in final setup (full problem)
 plot_cases = False      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
@@ -95,7 +95,7 @@ if record_cases:
 
 #%% Loading `openFAST` hub loads from a saved file
 if part_loads: # define paths
-    loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
+    loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_M4W.mat")
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
 
 else: # define paths
@@ -745,10 +745,8 @@ if record_cases:
 # ### Plot recorded results
 #%%
 # main colors
-clr_blueDark = '#313694'
-clr_blueLight = '#A6CAEC'
-clr_redDark = '#C00000'
-clr_redLight = 'r'
+loc_clr_scheme_m4w = "C:\\Users\\vasudevg\\OneDrive - NTNU\\R&D\\Made4Wind\\pics_vids_templates_etc\\color-scheme-made4wind.csv"
+clrs_m4w = read_color_scheme(loc_clr_scheme_m4w)
 # -------------------------
 # options: Journal polish
 # plot rc params
@@ -797,7 +795,7 @@ if record_cases and plot_cases:
     # ========= Row 1 (span both columns): msa_mass =========
     ax1 = fig.add_subplot(gs[0, :])
     ax1.plot(iters, msa_mass,
-            marker='o', linewidth=2, color='k',
+            marker='o', linewidth=2, color= clrs_m4w["Dark_Blue"],
             label=r'$m_{msa}$')
     ax1.set_ylabel(r'Mass [t]')
     # ax1.set_xlabel('Iteration')
@@ -808,10 +806,10 @@ if record_cases and plot_cases:
     # ========= Row 2, Col 1: L_12 and 10*L_h1 =========
     ax2 = fig.add_subplot(gs[1, 0])
     ax2.plot(iters, 10.0 * L_h1,
-            marker='s', color=clr_blueDark,
+            marker='s', color = clrs_m4w['Dark_Green'],
             label=r'$L_{h1} \times 10$')
     ax2.plot(iters, L_12,
-            marker='o', color=clr_blueLight,
+            marker='o', color = clrs_m4w['Aqua'],
             label=r'$L_{12}$')
     ax2.set_ylabel(r'Length [m]')
     # ax2.set_xlabel('Iteration')
@@ -822,16 +820,16 @@ if record_cases and plot_cases:
     # ========= Row 2, Col 2: diameter and thickness =========
     ax3 = fig.add_subplot(gs[1, 1])
     ax3.plot(iters, lss_diam[:, 0],
-            marker='o', color=clr_blueDark,
+            marker='o', color = clrs_m4w['Dark_Green'],
             label=r'$D_{lss,1}$')
     ax3.plot(iters, lss_diam[:, 1],
-            marker='o', color=clr_redDark,
+            marker='o', color = clrs_m4w['Aqua'],
             label=r'$D_{lss,2}$')
     ax3.plot(iters, 10.0 * lss_t[:, 0],
-            marker='s', color=clr_blueLight,
+            marker='s', color = clrs_m4w['Dark_Red'],
             label=r'$t_{lss,1} \times 10$')
     ax3.plot(iters, 10.0 * lss_t[:, 1],
-            marker='s', color=clr_redLight,
+            marker='s', color = clrs_m4w['Red'],
             label=r'$t_{lss,2} \times 10$')
     ax3.set_ylabel(r'Dimensions [m]')
     # ax3.set_xlabel('Iteration')
@@ -843,10 +841,10 @@ if record_cases and plot_cases:
     # ========= Row 3 (span both columns): L10 constraints =========
     ax4 = fig.add_subplot(gs[2, :])
     ax4.plot(iters, L10_mb1,
-            marker='o', linewidth=2, color=clr_blueDark,
+            marker='o', linewidth=2, color = clrs_m4w['Dark_Green'],
             label=r'$L_{10}^{mb1}$')
     ax4.plot(iters, L10_mb2,
-            marker='s', linewidth=2, color=clr_blueLight,
+            marker='s', linewidth=2, color = clrs_m4w['Aqua'],
             label=r'$L_{10}^{mb2}$')
     ax4.axhline(1.0, color='k', linestyle='--', linewidth=1)
     ax4.set_ylabel(r'Life constraint [-]')
@@ -864,8 +862,8 @@ if record_cases and plot_cases:
     # save
     # -------------------------
     plot_path = os.path.join(results_path,
-            "vars_with_iter_"+meth_Peq+".pdf")
-    plt.savefig(plot_path) # NOTE: saved, so don't change now 
+            "vars_with_iter_"+meth_Peq+".png")
+    # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 
     plt.show()
 
@@ -1030,28 +1028,52 @@ print(outs_recorded);
        [64650.67674836],
        [38386.64245769]])}
 """
+# ==== 1. MB type vary: new ULS
+"""
+{'L_h1': array([[0.30305484],
+       [0.19005296],
+       [0.30272963],
+       [0.20136395]]),
+'L_12': array([[4.85547772],
+       [4.06728249],
+       [4.86676433],
+       [2.16464623]]),
+'lss_diameter': array([[3.4551008 , 1.92397095],
+       [1.12036565, 2.48709673],
+       [3.44842101, 1.94309144],
+       [1.04527294, 2.78601022]]),
+'lss_wall_thickness': array([[0.02584622, 0.27731484],
+       [0.82202806, 0.12166346],
+       [0.02551514, 0.2671655 ],
+       [0.9       , 0.09527698]]),
+'msa_mass': array([[106210.72664515],
+       [ 97263.67950993],
+       [ 95305.95598093],
+       [ 67281.03505691]])}
+"""
+
 # ==== 2. L_ vary: LRD (DEL gives same results :D AL)
 """
-{'L_h1': array([[0.27704792],
-       [0.2508921 ],
-       [0.26512019],
-       [0.26235498]]),
-'L_12': array([[6.01097366],
-       [8.51422035],
-       [6.87448905],
-       [7.12632589]]),
-'lss_diameter': array([[3.093676  , 1.66591795],
-       [2.70852189, 1.72255716],
-       [2.91765771, 1.67859259],
-       [2.8769373 , 1.68417007]]),
-'lss_wall_thickness': array([[0.00435108, 0.12454809],
-       [0.00841746, 0.1164297 ],
-       [0.00598669, 0.12320443],
-       [0.00641597, 0.12239033]]),
-'msa_mass': array([[68904.24992945],
-       [69354.65015087],
-       [68297.18048801],
-       [68315.09627046]])}
+{'L_h1': array([[0.3030549 ],
+       [0.3030549 ],
+       [0.30305493],
+       [0.30305484]]),
+'L_12': array([[4.85547562],
+       [4.85547561],
+       [4.85547463],
+       [4.85547772]]),
+'lss_diameter': array([[3.45510162, 1.92397181],
+       [3.45510162, 1.92397181],
+       [3.4551016 , 1.92397191],
+       [3.4551008 , 1.92397095]]),
+'lss_wall_thickness': array([[0.02584621, 0.27731437],
+       [0.02584621, 0.27731437],
+       [0.02584617, 0.27731429],
+       [0.02584622, 0.27731484]]),
+'msa_mass': array([[106210.69683583],
+       [106210.69610393],
+       [106210.6729395 ],
+       [106210.72664515]])}
 """
 # %%
 if (param_for_study.lower() == "ldd") and (
@@ -1090,7 +1112,7 @@ if (param_for_study.lower() == "ldd") and (
         ax.scatter(
             L_h1[0],
             L_12[0],
-            color=clr_blueLight,
+            color = clrs_m4w["Aqua"],
             s=80,
             zorder=4,
             label='Start' if i == 0 else None
@@ -1100,7 +1122,7 @@ if (param_for_study.lower() == "ldd") and (
         ax.scatter(
             L_h1[-1],
             L_12[-1],
-            color=clr_blueDark,
+            color = clrs_m4w["Dark_Blue"],
             marker='x',
             s=100,
             zorder=4,
@@ -1176,7 +1198,7 @@ if (param_for_study.lower() == "ldd") and (
             L_h1[0],
             L_12[0],
             m_msa[0],
-            color=clr_blueLight,
+            color = clrs_m4w["Aqua"],
             s=80,
             zorder=3,
             label='Start' if i == 0 else None
@@ -1197,7 +1219,7 @@ if (param_for_study.lower() == "ldd") and (
             L_h1[-1],
             L_12[-1],
             m_msa[-1],
-            color=clr_blueDark,
+            color = clrs_m4w["Dark_Blue"],
             marker='x',
             s=100,
             zorder=4,
