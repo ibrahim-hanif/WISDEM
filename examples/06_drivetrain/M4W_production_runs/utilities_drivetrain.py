@@ -3,12 +3,12 @@ import numpy as np
 import pandas as pd
 
 # ==========
-def read_df_to_prob( df, row, prob ):
+def read_df_to_prob( this_case, prob ):
     """
     Parameters
     __________
-    df : DataFrame 
-        output of pd.read_csv( csv_file_path )
+    this_case : DataFrame row
+        output of ( pd.read_csv( csv_file_path ) ).loc[ row ]
     row : int
         row of the case being analysed,
         as each case is listed at one row
@@ -18,27 +18,36 @@ def read_df_to_prob( df, row, prob ):
     1. DONE : implement
     2. TODO : automate, based on outs_recorded keys
     """
-    this_case = df.loc[ row ]
-    len_case = len(this_case)
+    # this_case = df.loc[ row ]
     
     # update problem variables TODO: make this automated
-    prob["gear_ratio"] = this_case['gear_ratio']
-    prob["gearbox_mass_user"] = this_case['gearbox_mass_user']
-    prob["generator_mass_user"] = this_case['generator_mass_user']
+    # prob["gear_ratio"] = this_case['gear_ratio']
+    # prob["gearbox_mass_user"] = this_case['gearbox_mass_user']
+    # prob["generator_mass_user"] = this_case['generator_mass_user']
 
-    prob['L_h1'] = this_case['L_h1']
-    prob['L_12'] = this_case['L_12']
-    prob['lss_diameter'] = np.array(eval(this_case['lss_diameter']))
-    prob['lss_wall_thickness'] = np.array(eval(this_case['lss_wall_thickness']))
+    # prob['L_h1'] = this_case['L_h1']
+    # prob['L_12'] = this_case['L_12']
+    # prob['lss_diameter'] = np.array(eval(this_case['lss_diameter']))
+    # prob['lss_wall_thickness'] = np.array(eval(this_case['lss_wall_thickness']))
 
-    prob['L_hss'] = this_case['L_hss']
-    prob['hss_diameter'] = np.array(eval(this_case['hss_diameter']))
-    prob['hss_wall_thickness'] = np.array(eval(this_case['hss_wall_thickness']))
+    # prob['L_hss'] = this_case['L_hss']
+    # prob['hss_diameter'] = np.array(eval(this_case['hss_diameter']))
+    # prob['hss_wall_thickness'] = np.array(eval(this_case['hss_wall_thickness']))
 
-    prob['bedplate_web_thickness'] = this_case['bedplate_web_thickness']
-    prob['bedplate_flange_thickness'] = this_case['bedplate_flange_thickness']
-    prob['bedplate_flange_width'] = this_case['bedplate_flange_width']
+    # prob['bedplate_web_thickness'] = this_case['bedplate_web_thickness']
+    # prob['bedplate_flange_thickness'] = this_case['bedplate_flange_thickness']
+    # prob['bedplate_flange_width'] = this_case['bedplate_flange_width']
     # TODO: est. L,R of GB and gen (asked)
+
+    # iter over this_case 
+    for key, value in this_case.items():
+        # skip non-DV keys
+        if key in ["status_driver_exit","time"]: continue
+        # work on DVs
+        # 1. float type
+        if type(value) in [float, np.float64]: prob[key] = value
+        # 2. str type for vector DVs
+        elif type(value) == str: prob[key] = np.array(eval( value ))
     
     return prob
 # ==========
