@@ -1281,7 +1281,7 @@ class DriveDynamics(om.ExplicitComponent):
 # (v) --------------------------------------------
 class MainBearing_withDerivatives(om.ExplicitComponent):
     """
-    TODO: description
+    Heavy-load bearings with derivatives for drivetrain optimizaiton.
 
     Internal Progress
     _________________
@@ -1343,7 +1343,7 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
     BEARINGS = {
 
         "CARB":
-            dict(a=0.2663, b=0.0435, k=1561.4, n=2.6007, c=16676, m=1.4746,
+            dict(a=0.4299, b=0.0382, k=3682.8, n=2.7676, c=16676, m=1.4746,
                  max_ang=np.deg2rad(0.5), reactions=[0,1,1,0,0,0]),
 
         "CRB":
@@ -1351,7 +1351,7 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
                  max_ang=np.deg2rad(4/60), reactions=[0,1,1,0,0,0]),
 
         "SRB":
-            dict(a=0.2762, b=0.0, k=876.7,  n=1.7195, c=13878, m=1.0796,
+            dict(a=0.2463, b=0.185, k=2688.3,  n=1.8877, c=13878, m=1.0796,
                  max_ang=0.078, reactions=[1,1,1,0,0,0]),
 
         "TRB":
