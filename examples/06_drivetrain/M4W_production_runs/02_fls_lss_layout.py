@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 import time
 # import scipy.io as sio # --- not used in here, but within imports
 # import pickle
+import pandas as pd
 
 # %%
 from wisdem.drivetrainse.drivetrain import DriveMaterials
@@ -46,11 +47,12 @@ import wisdem.drivetrainse.drive_structure as ds
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, read_color_scheme
 from wisdem.commonse.fileIO import save_data
 from wisdem.commonse.cross_sections import Tube
+import utilities_drivetrain as utilsDT
 # %% [markdown]
 # ### Define flags
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
-record_cases = True    #TODO: add in final setup (full problem)
+record_cases = False    #TODO: add in final setup (full problem)
 plot_cases = False      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
@@ -68,8 +70,8 @@ flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 
 # Parametric study
-flag_study_parametric = False
-param_for_study = "LDD"     # "MB" (types) / "LDD" (MS' L_*)
+flag_study_parametric = True
+param_for_study = "mb"     # "MB" (types) / "LDD" (MS' L_*)
 meth_Peq = "DEL".lower()    # "LRD" or "DEL"
 
 #%%[markdown]
@@ -85,6 +87,8 @@ loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "02")
 loc_xdsm = os.path.join(results_path, 'xdsm_02')
 
+loc_DOEcsv_MBtype = os.path.join(results_path, "DOE_MBtype.csv")
+
 # Record results?
 if record_cases:
     print(" ---- Recording cases using `SqliteRecorder` ---- ")
@@ -95,7 +99,8 @@ if record_cases:
 
 #%% Loading `openFAST` hub loads from a saved file
 if part_loads: # define paths
-    loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_M4W.mat")
+    # TODO: mainshaft_loads: (old) "." , (newULS) "_M4W"
+    loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
 
 else: # define paths
@@ -806,7 +811,7 @@ if record_cases and plot_cases:
     # ========= Row 2, Col 1: L_12 and 10*L_h1 =========
     ax2 = fig.add_subplot(gs[1, 0])
     ax2.plot(iters, 10.0 * L_h1,
-            marker='s', color = clrs_m4w['Dark_Green'],
+            marker='s', color = clrs_m4w['Dark_Teal'],
             label=r'$L_{h1} \times 10$')
     ax2.plot(iters, L_12,
             marker='o', color = clrs_m4w['Aqua'],
@@ -820,7 +825,7 @@ if record_cases and plot_cases:
     # ========= Row 2, Col 2: diameter and thickness =========
     ax3 = fig.add_subplot(gs[1, 1])
     ax3.plot(iters, lss_diam[:, 0],
-            marker='o', color = clrs_m4w['Dark_Green'],
+            marker='o', color = clrs_m4w['Dark_Teal'],
             label=r'$D_{lss,1}$')
     ax3.plot(iters, lss_diam[:, 1],
             marker='o', color = clrs_m4w['Aqua'],
@@ -841,7 +846,7 @@ if record_cases and plot_cases:
     # ========= Row 3 (span both columns): L10 constraints =========
     ax4 = fig.add_subplot(gs[2, :])
     ax4.plot(iters, L10_mb1,
-            marker='o', linewidth=2, color = clrs_m4w['Dark_Green'],
+            marker='o', linewidth=2, color = clrs_m4w['Dark_Teal'],
             label=r'$L_{10}^{mb1}$')
     ax4.plot(iters, L10_mb2,
             marker='s', linewidth=2, color = clrs_m4w['Aqua'],
@@ -887,6 +892,8 @@ if flag_study_parametric and flag_opt_GBO:
 
     # ==== Initialize: Combinations to study ====
     if param_for_study.lower() == "mb":
+        cases = pd.read_csv( loc_DOEcsv_MBtype )
+        
         steps_MBtype = [
             ("CRB","TRB2"),
             ("CARB","TRB2"),
@@ -895,7 +902,7 @@ if flag_study_parametric and flag_opt_GBO:
             ]
         print(" - MB types: ", steps_MBtype);
         # length: total num of param varying steps
-        len_steps = len(steps_MBtype)
+        len_steps = len(cases)
 
     elif param_for_study.lower() == "ldd":
         # L_h1 (0,5.0)      : 1.25, 3.75
@@ -936,10 +943,23 @@ if flag_study_parametric and flag_opt_GBO:
     # - init to 0
     # - TODO: constr (size 2) are not here, so they become 1 long array
     outs_recorded = {}
+    # - status/time
+    outs_recorded["status_driver_exit"] = [""]*len_steps
+    outs_recorded["time"] = np.zeros( (len_steps,1) )
+    # - DVs
     lst_dvs = prob.driver.get_design_var_values()
     for key, val in lst_dvs.items():
         len_dv = int(val.size)
         outs_recorded[key] = np.zeros( (len_steps, len_dv) )
+    # - constr
+    lst_constr = ["constr_L10_mb1", "constr_L10_mb2"] 
+    for key in lst_constr:
+        outs_recorded[key] = np.zeros( (len_steps, 1) )
+    # - other masses to record
+    lst_masses = ["mb1_mass", "mb2_mass", "lss_mass"]
+    for key in lst_masses:
+        outs_recorded[key] = np.zeros( (len_steps, 1) )
+    # - objs
     name_obj = list(prob.model.get_objectives().keys())[0]
     outs_recorded[name_obj] = np.zeros((len_steps,1))
     outs_recorded
@@ -953,8 +973,8 @@ if flag_study_parametric and flag_opt_GBO:
             # set MB type
             set_MBs = steps_MBtype[i]
             print(f"=== type of bearing: {set_MBs} ===")
-            prob["bear1.bearing_type"] = set_MBs[0]
-            prob["bear2.bearing_type"] = set_MBs[1]
+            this_case = cases.loc[i]
+            prob = utilsDT.read_df_to_prob( this_case, prob )
             print("-------------------- v ------------------")
             # set L val: DONE above
             # prob["L_h1"] = 0.5
@@ -986,23 +1006,42 @@ if flag_study_parametric and flag_opt_GBO:
         # prob["lss_diameter"] = myones * 4.0
         # prob["lss_wall_thickness"] = myones * 0.3
 
+        # ---- time it ;)
+        t0 = time.time()
         # ===== RUN driver (GBO) =====
         prob.model.approx_totals()
         prob.run_driver()
+        # ---- time it ;)
+        t1 = time.time()
+        # ---- post-process
+        time_optim = t1-t0
+        status_optim = prob.driver.get_exit_status()
+        print(" - ",status_optim,": MSA optim run completed in,", time_optim, "s.")
         # print( "L_h1 = ", prob["L_h1"] ) # debugging
         
         # ===== post-processing =====
         # save outputs
-        for key, val in outs_recorded.items():
-            outs_recorded[key][i,:] = prob[key]
+        # for key, val in outs_recorded.items():
+        #     outs_recorded[key][i,:] = prob[key]
+        outs_recorded = utilsDT.fill_case_dict_from_prob(
+                            i, prob, outs_recorded, time_optim )
 
         # Recorded cases
         if param_for_study.lower() == "ldd" and record_cases:
             results_list_of_dicts.append(
                 get_recorder_results( loc_case_i, None, True ) #out=dict
                 )
+    # print outputs dict
+    print(outs_recorded);
+# =====
 
-print(outs_recorded);
+#%% save in to df and csv
+casesOut = cases.copy()
+for i in range(len_steps):
+    casesOut = utilsDT.write_dict_to_df(casesOut,i,outs_recorded)
+# save to csv
+casesOut.to_csv(loc_DOEcsv_MBtype, index=False)
+
 #%% [markdown]
 # ## Result outputs
 # ==== 1. MB type vary
@@ -1161,7 +1200,7 @@ if (param_for_study.lower() == "ldd") and (
     # -------------------------
     # Figure
     # -------------------------
-    fig = plt.figure(figsize=(7,6))
+    fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(111, projection='3d')
 
     for i, res in enumerate(results_list_of_dicts):
@@ -1253,18 +1292,5 @@ if (param_for_study.lower() == "ldd") and (
 
     plt.show()
 # =============================================================
-#%% [markdown]
-# ### use recorded cases for recording
+
 #%%
-len_steps = 4
-results_list_of_dicts = [] # array of dict(s)
-loc_cases_all = [
-                "case_"+meth_Peq+"_set_" + str(i) + ".sql" for i in range(
-                    1,len_steps+1)
-                ]
-for i in range(len_steps):
-    loc_case_i = os.path.join(results_path, loc_cases_all[i])
-    results_list_of_dicts.append(
-        get_recorder_results( loc_case_i, None, True ) #out=dict
-        )
-# %%
