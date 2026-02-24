@@ -45,7 +45,7 @@ import wisdem.drivetrainse.drive_components as dc
 import wisdem.drivetrainse.drive_structure as ds
 
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, read_color_scheme
-from wisdem.commonse.fileIO import save_data
+from wisdem.commonse.fileIO import save_data, load_data
 from wisdem.commonse.cross_sections import Tube
 import utilities_drivetrain as utilsDT
 # %% [markdown]
@@ -53,9 +53,10 @@ import utilities_drivetrain as utilsDT
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
 record_cases = False    #TODO: add in final setup (full problem)
-plot_cases = False      #NOTE: saved, not changing now (commented)
+plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
+flag_load_from_data = True
 
 # Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -63,6 +64,10 @@ load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
+# TODO: mainshaft_loads: (old) "." , (newULS) "_M4W"
+loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_M4W.mat")
+loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
+loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
 # Optimization flags
 flag_opt_GBO = True     # GBO: gradient based optimizer
@@ -71,8 +76,8 @@ flag_opt_GFO = False    # GFO: gradient free optimizer
 
 # Parametric study
 flag_study_parametric = True
-param_for_study = "mb"     # "MB" (types) / "LDD" (MS' L_*)
-meth_Peq = "DEL".lower()    # "LRD" or "DEL"
+param_for_study = "ldd"     # "MB" (types) / "LDD" (MS' L_*)
+meth_Peq = "LRD".lower()    # "LRD" or "DEL"
 
 #%%[markdown]
 # ### Defining results directory and files
@@ -99,13 +104,9 @@ if record_cases:
 
 #%% Loading `openFAST` hub loads from a saved file
 if part_loads: # define paths
-    # TODO: mainshaft_loads: (old) "." , (newULS) "_M4W"
-    loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
 
 else: # define paths
-    loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
-    loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
     if load_fls_loads: # load from paths
         Snew, keys_new = mainshaft_loads_from_mat_to_dict(
             loc_FLS_loads_mat_file, loc_ULS_loads_mat_file)
@@ -368,7 +369,7 @@ if flag_opt_GBO:
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
     prob.driver.options["tol"] = 1e-6 # comment to default (1e-6?)
-    prob.driver.options["maxiter"] = 5 * 6
+    prob.driver.options["maxiter"] = 5 * 4
     prob.driver.options["disp"] = True
     prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
     # prob.driver.options # disp for debugging
@@ -401,14 +402,14 @@ else:
 # - TODO: scaling (is better).
 if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # Add objective
-    prob.model.add_objective("msa_mass", ref=1e5)               #DONE: 'msa_mass' minimization
+    prob.model.add_objective("msa_mass", ref=1e6)               #DONE: 'msa_mass' minimization
     # - NOTE: effectively 'lss_mass' minimization
     
     # Add design variables
-    prob.model.add_design_var("L_h1", lower=0.1, upper=5.0, ref=5.0, ref0=0.2)
-    prob.model.add_design_var("L_12", lower=0.1, upper=10.0, ref=10.0, ref0=0.5)
-    prob.model.add_design_var("lss_diameter", lower=0.5, upper=4.0, ref=4.0, ref0=0.5)
-    prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.9, ref=1e-1) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
+    prob.model.add_design_var("L_h1", lower=0.1, upper=5.0)#, ref=5.0, ref0=0.1)
+    prob.model.add_design_var("L_12", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
+    prob.model.add_design_var("lss_diameter", lower=0.5, upper=5.0, ref=5.0, ref0=0.5)
+    prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=1.0, ref=1.0, ref0=4e-3) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
 
     if flag_DOE: pass # DOE: no constraints
     
@@ -418,7 +419,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     prob.model.add_constraint("constr_lss_vonmises", upper=1.0)         #DONE: add next
     
     # 2. deflection (main bearing: max perm is angle, + fls) #NOTE: scaling is better
-    prob.model.add_constraint("constr_shaft_deflection", upper=1.0)     #DONE: add next
+    prob.model.add_constraint("constr_shaft_deflection", upper=1.0)#, ref=1e-2)     #DONE: add next
     prob.model.add_constraint("constr_shaft_angle", upper=1.0, ref=1e-3)          #DONE: add next
     if doMBfls:
         prob.model.add_constraint("constr_L10_mb1", lower=1.0)
@@ -427,8 +428,8 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # 3. target overhang and hub height
     # prob.model.add_constraint("constr_length", lower=0.0)               #DONE: add later
     # prob.model.add_constraint("constr_height", lower=0.0, ref=1e1)               #DONE: add later
-    prob.model.add_constraint("constr_Lh1_MB1fw", lower=0.0, ref=1e1)            #DONE: add later
-    prob.model.add_constraint("constr_L12_MBsFW", lower=0.0, ref=1e0)            #DONE: add later
+    prob.model.add_constraint("constr_Lh1_MB1fw", lower=0.0)#, ref=1e1)            #DONE: add later
+    prob.model.add_constraint("constr_L12_MBsFW", lower=0.0)#, ref=1e0)            #DONE: add later
 
 # %%
 # Setup the problem
@@ -468,209 +469,212 @@ prob.model.list_outputs();
 # ### Defining input values
 # after calling `prob.setup()` (on the openMDAO `prob` defined) and before calling `prob.run_driver()`
 #%%
-# ==== 1. High-level Inputs ====
-prob.set_val("machine_rating", 15.0, units="MW")
-D_rotor = prob["rotor_diameter"] = 240.0
-prob["rated_torque"] = 21.03*1e6 # [Nm] ref.2, tab.5-4
-# prob["minimum_rpm"] = 5
-prob["rated_rpm"] = 7.56
-prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
+if not flag_load_from_data:
+    # ==== 1. High-level Inputs ====
+    prob.set_val("machine_rating", 15.0, units="MW")
+    D_rotor = prob["rotor_diameter"] = 240.0
+    prob["rated_torque"] = 21.03*1e6 # [Nm] ref.2, tab.5-4
+    # prob["minimum_rpm"] = 5
+    prob["rated_rpm"] = 7.56
+    prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
 
-prob["upwind"] = True
-prob["D_top"] = 6.5 #tower top diameter
-prob["hub_diameter"] = 7.94
-prob["overhang"] = 12.0313 #ref.2
-prob["tilt"] = 6.0 #[deg] ref.3
+    prob["upwind"] = True
+    prob["D_top"] = 6.5 #tower top diameter
+    prob["hub_diameter"] = 7.94
+    prob["overhang"] = 12.0313 #ref.2
+    prob["tilt"] = 6.0 #[deg] ref.3
 
-# ==== Loading `openFAST` hub loads from a saved file ====
-# Loads assignment (ULS, FLS)
-#
-# ## ULS load loads (xD), input to Analy_*
-# - NOTE: these are predscribed 50-yr extremes from extr DLCs (5.1,6.1,6.3) 
-# prob["F_aero_hub"] = np.array([5.3995*1e6, 1.3697*1e6, 5.5742*1e6]).reshape((3, 1))
-# prob["M_aero_hub"] = np.array([5.2515*1e7, 1.0747*1e8, 9.9481*1e7]).reshape((3, 1))
-# TODO: change here for testing
-# 1. partial loads (S_all)
-if part_loads:
-    prob['F_aero_hub'] = np.array( [S_all['Fx_max'], S_all['Fy_max'], S_all['Fz_max']] ).reshape((3, 1))
-    prob['M_aero_hub'] = np.array( [S_all['Mx_max'], S_all['My_max'], S_all['Mz_max']] ).reshape((3, 1))
-# 2. full loads (Snew)
-else:
-    prob['F_aero_hub'] = np.array( [Snew['Fx_max'], Snew['Fy_max'], Snew['Fz_mean']] ).reshape((3, 1))
-    prob['M_aero_hub'] = np.array( [Snew['Mx_max'], Snew['My_max'], Snew['Mz_max']] ).reshape((3, 1))
-
-# ## FLS load loads (xD), input to Analy_*; (72e4, 10)
-# TODO: change here for testing
-# 1. partial loads (S_all)
-if load_fls_loads:
+    # ==== Loading `openFAST` hub loads from a saved file ====
+    # Loads assignment (ULS, FLS)
+    #
+    # ## ULS load loads (xD), input to Analy_*
+    # - NOTE: these are predscribed 50-yr extremes from extr DLCs (5.1,6.1,6.3) 
+    # prob["F_aero_hub"] = np.array([5.3995*1e6, 1.3697*1e6, 5.5742*1e6]).reshape((3, 1))
+    # prob["M_aero_hub"] = np.array([5.2515*1e7, 1.0747*1e8, 9.9481*1e7]).reshape((3, 1))
+    # TODO: change here for testing
+    # 1. partial loads (S_all)
     if part_loads:
-        prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = S_all['Fx'],S_all['Fy'],S_all['Fz']
-        prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = S_all['Mx'],S_all['My'],S_all['Mz']
-        prob['rot_speed'] = S_all['rot_speed']
-        prob['mean_wind_speed'] = S_all['mean_wind_speed'][0]
-        prob['Time'] = S_all['Time'][0]
+        prob['F_aero_hub'] = np.array( [S_all['Fx_max'], S_all['Fy_max'], S_all['Fz_max']] ).reshape((3, 1))
+        prob['M_aero_hub'] = np.array( [S_all['Mx_max'], S_all['My_max'], S_all['Mz_max']] ).reshape((3, 1))
     # 2. full loads (Snew)
     else:
-        prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = Snew['Fx'],Snew['Fy'],Snew['Fz']
-        prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = Snew['Mx'],Snew['My'],Snew['Mz']
-        prob['rot_speed'] = Snew['rot_speed']
-        prob['mean_wind_speed'] = Snew['ws']
-        prob['Time'] = Snew['Time']
+        prob['F_aero_hub'] = np.array( [Snew['Fx_max'], Snew['Fy_max'], Snew['Fz_mean']] ).reshape((3, 1))
+        prob['M_aero_hub'] = np.array( [Snew['Mx_max'], Snew['My_max'], Snew['Mz_max']] ).reshape((3, 1))
 
-# TODO: make nice PPT with flow/chart of om.Problem here
-# TODO: update using pCrunch's rainflow
-# ---
+    # ## FLS load loads (xD), input to Analy_*; (72e4, 10)
+    # TODO: change here for testing
+    # 1. partial loads (S_all)
+    if load_fls_loads:
+        if part_loads:
+            prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = S_all['Fx'],S_all['Fy'],S_all['Fz']
+            prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = S_all['Mx'],S_all['My'],S_all['Mz']
+            prob['rot_speed'] = S_all['rot_speed']
+            prob['mean_wind_speed'] = S_all['mean_wind_speed'][0]
+            prob['Time'] = S_all['Time'][0]
+        # 2. full loads (Snew)
+        else:
+            prob['Fx_FLS'],prob['Fy_FLS'],prob['Fz_FLS'] = Snew['Fx'],Snew['Fy'],Snew['Fz']
+            prob['Mx_FLS'],prob['My_FLS'],prob['Mz_FLS'] = Snew['Mx'],Snew['My'],Snew['Mz']
+            prob['rot_speed'] = Snew['rot_speed']
+            prob['mean_wind_speed'] = Snew['ws']
+            prob['Time'] = Snew['Time']
 
-# ==== 2. Blade properties and hub design options ====
-# - cf. `opts["flags"]["hub"]`
+    # TODO: make nice PPT with flow/chart of om.Problem here
+    # TODO: update using pCrunch's rainflow
+    # ---
 
-# Hub_Rotor_LSS_Frame inputs
-# TODO: from made4wind_geared (IEA-15MW = ref), change to made4wind specs
-if True: #NOTE: True with `Hub_*`
-    blade_mass = 65250 # from ref.2, tab. ES-2 (= made4wind specs also)
-    n_blades = 3
-    prob["blades_mass"] = n_blades * blade_mass
-    prob["blades_cm"] = 2.46175
-    prob["blades_I"] = np.r_[3.48453857e+08, 1.74226928e+08, 1.74226928e+08, np.zeros(3)]
+    # ==== 2. Blade properties and hub design options ====
+    # - cf. `opts["flags"]["hub"]`
 
-    # if run HUB module within DrivetrainSE
-    if dohub:
-        prob["flange_t2shell_t"] = 6.0
-        prob["flange_OD2hub_D"] = 0.6
-        prob["flange_ID2flange_OD"] = 0.8
-        prob["hub_in2out_circ"] = 1.2
-        prob["hub_stress_concentration"] = 3.0
-        prob["n_front_brackets"] = 5
-        prob["n_rear_brackets"] = 5
-        prob["clearance_hub_spinner"] = 0.5
-        prob["spin_hole_incr"] = 1.2
-        prob["blade_root_diameter"] = 5.2
-
-        prob["n_blades"] = 3
-        prob["blade_mass"] = 65252.0
-        prob["blades_mass"] = prob["n_blades"] * prob["blade_mass"]
+    # Hub_Rotor_LSS_Frame inputs
+    # TODO: from made4wind_geared (IEA-15MW = ref), change to made4wind specs
+    if True: #NOTE: True with `Hub_*`
+        blade_mass = 65250 # from ref.2, tab. ES-2 (= made4wind specs also)
+        n_blades = 3
+        prob["blades_mass"] = n_blades * blade_mass
         prob["blades_cm"] = 2.46175
         prob["blades_I"] = np.r_[3.48453857e+08, 1.74226928e+08, 1.74226928e+08, np.zeros(3)]
 
-        prob["pitch_system.BRFM"] = 26648449.0
-        prob["pitch_system_scaling_factor"] = 0.75
+        # if run HUB module within DrivetrainSE
+        if dohub:
+            prob["flange_t2shell_t"] = 6.0
+            prob["flange_OD2hub_D"] = 0.6
+            prob["flange_ID2flange_OD"] = 0.8
+            prob["hub_in2out_circ"] = 1.2
+            prob["hub_stress_concentration"] = 3.0
+            prob["n_front_brackets"] = 5
+            prob["n_rear_brackets"] = 5
+            prob["clearance_hub_spinner"] = 0.5
+            prob["spin_hole_incr"] = 1.2
+            prob["blade_root_diameter"] = 5.2
 
-        prob["spinner_gust_ws"] = 70.0
+            prob["n_blades"] = 3
+            prob["blade_mass"] = 65252.0
+            prob["blades_mass"] = prob["n_blades"] * prob["blade_mass"]
+            prob["blades_cm"] = 2.46175
+            prob["blades_I"] = np.r_[3.48453857e+08, 1.74226928e+08, 1.74226928e+08, np.zeros(3)]
 
-    else:
-        # run made4wind_geared.py with flag_opt_GBO = false and copy the following values from drivetrain_example.csv
-        prob["hub_system_mass"] = 190e3 # from ref.2, tab. 5-1
-        prob["hub_system_cm"] = 3.35947759
-        prob["hub_system_I"] = np.array([[865503.52531197, 567289.77714803, 567289.77714803],[0., 0., 0.]])
+            prob["pitch_system.BRFM"] = 26648449.0
+            prob["pitch_system_scaling_factor"] = 0.75
 
-# TODO: cm & I (hub_system_ & blades_) will change with DVs (L in lss)
+            prob["spinner_gust_ws"] = 70.0
 
-# ==== 3. Drivetrain configuration and sizing inputs ====
+        else:
+            # run made4wind_geared.py with flag_opt_GBO = false and copy the following values from drivetrain_example.csv
+            prob["hub_system_mass"] = 190e3 # from ref.2, tab. 5-1
+            prob["hub_system_cm"] = 3.35947759
+            prob["hub_system_I"] = np.array([[865503.52531197, 567289.77714803, 567289.77714803],[0., 0., 0.]])
 
-myones = np.ones(2)
-# - init condn for some design vars
+    # TODO: cm & I (hub_system_ & blades_) will change with DVs (L in lss)
 
-# Main Bearing inputs
-prob["bear1.bearing_type"] = "CRB" # 1. floating MB
-prob["bear2.bearing_type"] = "TRB2" # 2. fixed MB
-# prob["bear1.D_shaft"] = 2.0 #(def:2.0), 4.0
-# prob["bear2.D_shaft"] = 2.0 #(def:2.0), 3.2
-prob["bear1.mb_e"] = 3.5 # from 3.5-4.0 (TODO: find ref.)
-prob["bear2.mb_e"] = 3.5
-if doMBfls:
-    prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
+    # ==== 3. Drivetrain configuration and sizing inputs ====
 
-# Layout / lss inputs
-prob["L_h1"] = 0.5 #(def: 0.5), 4.25; converg: 0.264
-prob["L_12"] = 2.0 #(def: 2.0), 7.1; converg: 6.936
-prob["lss_diameter"] = np.array([2.0, 2.0]) #(def:2.0), 4.0; converg: np.array([2.907, 1.679])
-prob["lss_wall_thickness"] = np.array([0.1, 0.1]) #(def:0.1), 0.3; converg: np.array([0.006, 0.123])
+    myones = np.ones(2)
+    # - init condn for some design vars
 
-flange_MS_length = 0.3*(D_rotor/100)**2 - 0.1*(D_rotor/100) + 0.4
-print(f"   - flange length at main-shaft = {flange_MS_length}")
+    # Main Bearing inputs
+    prob["bear1.bearing_type"] = "CRB" # 1. floating MB
+    prob["bear2.bearing_type"] = "TRB2" # 2. fixed MB
+    # prob["bear1.D_shaft"] = 2.0 #(def:2.0), 4.0
+    # prob["bear2.D_shaft"] = 2.0 #(def:2.0), 3.2
+    prob["bear1.mb_e"] = 0.4 # from 3.5-4.0 (TODO: find ref.)
+    prob["bear2.mb_e"] = 0.4
+    if doMBfls:
+        prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 
-# Gearbox inputs
-# prob["L_gearbox"] = 1.5 #(v) calc in gearbox.py
-# prob["gear_configuration"] = "eee"
-# prob["planet_numbers"] = np.array([5, 3, 0]) #ref.1
-prob["gear_ratio"] = 50 #.039
-prob["gearbox_mass_user"] = 135.5*1e3 # D5.1 R2
-# prob["gearbox_torque_density"] = 200.0 # (cf. line 210, gearbox.py)
+    # Layout / lss inputs
+    prob["L_h1"] = 0.5 #(def: 0.5), 4.25; converg: 0.264
+    prob["L_12"] = 2.0 #(def: 2.0), 7.1; converg: 6.936
+    prob["lss_diameter"] = np.array([2.0, 2.0]) #(def:2.0), 4.0; converg: np.array([2.907, 1.679])
+    prob["lss_wall_thickness"] = np.array([0.1, 0.1]) #(def:0.1), 0.3; converg: np.array([0.006, 0.123])
 
-prob["L_hss"] = 1.5
-prob["hss_diameter"] = 0.5 * myones
-prob["hss_wall_thickness"] = 0.1 * myones
+    flange_MS_length = 0.3*(D_rotor/100)**2 - 0.1*(D_rotor/100) + 0.4
+    print(f"   - flange length at main-shaft = {flange_MS_length}")
 
-# Generator inputs (TODO: add compn later)
-# - needed by Bedplate_IBeam_Frame in drive_structure.py, output of HSS_Frame
-# - copied from made4wind_geared.py's output drivetrain_example.csv
-# prob["R_generator"] = 1.7999999999999998
-prob["L_generator"] = 4.2
-# TODO: opts:
-# --- 1. input from gen design (ingeteam),
-# --- 2. maybe calc in generator.py?,
-# --- 3. 11.98398883842414 (from drivetrain_example.csv),
-# --- 4. 2.0 (drivetrain_geared) or 2.15 (drivetrain_direct)
+    # Gearbox inputs
+    # prob["L_gearbox"] = 1.5 #(v) calc in gearbox.py
+    # prob["gear_configuration"] = "eee"
+    # prob["planet_numbers"] = np.array([5, 3, 0]) #ref.1
+    prob["gear_ratio"] = 50 #.039
+    prob["gearbox_mass_user"] = 135.5*1e3 # D5.1 R2
+    # prob["gearbox_torque_density"] = 200.0 # (cf. line 210, gearbox.py)
 
-# prob["generator_cm"] = -0.09998102618633065
-# prob["generator_rotor_mass"] = 26437.71371233699
-# prob["generator_rotor_I"] = np.array([42829.09621398592, 31598.575743266098, 31598.575743266098])
-# prob["F_generator"] = np.array([[-55905.04536116102], [-0.0], [-531900.9765713954]])
-# prob["M_generator"] = np.array([[420611.2199999999], [-1687869.5522841304], [-0.0]])
-generator_mass_375rpm = 14482 #[kg] (cf. Made4Wind D5.1, Tab.9)
+    prob["L_hss"] = 1.5
+    prob["hss_diameter"] = 0.5 * myones
+    prob["hss_wall_thickness"] = 0.1 * myones
 
-# TODO: Ingeteam generator dimensions (email 15.12.25 from Bidane):
-# Mass [kg] = 3 Tn per 8MW conversion line
-generator_mass_user = (3*1e3/8)*(prob["machine_rating"]/1e3)
-# Overall dimensions (est. very preliminary): 2400x800x4200 mm [HxWxL]
-H_generator, W_generator, L_generator = 2.4, 0.8, 4.2 # [m]
+    # Generator inputs (TODO: add compn later)
+    # - needed by Bedplate_IBeam_Frame in drive_structure.py, output of HSS_Frame
+    # - copied from made4wind_geared.py's output drivetrain_example.csv
+    # prob["R_generator"] = 1.7999999999999998
+    prob["L_generator"] = 4.2
+    # TODO: opts:
+    # --- 1. input from gen design (ingeteam),
+    # --- 2. maybe calc in generator.py?,
+    # --- 3. 11.98398883842414 (from drivetrain_example.csv),
+    # --- 4. 2.0 (drivetrain_geared) or 2.15 (drivetrain_direct)
 
-# 'drive_height' : derive from the high-level inputs
-# - needed by layout.py (line 123)
-# - (def: 5.614 for 15MW DD)
-def calc_drive_height(prob):
-    L_fl = 0.358 #ref.2: Hub flange length 
-    L2n = 0.9 #ref.2: Distance of downwind bearing from bedplate flange
-    L_lss = prob["L_h1"]+prob["L_12"]+L2n
-    H_nose = 4.875 #ref.2: Nose height (from tower top to bottom of bedplate flange)
-    drive_height = H_nose + ( np.sin(np.deg2rad(prob["tilt"]))*( (prob["hub_diameter"]*np.sqrt(3/4))+L_fl+L_lss ) )
-    print( f'    Calculated drive height: {drive_height} m' ) #5.95522 m
-    return drive_height
-# prob["drive_height"] = calc_drive_height(prob) #(output= 5.95522 m)
-prob["drive_height"] = 5.614 # (def: 5.614 for 15MW DD)
+    # prob["generator_cm"] = -0.09998102618633065
+    # prob["generator_rotor_mass"] = 26437.71371233699
+    # prob["generator_rotor_I"] = np.array([42829.09621398592, 31598.575743266098, 31598.575743266098])
+    # prob["F_generator"] = np.array([[-55905.04536116102], [-0.0], [-531900.9765713954]])
+    # prob["M_generator"] = np.array([[420611.2199999999], [-1687869.5522841304], [-0.0]])
+    generator_mass_375rpm = 14482 #[kg] (cf. Made4Wind D5.1, Tab.9)
 
-# bedplate: Hub:_Rotor_LSS_Frame, Bedplate_IBeam_Frame inputs
-# prob["bedplate_flange_width"] = 1.0
-# prob["bedplate_flange_thickness"] = 0.1
-# prob["bedplate_web_thickness"] = 0.1
+    # TODO: Ingeteam generator dimensions (email 15.12.25 from Bidane):
+    # Mass [kg] = 3 Tn per 8MW conversion line
+    generator_mass_user = (3*1e3/8)*(prob["machine_rating"]/1e3)
+    # Overall dimensions (est. very preliminary): 2400x800x4200 mm [HxWxL]
+    H_generator, W_generator, L_generator = 2.4, 0.8, 4.2 # [m]
 
-# NOTE: True with `Hub_*`
-prob["shaft_deflection_allowable"] = 1e-4 # within Hub_Rotor_LSS_Frame (below): Deflections and rotations at GB attachment
-prob["shaft_angle_allowable"] = 1e-3
+    # 'drive_height' : derive from the high-level inputs
+    # - needed by layout.py (line 123)
+    # - (def: 5.614 for 15MW DD)
+    def calc_drive_height(prob):
+        L_fl = 0.358 #ref.2: Hub flange length 
+        L2n = 0.9 #ref.2: Distance of downwind bearing from bedplate flange
+        L_lss = prob["L_h1"]+prob["L_12"]+L2n
+        H_nose = 4.875 #ref.2: Nose height (from tower top to bottom of bedplate flange)
+        drive_height = H_nose + ( np.sin(np.deg2rad(prob["tilt"]))*( (prob["hub_diameter"]*np.sqrt(3/4))+L_fl+L_lss ) )
+        print( f'    Calculated drive height: {drive_height} m' ) #5.95522 m
+        return drive_height
+    # prob["drive_height"] = calc_drive_height(prob) #(output= 5.95522 m)
+    prob["drive_height"] = 5.614 # (def: 5.614 for 15MW DD)
 
-# prob["stator_deflection_allowable"] = 1e-4 # within Bedplate_IBeam_Frame (below)
-# prob["stator_angle_allowable"] = 1e-3
+    # bedplate: Hub:_Rotor_LSS_Frame, Bedplate_IBeam_Frame inputs
+    # prob["bedplate_flange_width"] = 1.0
+    # prob["bedplate_flange_thickness"] = 0.1
+    # prob["bedplate_web_thickness"] = 0.1
 
-# ==== 4. Material properties ==== 
-#  (discrete_inputs to `DriveMaterials`)
+    # NOTE: True with `Hub_*`
+    prob["shaft_deflection_allowable"] = 1e-4 # within Hub_Rotor_LSS_Frame (below): Deflections and rotations at GB attachment
+    prob["shaft_angle_allowable"] = 1e-3
 
-# DriveMaterials inputs
-prob["E_mat"] = np.c_[200e9 * np.ones(3), 205e9 * np.ones(3), 118e9 * np.ones(3), [4.46e10, 1.7e10, 1.67e10]].T
-prob["G_mat"] = np.c_[79.3e9 * np.ones(3), 80e9 * np.ones(3), 47.6e9 * np.ones(3), [3.27e9, 3.48e9, 3.5e9]].T
-prob["Xt_mat"] = np.c_[450e6 * np.ones(3), 814e6 * np.ones(3), 310e6 * np.ones(3), [6.092e8, 3.81e7, 1.529e7]].T
-# - (v, note) these would be  -np.c_-> (4,3) -.T-> (3,4) array
-prob["rho_mat"] = np.r_[7800.0, 7850.0, 7200.0, 1940.0]
-prob["Xy_mat"] = np.r_[345e6, 485e6, 265e6, 18.9e6]
-prob["wohler_exp_mat"] = 1e1 * np.ones(4)
-prob["wohler_A_mat"] = 1e1 * np.ones(4)
-prob["unit_cost_mat"] = np.r_[0.7, 0.9, 0.5, 1.9]
-# - Material assignment
-prob["lss_material"] = prob["hss_material"] = "steel_drive"
-prob["bedplate_material"] = "steel"
-prob["hub_material"] = "cast_iron"
-prob["spinner_material"] = "glass_uni"
-prob["material_names"] = ["steel", "steel_drive", "cast_iron", "glass_uni"]
-# ---
+    # prob["stator_deflection_allowable"] = 1e-4 # within Bedplate_IBeam_Frame (below)
+    # prob["stator_angle_allowable"] = 1e-3
+
+    # ==== 4. Material properties ==== 
+    #  (discrete_inputs to `DriveMaterials`)
+
+    # DriveMaterials inputs
+    prob["E_mat"] = np.c_[200e9 * np.ones(3), 205e9 * np.ones(3), 118e9 * np.ones(3), [4.46e10, 1.7e10, 1.67e10]].T
+    prob["G_mat"] = np.c_[79.3e9 * np.ones(3), 80e9 * np.ones(3), 47.6e9 * np.ones(3), [3.27e9, 3.48e9, 3.5e9]].T
+    prob["Xt_mat"] = np.c_[450e6 * np.ones(3), 814e6 * np.ones(3), 310e6 * np.ones(3), [6.092e8, 3.81e7, 1.529e7]].T
+    # - (v, note) these would be  -np.c_-> (4,3) -.T-> (3,4) array
+    prob["rho_mat"] = np.r_[7800.0, 7850.0, 7200.0, 1940.0]
+    prob["Xy_mat"] = np.r_[345e6, 485e6, 265e6, 18.9e6]
+    prob["wohler_exp_mat"] = 1e1 * np.ones(4)
+    prob["wohler_A_mat"] = 1e1 * np.ones(4)
+    prob["unit_cost_mat"] = np.r_[0.7, 0.9, 0.5, 1.9]
+    # - Material assignment
+    prob["lss_material"] = prob["hss_material"] = "steel_drive"
+    prob["bedplate_material"] = "steel"
+    prob["hub_material"] = "cast_iron"
+    prob["spinner_material"] = "glass_uni"
+    prob["material_names"] = ["steel", "steel_drive", "cast_iron", "glass_uni"]
+    # ---
+else:
+    prob = load_data( loc_save_data+".csv", prob )
 
 #%%[markdown]
 # ### Final check before running
@@ -711,9 +715,6 @@ else:
 print("LSS desvars:")
 print(" ", prob["L_h1"], prob["L_12"], prob["lss_diameter"], prob["lss_wall_thickness"] )
 # [3.48132032] [1.] [4. 4.] [0.32635334 0.29289825]
-flangeCyl = Tube( prob["lss_diameter"][0], prob["lss_wall_thickness"][0] )
-flange_mass = (flangeCyl.Area * flange_MS_length * prob["lss_rho"])[0]
-print(f"   flange mass, est.: {flange_mass} kg. use `dohub` for accurate est.")
 
 print("F_mb*:")
 print(" ", prob["F_mb1"], prob["F_mb2"] )
@@ -747,6 +748,15 @@ if record_cases:
     print(results_dict);
 
 #%%[markdown]
+# Driver scaling report 
+prob.driver.scaling_report(
+    outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
+);
+#%%
+if flag_save_new_data: save_data(loc_save_data, prob)
+# ===============================================================
+
+#%%[markdown]
 # ### Plot recorded results
 #%%
 # main colors
@@ -756,9 +766,9 @@ clrs_m4w = read_color_scheme(loc_clr_scheme_m4w)
 # options: Journal polish
 # plot rc params
 params_plot_rc = {
-        "font.size": 24,
-        "axes.labelsize": 24,
-        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+        "font.size": 18,
+        "axes.labelsize": 18,
+        "legend.fontsize": 18, # 16 for pdf of `var_with_iter` plot
         "lines.linewidth": 2,
         "lines.markersize": 6,
     }
@@ -852,7 +862,7 @@ if record_cases and plot_cases:
             marker='s', linewidth=2, color = clrs_m4w['Aqua'],
             label=r'$L_{10}^{mb2}$')
     ax4.axhline(1.0, color='k', linestyle='--', linewidth=1)
-    ax4.set_ylabel(r'Life constraint [-]')
+    ax4.set_ylabel(r'$ \mathrm{constr\_L}_{10} $ [-]')
     ax4.set_xlabel('Optimizer iterations')
     ax4.set_xticks(iters)
     ax4.grid(True)
@@ -871,15 +881,6 @@ if record_cases and plot_cases:
     # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 
     plt.show()
-
-#%%[markdown]
-# Driver scaling report 
-prob.driver.scaling_report(
-    outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
-);
-#%%
-if flag_save_new_data: save_data(loc_save_data, prob)
-# ===============================================================
 
 # %% [markdown]
 # ### Convergence/parametric study setup
@@ -1040,7 +1041,7 @@ casesOut = cases.copy()
 for i in range(len_steps):
     casesOut = utilsDT.write_dict_to_df(casesOut,i,outs_recorded)
 # save to csv
-casesOut.to_csv(loc_DOEcsv_MBtype, index=False)
+# casesOut.to_csv(loc_DOEcsv_MBtype, index=False)
 
 #%% [markdown]
 # ## Result outputs
@@ -1093,26 +1094,53 @@ casesOut.to_csv(loc_DOEcsv_MBtype, index=False)
 
 # ==== 2. L_ vary: LRD (DEL gives same results :D AL)
 """
-{'L_h1': array([[0.3030549 ],
-       [0.3030549 ],
-       [0.30305493],
-       [0.30305484]]),
-'L_12': array([[4.85547562],
-       [4.85547561],
-       [4.85547463],
-       [4.85547772]]),
-'lss_diameter': array([[3.45510162, 1.92397181],
-       [3.45510162, 1.92397181],
-       [3.4551016 , 1.92397191],
-       [3.4551008 , 1.92397095]]),
-'lss_wall_thickness': array([[0.02584621, 0.27731437],
-       [0.02584621, 0.27731437],
-       [0.02584617, 0.27731429],
-       [0.02584622, 0.27731484]]),
-'msa_mass': array([[106210.69683583],
-       [106210.69610393],
-       [106210.6729395 ],
-       [106210.72664515]])}
+{
+'status_driver_exit': ['SUCCESS', 'FAIL', 'SUCCESS', 'SUCCESS'],
+ 'time': array([[23.48544884],
+        [60.54071879],
+        [39.94250941],
+        [52.85283065]]),
+ 'L_h1': array([[1.13470962],
+        [0.25502974],
+        [0.25561541],
+        [0.4556206 ]]),
+ 'L_12': array([[8.        ],
+        [7.9999992 ],
+        [7.92725154],
+        [8.        ]]),
+ 'lss_diameter': array([[2.88029455, 3.99941931],
+        [2.63536503, 3.90782125],
+        [2.64202145, 3.91773252],
+        [2.69083078, 3.93254011]]),
+ 'lss_wall_thickness': array([[0.02376211, 0.02570975],
+        [0.02840487, 0.02755695],
+        [0.02842884, 0.02745687],
+        [0.02726306, 0.02709067]]),
+ 'constr_L10_mb1': array([[0.99999989],
+        [0.99992761],
+        [0.9999999 ],
+        [1.00000048]]),
+ 'constr_L10_mb2': array([[0.99999998],
+        [0.99942944],
+        [1.        ],
+        [1.00000082]]),
+ 'mb1_mass': array([[30432.24750686],
+        [26214.03476245],
+        [26345.96072799],
+        [27143.57213201]]),
+ 'mb2_mass': array([[74013.98664365],
+        [74127.74274487],
+        [74469.70393851],
+        [74077.44374573]]),
+ 'lss_mass': array([[20127.65339586],
+        [19569.17503235],
+        [19427.28686956],
+        [19709.1176895 ]]),
+ 'msa_mass': array([[124573.88754638],
+        [119910.95253967],
+        [120242.95153605],
+        [120930.13356725]])
+}
 """
 # %%
 if (param_for_study.lower() == "ldd") and (
@@ -1121,7 +1149,7 @@ if (param_for_study.lower() == "ldd") and (
     # -------------------------
     # Figure
     # -------------------------
-    fig, ax = plt.subplots(figsize=(6.5, 6))
+    fig, ax = plt.subplots(figsize=(8, 8))
 
     for i, res in enumerate(results_list_of_dicts):
 
@@ -1134,7 +1162,7 @@ if (param_for_study.lower() == "ldd") and (
             L_h1,
             L_12,
             color='0.7',
-            linewidth=1.5,
+            linewidth=2.0,
             zorder=1
         )
 
@@ -1143,7 +1171,7 @@ if (param_for_study.lower() == "ldd") and (
             L_h1[:-1],
             L_12[:-1],
             color='0.7',
-            s=25,
+            s=26,
             zorder=2
         )
 
@@ -1200,7 +1228,7 @@ if (param_for_study.lower() == "ldd") and (
     # -------------------------
     # Figure
     # -------------------------
-    fig = plt.figure(figsize=(8,8))
+    fig = plt.figure(figsize=(9,8))
     ax = fig.add_subplot(111, projection='3d')
 
     for i, res in enumerate(results_list_of_dicts):
@@ -1209,7 +1237,7 @@ if (param_for_study.lower() == "ldd") and (
         L_h1 = res['L_h1'].squeeze()
         L_12 = res['L_12'].squeeze()
         m_msa = res['msa_mass'].squeeze()
-        msa_scale = 1e3  # kg -> tonnes
+        msa_scale = 1e4  # 1e3: kg -> tonnes
         m_msa = m_msa / msa_scale # z_plot
 
         # Trajectory
@@ -1218,7 +1246,7 @@ if (param_for_study.lower() == "ldd") and (
             L_12,
             m_msa,
             color='0.7',
-            linewidth=1.5,
+            linewidth=2.0,
             zorder=1
         )
 
@@ -1228,7 +1256,7 @@ if (param_for_study.lower() == "ldd") and (
             L_12[:-1],
             m_msa[:-1],
             color='0.7',
-            s=25,
+            s=26,
             zorder=2
         )
 
@@ -1238,7 +1266,7 @@ if (param_for_study.lower() == "ldd") and (
             L_12[0],
             m_msa[0],
             color = clrs_m4w["Aqua"],
-            s=80,
+            s=100,
             zorder=3,
             label='Start' if i == 0 else None
         )
@@ -1260,7 +1288,7 @@ if (param_for_study.lower() == "ldd") and (
             m_msa[-1],
             color = clrs_m4w["Dark_Blue"],
             marker='x',
-            s=100,
+            s=120,
             zorder=4,
             depthshade=False,
             label='Converged' if i == 0 else None
@@ -1269,9 +1297,9 @@ if (param_for_study.lower() == "ldd") and (
     # -------------------------
     # Axes formatting
     # -------------------------
-    ax.set_xlabel(r'$L_{h1}\ \mathrm{[m]}$', labelpad=10)
-    ax.set_ylabel(r'$L_{12}\ \mathrm{[m]}$')
-    ax.set_zlabel(r'$m_{\mathrm{MSA}}\ \mathrm{[t]}$')
+    ax.set_xlabel(r'$L_{h1}\ \mathrm{[m]}$', labelpad=14)
+    ax.set_ylabel(r'$L_{12}\ \mathrm{[m]}$', labelpad=10)
+    ax.set_zlabel(r'$m_{\mathrm{MSA}}\ \cdot 10 ~\mathrm{[t]}$', labelpad=10)
 
     # ax.set_title('3D optimization convergence path')
     ax.legend(loc='best')
@@ -1288,7 +1316,7 @@ if (param_for_study.lower() == "ldd") and (
     # Save plot
     plot_path = os.path.join(results_path,
         meth_Peq+"_multiStart3D_optim_path.png")
-    # plt.savefig(plot_path) # NOTE: saved, so don't change now 
+    plt.savefig(plot_path) # NOTE: saved, so don't change now 
 
     plt.show()
 # =============================================================
