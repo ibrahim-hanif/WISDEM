@@ -63,7 +63,7 @@ class MainBearing(om.ExplicitComponent):
         self.add_input("D_bearing", 0.0, units="m")
         self.add_input("D_shaft", 0.0, units="m")
         self.add_input("mb_mass_user", 0.0, units="kg")
-        self.add_input("mb_e", 3.5, desc="limiting value of Fa/Fr for the applicability of different values of factors X and Y (ISO 281)") #(v)
+        self.add_input("mb_e", 0.35, desc="limiting value of Fa/Fr for the applicability of different values of factors X and Y (ISO 281)") #(v)
 
         self.add_output("mb_max_defl_ang", 0.0, units="rad")
         self.add_output("mb_mass", 0.0, units="kg")
@@ -1298,7 +1298,7 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
         self.add_input("D_bearing", -1.0, units="m")
         self.add_input("D_shaft", 0.0, units="m")
         self.add_input("mb_mass_user", -1.0, units="kg")
-        self.add_input("mb_e", 3.5)
+        self.add_input("mb_e", 0.35)
 
         self.add_output("face_width", 0.0, units="m")
         self.add_output("mb_mass", 0.0, units="kg")
