@@ -490,6 +490,8 @@ class GearedLayout(Layout):
         self.add_input("bedplate_flange_width", val=0.0, units="m")
         self.add_input("bedplate_flange_thickness", val=0.0, units="m")
         self.add_input("bedplate_web_thickness", val=0.0, units="m")
+        # ----- (v) below -----
+        self.add_input("delta", 0.5, units="m", desc="separation between MB2 and gearbox attachment")
 
         self.add_output("s_drive", val=np.zeros(12), units="m")
         self.add_output("s_hss", val=np.zeros(3), units="m")
@@ -532,7 +534,7 @@ class GearedLayout(Layout):
 
         # ------- Discretization ----------------
         # Length of lss and drivetrain length
-        delta = 0.5 # separation between MB2 and gearbox attachment #(v) TODO: must be more than 0.5 * 'mb2_face_width'
+        delta = float(inputs["delta"][0]) # separation between MB2 and gearbox attachment #(v) DONE: >= 0.5 * 'mb2_face_width'; cf. Hub_*
         L_lss = L_12 + L_h1 + delta
         L_drive = L_lss + L_gearbox + L_hss + L_generator
         ds = 0.5 * np.ones(2)

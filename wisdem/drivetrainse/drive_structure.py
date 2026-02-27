@@ -244,6 +244,7 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         self.add_output("constr_shaft_angle", 0.0)
         self.add_output("constr_Lh1_MB1fw", val=0.0, units="m") #(v) --- & below ---
         self.add_output("constr_L12_MBsFW", val=0.0, units="m")
+        self.add_output("constr_del_MB2fw", val=0.0, units="m")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Unpack inputs
@@ -510,11 +511,12 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         outputs["lss_shear_load2stress"] = sh_load2stress
 
         #(v) length constraints for L_h1 and L_12, compared to bearing face widths
-        L_12, L_h1 = float(s_lss[3]-s_lss[1]), float(s_lss[4]-s_lss[3])
+        delta, L_12, L_h1 = float(s_lss[1]-s_lss[0]), float(s_lss[3]-s_lss[1]), float(s_lss[4]-s_lss[3])
         mb1_face_width = float(inputs["mb1_face_width"][0]) #(v) NEW
         mb2_face_width = float(inputs["mb2_face_width"][0]) #(v) NEW
         outputs["constr_Lh1_MB1fw"] = L_h1 - (mb1_face_width*0.5) #(v) Should be > 0
         outputs["constr_L12_MBsFW"] = L_12 - (mb1_face_width+mb2_face_width)*0.5 #(v) Should be > 0
+        outputs["constr_del_MB2fw"] = delta - (mb2_face_width*0.5) #(v) Should be > 0
 
 class HSS_Frame(om.ExplicitComponent):
     """
@@ -1807,9 +1809,11 @@ def analytical_MBforces_realistic( Fx,Fy,Fz, Mx,My,Mz, m_carrier,delta,tilt,
 
     Internal Progress
     --------------
-    - DONE : implement as a function, general purpose
-    - TODO?: implement as a openMDAO Explicit Component
-    - TODO : add analytical gradients
+    - 0. DONE : implement as a function, general purpose
+    - 1. TODO : enhance for moment-reacting bearing (TRB2) (cf. 2021_Stirling paper)
+    -- proxy used here: horiz plane loads div by 3 (but needs more clarification)
+    - 2. TODO?: implement as a openMDAO Explicit Component
+    - 3. TODO : add analytical gradients
     """
     # init
     g = 9.81 # m^2/s
@@ -1828,6 +1832,7 @@ def analytical_MBforces_realistic( Fx,Fy,Fz, Mx,My,Mz, m_carrier,delta,tilt,
     # --- MB2 (DRTRB) ---
     F_mb2_ax = np.abs( -Fx - (m_carrier*g*np.sin(tilt)) ) # `abs` coz mb2 reacts to the axial load, regardless if tensile or compressive.
     F_mb2_y = -Fy - F_mb1_y
+    F_mb2_y = F_mb2_y #/ 3 # horiz plane (cf. pt.3 internal progress)
     F_mb2_z = -Fz - F_mb1_z + (m_carrier*g*np.cos(tilt))
     F_mb2_rad = np.hypot(F_mb2_y, F_mb2_z) # element-wise
 
