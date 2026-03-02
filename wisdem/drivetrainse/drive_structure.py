@@ -1809,11 +1809,9 @@ def analytical_MBforces_realistic( Fx,Fy,Fz, Mx,My,Mz, m_carrier,delta,tilt,
 
     Internal Progress
     --------------
-    - 0. DONE : implement as a function, general purpose
-    - 1. TODO : enhance for moment-reacting bearing (TRB2) (cf. 2021_Stirling paper)
-    -- proxy used here: horiz plane loads div by 3 (but needs more clarification)
-    - 2. TODO?: implement as a openMDAO Explicit Component
-    - 3. TODO : add analytical gradients
+    - DONE : implement as a function, general purpose
+    - TODO?: implement as a openMDAO Explicit Component
+    - TODO : add analytical gradients
     """
     # init
     g = 9.81 # m^2/s
@@ -1832,7 +1830,6 @@ def analytical_MBforces_realistic( Fx,Fy,Fz, Mx,My,Mz, m_carrier,delta,tilt,
     # --- MB2 (DRTRB) ---
     F_mb2_ax = np.abs( -Fx - (m_carrier*g*np.sin(tilt)) ) # `abs` coz mb2 reacts to the axial load, regardless if tensile or compressive.
     F_mb2_y = -Fy - F_mb1_y
-    F_mb2_y = F_mb2_y #/ 3 # horiz plane (cf. pt.3 internal progress)
     F_mb2_z = -Fz - F_mb1_z + (m_carrier*g*np.cos(tilt))
     F_mb2_rad = np.hypot(F_mb2_y, F_mb2_z) # element-wise
 
@@ -1875,6 +1872,87 @@ def analytical_MBforces_realistic( Fx,Fy,Fz, Mx,My,Mz, m_carrier,delta,tilt,
 
         return F_mb1, F_mb2, dFmb1_dLh1, dFmb1_dL12, dFmb2_dLh1, dFmb2_dL12
     # ==============================
+
+# ---------------
+# two-bearing EB-beam shaft model for moment-reacting MB2
+def solve_bearing_system(M,F, L_h1,L_12,delta, G,EI,k):
+    """
+    _Solve bearing system in one plane_\\
+    using EB-beam theory between the two bearing span (A-B),
+    with MB2 @ B supports moment `M`, with stiffness `k`, so: `M = k*theta`.
+
+    Diagram
+    --------
+    -          A          B          -          \\
+        L_h1       L_12      delta              \\
+    |----------|----------|----------|          \\
+    Hub       MB1        MB2         GB-input   \\
+    ^          ^          ^          v          \\
+    |          |          |          |          \\
+    F, M       RA         RB, MB     G          \\
+    
+    Convention: +ve =
+    ----------
+    Forces  : vertical upward
+    Applied moments : counter clock-wise (CCW)
+    Bending moment  : sagging (eg. upward force on left = clock-wise (CW) moment)
+
+    Internal Progress
+    -----------------
+    - DONE : implementation
+    """
+    # define intermediate parameters
+    C = G*(L_12+delta) - (F*L_h1) - M
+    lam = (k*L_12)/(3*EI)
+    lamL = lam*L_12
+    # bearing reactions
+    RB = ( C - (lamL*(G-F)) )/(L_12*(1-lam))        # eq.1
+    RA = G - F - RB                                 # eq.2
+    MB = lamL*RA # derived from first-principles    # eq.3
+    return RA, RB, MB
+
+def analytical_MBforces_EBbeam(
+        Fx,Fy,Fz, Mx,My,Mz, m_carrier,delta,tilt,
+        L_h1,L_12, EI, k
+    ):
+    """
+    Two-bearing euler-bernoulli beam shaft model for moment reacting MB2
+    - note! use only when `lambda := (k*L_12)/(3*EI) != 1` 
+    """
+    # === sanity check and init ===
+    from wisdem.commonse.constants import gravity
+    g = gravity
+    n_ts, n_ws = Fx.shape[0], Fx.shape[1] # = 72e4, 10
+
+    # === Loads on bearings ===
+    F_mb1 = np.zeros( (n_ts,n_ws,4) ) # for 4 forces (ax,y,z,rad)
+    F_mb2 = np.zeros( (n_ts,n_ws,4) ) # for 4 forces (ax,y,z,rad)
+
+    # solve bearing system in planes
+    # 1. y-x
+    G = 0.0
+    F_mb1_y, F_mb2_y, M_mb2_y = solve_bearing_system(
+                Mz, Fy, L_h1, L_12, delta, G, EI, k)
+    # 1. z-x
+    G = m_carrier*g*np.cos(tilt)
+    F_mb1_z, F_mb2_z, M_mb2_z = solve_bearing_system(
+                -My, Fz, L_h1, L_12, delta, G, EI, k)
+
+    # assemble forces
+    # --- MB1 (CRB) ---
+    F_mb1_ax = np.zeros_like(Fx)
+    F_mb1_rad = np.hypot(F_mb1_y, F_mb1_z) # element-wise
+
+    # --- MB2 (DRTRB) ---
+    F_mb2_ax = np.abs( -Fx - (m_carrier*g*np.sin(tilt)) ) # `abs` coz mb2 reacts to the axial load, regardless if tensile or compressive.
+    F_mb2_rad = np.hypot(F_mb2_y, F_mb2_z) # element-wise
+
+    # ----- collect for outputs
+    F_mb1 = np.stack([F_mb1_ax, F_mb1_y, F_mb1_z, F_mb1_rad])
+    F_mb2 = np.stack([F_mb2_ax, F_mb2_y, F_mb2_z, F_mb2_rad])
+    
+    return F_mb1, F_mb2
+# ---------------
 
 # ---------------
 def del_bearing_computation(load_series, ws_bins, t_step, omega,
@@ -2060,9 +2138,13 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input('L_h1', val=0.0, desc='Rotor bearing distance', units='m')
         # - 2. bearing parameters (from MainBearing)
         self.add_input('Cr_mb1', val=1e7, units='N', desc='Dynamic load rating MB1')
+        self.add_discrete_input('mb2_type', val="TRB2")
+        self.add_input("mb2_D_shaft", val=0.0, units="m")
+        self.add_input("mb2_T_shaft", val=0.0, units="m")
         self.add_input('Cr_mb2', val=1e7, units='N', desc='Dynamic load rating MB2')
+        self.add_input('mb2_k', val=6e8, desc='Torsional stiffness of the moment-reacting bearing (eg. TRB2)')
         self.add_input('p_mb', val=3.33, desc='Bearing life exponent')
-        self.add_input('e_mb', val=3.5, desc='Bearing limiting factor, load ratio')
+        self.add_input('e_mb', val=0.35, desc='Bearing limiting factor, load ratio')
         self.add_input('X1_mb', val=1.0, desc='Bearing light coefficient for P calculation')
         self.add_input('Y1_mb', val=1.0, desc='Bearing light coefficient for P calculation')
         self.add_input('X2_mb', val=1.0, desc='Bearing heavy coefficient for P calculation')
@@ -2074,6 +2156,8 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input("carrier_mass", 0.0, units="kg")
         self.add_input("tilt", 0.0, units="deg")
         self.add_input("s_lss", val=np.zeros(5), units="m")
+        # - 5. material properties
+        self.add_input("lss_E", val=0.0, units="Pa")
         # Outputs
         self.add_output('L10h_mb1', val=0.0, desc='L10 life MB1', units='h')
         self.add_output('L10h_mb2', val=0.0, desc='L10 life MB2', units='h')
@@ -2081,8 +2165,15 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_output('constr_L10_mb2', val=0.0, desc='Safety factor MB2')
         # self.add_output('constr_L10_mb_all', val=0.0, desc='Minimum safety factor')
         
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, discrete_inputs):
         # ---- Inputs ----
+        # bearings
+        if type(discrete_inputs["mb2_type"]) != type(""):
+            raise ValueError(" - MB2 bearing type input must be a string")
+        mb2_type = discrete_inputs["mb2_type"].upper()
+        D_mb2 = float(inputs['mb2_D_shaft'][0])
+        T_mb2 = float(inputs['mb2_T_shaft'][0])
+        k_mb2 = float(inputs['mb2_k'][0])
         # ISO 281 parameters (from MainBearing)
         e, p = inputs['e_mb'], inputs['p_mb']
         X1, Y1 = inputs['X1_mb'], inputs['Y1_mb']
@@ -2096,15 +2187,31 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         m_carrier = float(inputs["carrier_mass"][0])
         s_lss = inputs["s_lss"]
         delta = float(s_lss[1]-s_lss[0])
+        # materials
+        E = float(inputs['lss_E'][0])
+        # --------
+        # compute lambda to check if EB_beam can be used for TRB2
+        tube_mb2 = Tube(D_mb2,T_mb2)
+        I = tube_mb2.Ixx
+        EI = E*I + 1e-6 # div by 0.0 (def), avoid by 1e-6
+        lam = (k_mb2*L_12)/(3*EI)
         # --------
         # Bearing loads (analytical) calculation: shape=(4, 72000, 11)
         # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MB_Forces(
         #     Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=True )
-        # --- more realistic
-        Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MBforces_realistic(
-            self.Fx,self.Fy,self.Fz,self.Mx,self.My,self.Mz,
-            m_carrier,delta,tilt_rad,
-            L_h1,L_12,flag_jac=True)
+        # --- for TRB2, moment reacting
+        if (mb2_type=="TRB2") and (lam != 1):
+            Fmb1, Fmb2 = analytical_MBforces_EBbeam(
+                self.Fx,self.Fy,self.Fz, self.Mx,self.My,self.Mz,
+                m_carrier,delta,tilt_rad,L_h1,L_12,
+                EI,k_mb2
+            )
+        else:
+            # --- more realistic
+            Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MBforces_realistic(
+                self.Fx,self.Fy,self.Fz,self.Mx,self.My,self.Mz,
+                m_carrier,delta,tilt_rad,
+                L_h1,L_12,flag_jac=True)
         # ----- extract axial and radial forces
         F_mb1_rad = Fmb1[3, :, :]                           # shape (720000,10)
         F_mb2_ax, F_mb2_rad = Fmb2[0, :, :], Fmb2[3, :, :]  # shape (720000,10)
