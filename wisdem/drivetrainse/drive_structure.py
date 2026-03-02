@@ -1906,7 +1906,7 @@ def solve_bearing_system(M,F, L_h1,L_12,delta, G,EI,k):
     lam = (k*L_12)/(3*EI)
     lamL = lam*L_12
     # bearing reactions
-    RB = ( C - (lamL*(G-F)) )/(L_12*(1-lam))        # eq.1
+    RB = ( C - (lamL*(G-F)) )/(L_12*(1-lam)+1e-6)   # eq.1
     RA = G - F - RB                                 # eq.2
     MB = lamL*RA # derived from first-principles    # eq.3
     return RA, RB, MB
@@ -1917,7 +1917,6 @@ def analytical_MBforces_EBbeam(
     ):
     """
     Two-bearing euler-bernoulli beam shaft model for moment reacting MB2
-    - note! use only when `lambda := (k*L_12)/(3*EI) != 1` 
     """
     # === sanity check and init ===
     from wisdem.commonse.constants import gravity
@@ -2133,12 +2132,12 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.dt = self.options['openfast_options']['simulation']['DT'] # 0.05 (20 Hz)
         # ----
         # ---- Inputs ----
+        self.add_discrete_input('mb2_type', val="SRB")
         # - 1. LSS parameters (from Layout, Hub_Rotor_LSS_Frame)
         self.add_input('L_12', val=0.0, desc='Main bearing span', units='m')
         self.add_input('L_h1', val=0.0, desc='Rotor bearing distance', units='m')
         # - 2. bearing parameters (from MainBearing)
         self.add_input('Cr_mb1', val=1e7, units='N', desc='Dynamic load rating MB1')
-        self.add_discrete_input('mb2_type', val="TRB2")
         self.add_input("Dshaft_mb2", val=0.0, units="m")
         self.add_input("Tshaft_mb2", val=0.0, units="m")
         self.add_input('Cr_mb2', val=1e7, units='N', desc='Dynamic load rating MB2')
@@ -2165,7 +2164,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_output('constr_L10_mb2', val=0.0, desc='Safety factor MB2')
         # self.add_output('constr_L10_mb_all', val=0.0, desc='Minimum safety factor')
         
-    def compute(self, inputs, outputs, discrete_inputs):
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # ---- Inputs ----
         # bearings
         if type(discrete_inputs["mb2_type"]) != type(""):
@@ -2200,13 +2199,15 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MB_Forces(
         #     Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=True )
         # --- for TRB2, moment reacting
-        if (mb2_type=="TRB2") and (lam != 1):
+        if mb2_type in ["TRB2", "TRB"]:
+            # print(f" - {mb2_type}: using analytical_MBforces_EBbeam") #debug
             Fmb1, Fmb2 = analytical_MBforces_EBbeam(
                 self.Fx,self.Fy,self.Fz, self.Mx,self.My,self.Mz,
                 m_carrier,delta,tilt_rad,L_h1,L_12,
                 EI,k_mb2
             )
         else:
+            # print(f" - {mb2_type}: using analytical_MBforces_realistic") #debug
             # --- more realistic
             Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MBforces_realistic(
                 self.Fx,self.Fy,self.Fz,self.Mx,self.My,self.Mz,
