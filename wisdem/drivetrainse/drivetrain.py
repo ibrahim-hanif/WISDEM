@@ -420,10 +420,11 @@ class DrivetrainSE_M4W( om.Group ):
                     openfast_options=opt_openfast,
                     dlc_options=opt_DLC
                     ),
-                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss"],
+                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss","lss_E","Dshaft_mb2","Tshaft_mb2"],
                 promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
             )
             # -connecting = bear(1,2) -to- Analy_*
+            self.connect("bear2.bearing_type", "mb_fls.mb2_type")
             self.connect("bear2.mb_p", "mb_fls.p_mb") # same for both MBs ---
             self.connect("bear2.mb_X1", "mb_fls.X1_mb")
             self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
