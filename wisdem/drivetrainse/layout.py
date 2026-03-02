@@ -9,7 +9,7 @@ import wisdem.commonse.utilities as util
 from wisdem.commonse.cross_sections import IBeam
 
 
-def rod_prop(s, Di, ti, rho, return_Ds=False): #(v) added `return_Ds=False`
+def rod_prop(s, Di, ti, rho, return_Dts=False): #(v) added `return_Ds=False`
     L = s.max() - s.min()
 
     def equal_pts(xi):
@@ -35,7 +35,7 @@ def rod_prop(s, Di, ti, rho, return_Ds=False): #(v) added `return_Ds=False`
             (1.0 / 12.0) * (3 * 0.25 * (Dm**2 + (Dm - 2 * tm) ** 2) + L**2),
         ]
     )
-    if return_Ds: return m, cm, m * I, D #(v) changed return(s) for `return_Ds` usage
+    if return_Dts: return m, cm, m * I, D, t #(v) changed return(s) for `return_Ds` usage
     else: return m, cm, m * I
 
 
@@ -476,6 +476,8 @@ class GearedLayout(Layout):
         LSS outer / MB1 bore diameter; calc: linear interp between lss_diameter
     Dshaft_mb2 : float, [m]
         LSS outer / MB2 bore diameter; calc: linear interp between lss_diameter
+    Tshaft_mb2 : foat, [m]
+        LSS wall thickness at MB2 location; calc: linear interp between lss_wall_thickness
 
     """
 
@@ -498,6 +500,7 @@ class GearedLayout(Layout):
         self.add_output("bedplate_web_height", val=0.0, units="m")
         self.add_output("Dshaft_mb1", val=0.0, units="m", desc="D_shaft at mb1") # ----- (v) & below -----
         self.add_output("Dshaft_mb2", val=0.0, units="m", desc="D_shaft at mb2")
+        self.add_output("Tshaft_mb2", val=0.0, units="m", desc="lss wall thickness at mb2")
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Unpack inputs
@@ -576,7 +579,7 @@ class GearedLayout(Layout):
         outputs["hss_I"] = I_hss
         outputs["s_hss"] = s_hss
 
-        m_lss, cm_lss, I_lss, Ds_lss = rod_prop(s_lss, D_lss, t_lss, lss_rho, return_Ds=True) #(v) LSS
+        m_lss, cm_lss, I_lss, Ds_lss, ts_lss = rod_prop(s_lss, D_lss, t_lss, lss_rho, return_Dts=True) #(v) LSS
         outputs["lss_mass"] = m_lss
         outputs["lss_cm"] = cm_lss
         outputs["lss_I"] = I_lss
@@ -584,6 +587,7 @@ class GearedLayout(Layout):
         #(v) take out D shaft at both bearings
         outputs["Dshaft_mb1"] = Ds_lss[1] #(v) change indices (mb1 > mb2) coz rod_prop changes it (func [0,1] <-> D_lss)
         outputs["Dshaft_mb2"] = Ds_lss[3]
+        outputs["Tshaft_mb2"] = ts_lss[3]
         # print(f"--- GearedLayout: D_mb1={Ds_lss[1]}, D_mb2={Ds_lss[3]}") #(v) debugging
 
         # ------- Bedplate I-beam properties ----------------
