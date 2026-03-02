@@ -2132,17 +2132,17 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # - c. DLC
         self.dt = self.options['openfast_options']['simulation']['DT'] # 0.05 (20 Hz)
         # ----
-
+        # ---- Inputs ----
         # - 1. LSS parameters (from Layout, Hub_Rotor_LSS_Frame)
         self.add_input('L_12', val=0.0, desc='Main bearing span', units='m')
         self.add_input('L_h1', val=0.0, desc='Rotor bearing distance', units='m')
         # - 2. bearing parameters (from MainBearing)
         self.add_input('Cr_mb1', val=1e7, units='N', desc='Dynamic load rating MB1')
         self.add_discrete_input('mb2_type', val="TRB2")
-        self.add_input("mb2_D_shaft", val=0.0, units="m")
-        self.add_input("mb2_T_shaft", val=0.0, units="m")
+        self.add_input("Dshaft_mb2", val=0.0, units="m")
+        self.add_input("Tshaft_mb2", val=0.0, units="m")
         self.add_input('Cr_mb2', val=1e7, units='N', desc='Dynamic load rating MB2')
-        self.add_input('mb2_k', val=6e8, desc='Torsional stiffness of the moment-reacting bearing (eg. TRB2)')
+        self.add_input('mb2_k', val=6e8, units="N*m/rad", desc='Torsional stiffness of the moment-reacting bearing (eg. TRB2)')
         self.add_input('p_mb', val=3.33, desc='Bearing life exponent')
         self.add_input('e_mb', val=0.35, desc='Bearing limiting factor, load ratio')
         self.add_input('X1_mb', val=1.0, desc='Bearing light coefficient for P calculation')
@@ -2158,7 +2158,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input("s_lss", val=np.zeros(5), units="m")
         # - 5. material properties
         self.add_input("lss_E", val=0.0, units="Pa")
-        # Outputs
+        # ---- Outputs ----
         self.add_output('L10h_mb1', val=0.0, desc='L10 life MB1', units='h')
         self.add_output('L10h_mb2', val=0.0, desc='L10 life MB2', units='h')
         self.add_output('constr_L10_mb1', val=0.0, desc='Safety factor MB1')
@@ -2171,8 +2171,8 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         if type(discrete_inputs["mb2_type"]) != type(""):
             raise ValueError(" - MB2 bearing type input must be a string")
         mb2_type = discrete_inputs["mb2_type"].upper()
-        D_mb2 = float(inputs['mb2_D_shaft'][0])
-        T_mb2 = float(inputs['mb2_T_shaft'][0])
+        D_mb2 = float(inputs['Dshaft_mb2'][0])
+        T_mb2 = float(inputs['Tshaft_mb2'][0])
         k_mb2 = float(inputs['mb2_k'][0])
         # ISO 281 parameters (from MainBearing)
         e, p = inputs['e_mb'], inputs['p_mb']
