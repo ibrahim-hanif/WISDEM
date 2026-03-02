@@ -44,7 +44,7 @@ import wisdem.drivetrainse.drive_components as dc
 
 import wisdem.drivetrainse.drive_structure as ds
 
-from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, read_color_scheme
+from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict
 from wisdem.commonse.fileIO import save_data, load_data
 from wisdem.commonse.cross_sections import Tube
 import utilities_drivetrain as utilsDT
@@ -56,7 +56,7 @@ record_cases = False    #TODO: add in final setup (full problem)
 plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
-flag_load_from_data = True
+flag_load_from_data = False
 
 # Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -65,7 +65,7 @@ load_fls_loads = False
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
 # TODO: mainshaft_loads: (old) "." , (newULS) "_M4W"
-loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_M4W.mat")
+loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
@@ -76,7 +76,7 @@ flag_opt_GFO = False    # GFO: gradient free optimizer
 
 # Parametric study
 flag_study_parametric = True
-param_for_study = "ldd"     # "MB" (types) / "LDD" (MS' L_*)
+param_for_study = "mb"     # "MB" (types) / "LDD" (MS' L_*)
 meth_Peq = "LRD".lower()    # "LRD" or "DEL"
 
 #%%[markdown]
@@ -89,7 +89,7 @@ os.makedirs(results_path, exist_ok=True)
 loc_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
-loc_save_data = os.path.join(results_path, "02")
+loc_save_data = os.path.join(results_path, "02newULS")
 loc_xdsm = os.path.join(results_path, 'xdsm_02')
 
 loc_DOEcsv_MBtype = os.path.join(results_path, "DOE_MBtype.csv")
@@ -250,7 +250,7 @@ class LSS_layout( om.Group ):
                     openfast_options=opt_openfast,
                     dlc_options=opt_DLC
                     ),
-                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss"],
+                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss","lss_E","Dshaft_mb2","Tshaft_mb2"],
                 promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
             )
             # -connecting = bear(1,2) -to- Analy_*
@@ -408,7 +408,8 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # Add design variables
     prob.model.add_design_var("L_h1", lower=0.1, upper=5.0)#, ref=5.0, ref0=0.1)
     prob.model.add_design_var("L_12", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
-    prob.model.add_design_var("lss_diameter", lower=0.5, upper=5.0, ref=5.0, ref0=0.5)
+    # prob.model.add_design_var("delta", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
+    prob.model.add_design_var("lss_diameter", lower=1.0, upper=5.0, ref=5.0, ref0=1.0)
     prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=1.0, ref=1.0, ref0=4e-3) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
 
     if flag_DOE: pass # DOE: no constraints
@@ -430,6 +431,8 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # prob.model.add_constraint("constr_height", lower=0.0, ref=1e1)               #DONE: add later
     prob.model.add_constraint("constr_Lh1_MB1fw", lower=0.0)#, ref=1e1)            #DONE: add later
     prob.model.add_constraint("constr_L12_MBsFW", lower=0.0)#, ref=1e0)            #DONE: add later
+    # prob.model.add_constraint("constr_del_MB2fw", lower=0.0)#, ref=1e0)            #TODO: add later
+    # prob.model.add_constraint("L_lss", upper=7.0)#, ref=1e0)            #TODO: add later
 
 # %%
 # Setup the problem
@@ -470,6 +473,7 @@ prob.model.list_outputs();
 # after calling `prob.setup()` (on the openMDAO `prob` defined) and before calling `prob.run_driver()`
 #%%
 if not flag_load_from_data:
+    print(" user defined prob vars")
     # ==== 1. High-level Inputs ====
     prob.set_val("machine_rating", 15.0, units="MW")
     D_rotor = prob["rotor_diameter"] = 240.0
@@ -575,12 +579,12 @@ if not flag_load_from_data:
     # Main Bearing inputs
     prob["bear1.bearing_type"] = "CRB" # 1. floating MB
     prob["bear2.bearing_type"] = "TRB2" # 2. fixed MB
-    # prob["bear1.D_shaft"] = 2.0 #(def:2.0), 4.0
-    # prob["bear2.D_shaft"] = 2.0 #(def:2.0), 3.2
     prob["bear1.mb_e"] = 0.4 # from 3.5-4.0 (TODO: find ref.)
     prob["bear2.mb_e"] = 0.4
     if doMBfls:
         prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
+        prob["mb_fls.mb2_type"] = prob["bear2.bearing_type"]
+        prob["mb_fls.mb2_k"] = 6e8
 
     # Layout / lss inputs
     prob["L_h1"] = 0.5 #(def: 0.5), 4.25; converg: 0.264
@@ -674,6 +678,7 @@ if not flag_load_from_data:
     prob["material_names"] = ["steel", "steel_drive", "cast_iron", "glass_uni"]
     # ---
 else:
+    print(" loading prob vars from saved csv")
     prob = load_data( loc_save_data+".csv", prob )
 
 #%%[markdown]
@@ -738,7 +743,7 @@ print(f"MSA mass: {prob["msa_mass"]}")
 # [[        0.        ] [ 11821817.6056338 ] [-24047488.73239437]]
 # [[  5399500.        ] [-13191517.6056338 ] [ 18473288.73239437]]
 
-list_driver_vars = prob.list_driver_vars()
+# list_driver_vars = prob.list_driver_vars()
 # ==========================================================
 #%%
 ### Recorded cases
@@ -760,15 +765,16 @@ if flag_save_new_data: save_data(loc_save_data, prob)
 # ### Plot recorded results
 #%%
 # main colors
-loc_clr_scheme_m4w = "C:\\Users\\vasudevg\\OneDrive - NTNU\\R&D\\Made4Wind\\pics_vids_templates_etc\\color-scheme-made4wind.csv"
-clrs_m4w = read_color_scheme(loc_clr_scheme_m4w)
+from my_util_tools import util_funcs
+loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
+clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
 # -------------------------
 # options: Journal polish
 # plot rc params
 params_plot_rc = {
-        "font.size": 18,
-        "axes.labelsize": 18,
-        "legend.fontsize": 18, # 16 for pdf of `var_with_iter` plot
+        "font.size": 24,
+        "axes.labelsize": 24,
+        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
         "lines.linewidth": 2,
         "lines.markersize": 6,
     }
@@ -814,7 +820,7 @@ if record_cases and plot_cases:
             label=r'$m_{msa}$')
     ax1.set_ylabel(r'Mass [t]')
     # ax1.set_xlabel('Iteration')
-    ax1.set_xticks(iters)
+    # ax1.set_xticks(iters)
     ax1.grid(True)
     ax1.legend()
 
@@ -864,7 +870,7 @@ if record_cases and plot_cases:
     ax4.axhline(1.0, color='k', linestyle='--', linewidth=1)
     ax4.set_ylabel(r'$ \mathrm{constr\_L}_{10} $ [-]')
     ax4.set_xlabel('Optimizer iterations')
-    ax4.set_xticks(iters)
+    # ax4.set_xticks(iters)
     ax4.grid(True)
     ax4.legend(loc='center left',bbox_to_anchor=(1,0.5))
 
@@ -1032,16 +1038,20 @@ if flag_study_parametric and flag_opt_GBO:
             results_list_of_dicts.append(
                 get_recorder_results( loc_case_i, None, True ) #out=dict
                 )
-    # print outputs dict
-    print(outs_recorded);
 # =====
 
-#%% save in to df and csv
-casesOut = cases.copy()
-for i in range(len_steps):
-    casesOut = utilsDT.write_dict_to_df(casesOut,i,outs_recorded)
-# save to csv
-# casesOut.to_csv(loc_DOEcsv_MBtype, index=False)
+#%%
+# print outputs dict
+print(outs_recorded);
+
+#%%
+# # save in to df and csv
+if param_for_study.lower() == "mb":
+    casesOut = cases.copy()
+    for i in range(len_steps):
+        casesOut = utilsDT.write_dict_to_df(casesOut,i,outs_recorded)
+    # save to csv
+    # casesOut.to_csv(loc_DOEcsv_MBtype, index=False)
 
 #%% [markdown]
 # ## Result outputs
@@ -1316,7 +1326,7 @@ if (param_for_study.lower() == "ldd") and (
     # Save plot
     plot_path = os.path.join(results_path,
         meth_Peq+"_multiStart3D_optim_path.png")
-    plt.savefig(plot_path) # NOTE: saved, so don't change now 
+    # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 
     plt.show()
 # =============================================================
