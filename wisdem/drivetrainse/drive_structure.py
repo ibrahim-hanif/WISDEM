@@ -1903,11 +1903,13 @@ def solve_bearing_system(M,F, L_h1,L_12,delta, G,EI,k):
     """
     # define intermediate parameters
     C = -G*(L_12+delta) - (F*L_h1) - M
-    lam = (k*L_12)/(3*EI)
+    lam = (k*L_12)/(3*EI) # Non-dimensional stiffness ratio
     lamL = lam*L_12
-    # bearing reactions
-    RB = ( C - (lamL*(-G-F)) )/(L_12*(1-lam)+1e-6)   # eq.1
-    RA = -G - F - RB                                 # eq.2
+    # Left bearing reaction (closed-form solution) 
+    RA = (C + (F+G)*L_12) / (L_12 * (1.0 + lam))
+    # Force equilibrium
+    RB = F + G - RA
+    # Rotation at B from beam slope relation -> Bearing moment
     MB = lamL*RA # derived from first-principles    # eq.3
     return RA, RB, MB
 
