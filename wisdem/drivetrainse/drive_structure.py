@@ -1902,12 +1902,12 @@ def solve_bearing_system(M,F, L_h1,L_12,delta, G,EI,k):
     - DONE : implementation
     """
     # define intermediate parameters
-    C = G*(L_12+delta) - (F*L_h1) - M
+    C = -G*(L_12+delta) - (F*L_h1) - M
     lam = (k*L_12)/(3*EI)
     lamL = lam*L_12
     # bearing reactions
-    RB = ( C - (lamL*(G-F)) )/(L_12*(1-lam)+1e-6)   # eq.1
-    RA = G - F - RB                                 # eq.2
+    RB = ( C - (lamL*(-G-F)) )/(L_12*(1-lam)+1e-6)   # eq.1
+    RA = -G - F - RB                                 # eq.2
     MB = lamL*RA # derived from first-principles    # eq.3
     return RA, RB, MB
 
@@ -1916,11 +1916,18 @@ def analytical_MBforces_EBbeam(
         L_h1,L_12, EI, k
     ):
     """
-    Two-bearing euler-bernoulli beam shaft model for moment reacting MB2
+    Two-bearing euler-bernoulli beam shaft model for moment reacting MB2\\
+    using EB-beam theory between the two bearing span (A-B),\\
+    with MB2 @ B supports moment `M`, with stiffness `k`, so: `M = k*theta`.
+
+    Internal Progress
+    -----------------
+    - DONE : implementation
     """
     # === sanity check and init ===
-    from wisdem.commonse.constants import gravity
-    g = gravity
+    gy = 0.0
+    gx = gravity * np.sin(tilt)
+    gz = -gravity * np.cos(tilt)
     n_ts, n_ws = Fx.shape[0], Fx.shape[1] # = 72e4, 10
 
     # === Loads on bearings ===
@@ -1929,11 +1936,11 @@ def analytical_MBforces_EBbeam(
 
     # solve bearing system in planes
     # 1. y-x
-    G = 0.0
+    G = m_carrier*gy
     F_mb1_y, F_mb2_y, M_mb2_y = solve_bearing_system(
                 Mz, Fy, L_h1, L_12, delta, G, EI, k)
     # 1. z-x
-    G = m_carrier*g*np.cos(tilt)
+    G = m_carrier*gz
     F_mb1_z, F_mb2_z, M_mb2_z = solve_bearing_system(
                 -My, Fz, L_h1, L_12, delta, G, EI, k)
 
@@ -1943,7 +1950,8 @@ def analytical_MBforces_EBbeam(
     F_mb1_rad = np.hypot(F_mb1_y, F_mb1_z) # element-wise
 
     # --- MB2 (DRTRB) ---
-    F_mb2_ax = np.abs( -Fx - (m_carrier*g*np.sin(tilt)) ) # `abs` coz mb2 reacts to the axial load, regardless if tensile or compressive.
+    G = m_carrier*gx
+    F_mb2_ax = np.abs( -Fx - G ) # `abs` coz mb2 reacts to the axial load, regardless if tensile or compressive.
     F_mb2_rad = np.hypot(F_mb2_y, F_mb2_z) # element-wise
 
     # ----- collect for outputs
