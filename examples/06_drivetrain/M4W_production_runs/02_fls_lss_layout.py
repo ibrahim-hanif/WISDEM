@@ -63,7 +63,7 @@ part_loads = True
 load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
-dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
+dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 # TODO: mainshaft_loads: (old) "." , (newULS) "_M4W"
 loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
@@ -76,8 +76,8 @@ flag_opt_GFO = False    # GFO: gradient free optimizer
 
 # Parametric study
 flag_study_parametric = True
-param_for_study = "mb"     # "MB" (types) / "LDD" (MS' L_*)
-meth_Peq = "LRD".lower()    # "LRD" or "DEL"
+param_for_study = "MB".lower() # "MB" (types) / "LDD" (MS' L_*)
+meth_Peq = "DEL".lower()        # Method: "LRD" or "DEL"
 
 #%%[markdown]
 # ### Defining results directory and files
@@ -89,7 +89,7 @@ os.makedirs(results_path, exist_ok=True)
 loc_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
-loc_save_data = os.path.join(results_path, "02newULS")
+loc_save_data = os.path.join(results_path, "02")
 loc_xdsm = os.path.join(results_path, 'xdsm_02')
 
 loc_DOEcsv_MBtype = os.path.join(results_path, "DOE_MBtype.csv")
@@ -406,7 +406,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # - NOTE: effectively 'lss_mass' minimization
     
     # Add design variables
-    prob.model.add_design_var("L_h1", lower=0.1, upper=5.0)#, ref=5.0, ref0=0.1)
+    prob.model.add_design_var("L_h1", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
     prob.model.add_design_var("L_12", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
     # prob.model.add_design_var("delta", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
     prob.model.add_design_var("lss_diameter", lower=1.0, upper=5.0, ref=5.0, ref0=1.0)
@@ -479,7 +479,7 @@ if not flag_load_from_data:
     D_rotor = prob["rotor_diameter"] = 240.0
     prob["rated_torque"] = 21.03*1e6 # [Nm] ref.2, tab.5-4
     # prob["minimum_rpm"] = 5
-    prob["rated_rpm"] = 7.56
+    rated_rpm = prob["rated_rpm"] = 7.56
     prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
 
     prob["upwind"] = True
@@ -584,10 +584,10 @@ if not flag_load_from_data:
     if doMBfls:
         prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
         prob["mb_fls.mb2_type"] = prob["bear2.bearing_type"]
-        prob["mb_fls.mb2_k"] = 6e8
+        prob["mb_fls.mb2_k"] = 3.0*1e10
 
     # Layout / lss inputs
-    prob["L_h1"] = 0.5 #(def: 0.5), 4.25; converg: 0.264
+    prob["L_h1"] = 0.1 #(def: 0.5), 4.25; converg: 0.264
     prob["L_12"] = 2.0 #(def: 2.0), 7.1; converg: 6.936
     prob["lss_diameter"] = np.array([2.0, 2.0]) #(def:2.0), 4.0; converg: np.array([2.907, 1.679])
     prob["lss_wall_thickness"] = np.array([0.1, 0.1]) #(def:0.1), 0.3; converg: np.array([0.006, 0.123])
@@ -599,8 +599,8 @@ if not flag_load_from_data:
     # prob["L_gearbox"] = 1.5 #(v) calc in gearbox.py
     # prob["gear_configuration"] = "eee"
     # prob["planet_numbers"] = np.array([5, 3, 0]) #ref.1
-    prob["gear_ratio"] = 50 #.039
-    prob["gearbox_mass_user"] = 135.5*1e3 # D5.1 R2
+    prob["gear_ratio"] = (375 / rated_rpm)
+    prob["gearbox_mass_user"] = 135.5*1e3 # 138.728645e3: incl housing (from DOE_GBgen_updated.csv)
     # prob["gearbox_torque_density"] = 200.0 # (cf. line 210, gearbox.py)
 
     prob["L_hss"] = 1.5
@@ -611,25 +611,23 @@ if not flag_load_from_data:
     # - needed by Bedplate_IBeam_Frame in drive_structure.py, output of HSS_Frame
     # - copied from made4wind_geared.py's output drivetrain_example.csv
     # prob["R_generator"] = 1.7999999999999998
-    prob["L_generator"] = 4.2
+    # prob["L_generator"] = 4.2
     # TODO: opts:
     # --- 1. input from gen design (ingeteam),
     # --- 2. maybe calc in generator.py?,
     # --- 3. 11.98398883842414 (from drivetrain_example.csv),
     # --- 4. 2.0 (drivetrain_geared) or 2.15 (drivetrain_direct)
 
-    # prob["generator_cm"] = -0.09998102618633065
-    # prob["generator_rotor_mass"] = 26437.71371233699
-    # prob["generator_rotor_I"] = np.array([42829.09621398592, 31598.575743266098, 31598.575743266098])
-    # prob["F_generator"] = np.array([[-55905.04536116102], [-0.0], [-531900.9765713954]])
-    # prob["M_generator"] = np.array([[420611.2199999999], [-1687869.5522841304], [-0.0]])
-    generator_mass_375rpm = 14482 #[kg] (cf. Made4Wind D5.1, Tab.9)
+    # TODO: Ingeteam generator dimensions
+    # prob["generator_mass_user"] = 34.8*1e3 # D5.4, tab.9
+    # prob["generator_radius_user"] = 2.8 / 2 # = stator outer diameter
+    prob["L_generator"] = 1.550
 
-    # TODO: Ingeteam generator dimensions (email 15.12.25 from Bidane):
-    # Mass [kg] = 3 Tn per 8MW conversion line
-    generator_mass_user = (3*1e3/8)*(prob["machine_rating"]/1e3)
-    # Overall dimensions (est. very preliminary): 2400x800x4200 mm [HxWxL]
-    H_generator, W_generator, L_generator = 2.4, 0.8, 4.2 # [m]
+    # === Electronics input (ING: converter, transformer)
+    # converter mass = 3 Tn per 8MW conversion line (ING Bidane's email)
+    # prob["converter_mass_user"] = (3*1e3*15)/8 # 5,625 [kg]
+    # overall dims (est. very preliminary): TODO
+    H_converter, W_converter, L_converter = 2.4, 0.8, 4.2 # [m]
 
     # 'drive_height' : derive from the high-level inputs
     # - needed by layout.py (line 123)
@@ -1046,7 +1044,7 @@ print(outs_recorded);
 
 #%%
 # # save in to df and csv
-if param_for_study.lower() == "mb":
+if flag_study_parametric and (param_for_study.lower() == "mb"):
     casesOut = cases.copy()
     for i in range(len_steps):
         casesOut = utilsDT.write_dict_to_df(casesOut,i,outs_recorded)
@@ -1057,26 +1055,51 @@ if param_for_study.lower() == "mb":
 # ## Result outputs
 # ==== 1. MB type vary
 """ 
-{'L_12': array([[6.93563233],
-       [4.95328602],
-       [4.90916032 ],
-       [2.41317276]]),
-'L_h1': array([[0.26441632],
-       [0.2       ],
-       [0.30079521],
-       [0.2       ]]),
-'lss_diameter': array([[2.90729986, 1.67985956],
-       [0.82344261, 1.9916245 ],
-       [3.43984147, 1.74033424],
-       [1.12356334, 1.78972858]]),
-'lss_wall_thickness': array([[0.00609344, 0.12302497],
-       [0.24916403, 0.10025035],
-       [0.004    , 0.1101714],
-       [0.22114549, 0.17132604]]),
-'msa_mass': array([[68293.12376318],
-       [52305.38151471],
-       [64650.67674836],
-       [38386.64245769]])}
+{'status_driver_exit': ['SUCCESS', 'SUCCESS', 'SUCCESS', 'SUCCESS'],
+'time': array([[15.87260056],
+       [ 9.50170016],
+       [ 8.73832917],
+       [ 7.16219592]]),
+'L_h1': array([[0.47302864],
+       [0.34322159],
+       [0.20876778],
+       [0.26560464]]),
+'L_12': array([[8.        ],
+       [7.05140913],
+       [3.37018827],
+       [2.39397285]]),
+'lss_diameter': array([[1.38378933, 3.8569349 ],
+       [1.        , 3.88599545],
+       [2.19947652, 1.54049089],
+       [1.        , 1.92765165]]),
+'lss_wall_thickness': array([[0.06049266, 0.02409574],
+       [0.08777663, 0.02330944],
+       [0.03491298, 0.17757456],
+       [0.26282628, 0.13408421]]),
+'constr_L10_mb1': array([[1.        ],
+       [2.88704918],
+       [1.        ],
+       [1.26386335]]),
+'constr_L10_mb2': array([[1.        ],
+       [0.99999995],
+       [1.        ],
+       [0.99999984]]),
+'mb1_mass': array([[ 9139.80361905],
+       [23225.73068036],
+       [16738.53040417],
+       [21322.40622518]]),
+'mb2_mass': array([[68986.8318912 ],
+       [70182.13183047],
+       [25089.82096123],
+       [34016.65724871]]),
+'lss_mass': array([[21846.40644692],
+       [21630.00270761],
+       [17616.94243159],
+       [18483.98342485]]),
+'msa_mass': array([[ 99973.04195717],
+       [115037.86521844],
+       [ 59445.29379699],
+       [ 73823.04689874]])}
 """
 # ==== 1. MB type vary: new ULS
 """
@@ -1106,53 +1129,54 @@ if param_for_study.lower() == "mb":
 """
 {
 'status_driver_exit': ['SUCCESS', 'FAIL', 'SUCCESS', 'SUCCESS'],
- 'time': array([[23.48544884],
-        [60.54071879],
-        [39.94250941],
-        [52.85283065]]),
- 'L_h1': array([[1.13470962],
-        [0.25502974],
-        [0.25561541],
-        [0.4556206 ]]),
- 'L_12': array([[8.        ],
-        [7.9999992 ],
-        [7.92725154],
-        [8.        ]]),
- 'lss_diameter': array([[2.88029455, 3.99941931],
-        [2.63536503, 3.90782125],
-        [2.64202145, 3.91773252],
-        [2.69083078, 3.93254011]]),
- 'lss_wall_thickness': array([[0.02376211, 0.02570975],
-        [0.02840487, 0.02755695],
-        [0.02842884, 0.02745687],
-        [0.02726306, 0.02709067]]),
- 'constr_L10_mb1': array([[0.99999989],
-        [0.99992761],
-        [0.9999999 ],
-        [1.00000048]]),
- 'constr_L10_mb2': array([[0.99999998],
-        [0.99942944],
-        [1.        ],
-        [1.00000082]]),
- 'mb1_mass': array([[30432.24750686],
-        [26214.03476245],
-        [26345.96072799],
-        [27143.57213201]]),
- 'mb2_mass': array([[74013.98664365],
-        [74127.74274487],
-        [74469.70393851],
-        [74077.44374573]]),
- 'lss_mass': array([[20127.65339586],
-        [19569.17503235],
-        [19427.28686956],
-        [19709.1176895 ]]),
- 'msa_mass': array([[124573.88754638],
-        [119910.95253967],
-        [120242.95153605],
-        [120930.13356725]])
+ 'time': array([[44.93823862],
+        [61.28058243],
+        [52.68014336],
+        [61.6395607 ]]),
+ 'L_h1': array([[1.04969468],
+        [0.17743924],
+        [0.77638446],
+        [3.21619962]]),
+ 'L_12': array([[7.98922461],
+        [7.39648932],
+        [7.90763795],
+        [7.99996046]]),
+ 'lss_diameter': array([[1.46587534, 3.9643857 ],
+        [1.46788412, 3.80722631],
+        [1.44021497, 3.91704652],
+        [1.72937712, 4.28607751]]),
+ 'lss_wall_thickness': array([[0.05514977, 0.02289683],
+        [0.05971319, 0.02651526],
+        [0.05736821, 0.02339293],
+        [0.04092318, 0.02078982]]),
+ 'constr_L10_mb1': array([[0.9999995 ],
+        [0.99992507],
+        [1.00000001],
+        [1.00000001]]),
+ 'constr_L10_mb2': array([[1.00000012],
+        [1.00001071],
+        [0.99999925],
+        [1.00000126]]),
+ 'mb1_mass': array([[ 9982.72824704],
+        [10165.33098495],
+        [ 9735.26554027],
+        [12915.44714381]]),
+ 'mb2_mass': array([[67691.7503778 ],
+        [70015.77826691],
+        [68326.1214711 ],
+        [64084.07821684]]),
+ 'lss_mass': array([[22491.74793949],
+        [20462.53848713],
+        [22002.6653499 ],
+        [25040.74443353]]),
+ 'msa_mass': array([[100166.22656434],
+        [100643.64773899],
+        [100064.05236127],
+        [102040.26979418]])
 }
 """
 # %%
+# plot 2D optim path
 if (param_for_study.lower() == "ldd") and (
     record_cases and plot_cases):
     print(" NOTE: 2D multi-start converg plot for testing now; not being saved")
@@ -1229,6 +1253,7 @@ if (param_for_study.lower() == "ldd") and (
     plt.show()
 
 # %%
+# plot 3D optim path
 if (param_for_study.lower() == "ldd") and (
     record_cases and plot_cases):
     print(" NOTE: 3D multi-start converg plot for testing now; not being saved")
@@ -1320,7 +1345,7 @@ if (param_for_study.lower() == "ldd") and (
     # -------------------------
     # rotate view (via camera angles)
     # def: (30,-60), print(ax.elev, ax.azim)
-    if meth_Peq=="lrd": ax.view_init(elev=40, azim=-20)
+    if meth_Peq=="lrd": ax.view_init(elev=40, azim=-40)
     # plt.ion() # interactive
     # ------------------------
     # Save plot
