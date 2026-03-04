@@ -1894,7 +1894,6 @@ def solve_bearing_system(M,F, L_h1,L_12,delta, G,EI,k):
     Convention: +ve =
     ----------
     Forces  : vertical upward
-    Applied moments : counter clock-wise (CCW)
     Bending moment  : sagging (eg. upward force on left = clock-wise (CW) moment)
 
     Internal Progress
@@ -1905,10 +1904,11 @@ def solve_bearing_system(M,F, L_h1,L_12,delta, G,EI,k):
     C = -G*(L_12+delta) - (F*L_h1) - M
     lam = (k*L_12)/(3*EI) # Non-dimensional stiffness ratio
     lamL = lam*L_12
+    x3 = L_h1+L_12
     # Left bearing reaction (closed-form solution) 
-    RA = (C + (F+G)*L_12) / (L_12 * (1.0 + lam))
+    RA = ( -M-F*x3 +G*delta)/( L_12*(1+lam) )
     # Force equilibrium
-    RB = F + G - RA
+    RB = G - F - RA
     # Rotation at B from beam slope relation -> Bearing moment
     MB = lamL*RA # derived from first-principles    # eq.3
     return RA, RB, MB
@@ -1940,11 +1940,11 @@ def analytical_MBforces_EBbeam(
     # 1. y-x
     G = m_carrier*gy
     F_mb1_y, F_mb2_y, M_mb2_y = solve_bearing_system(
-                Mz, Fy, L_h1, L_12, delta, G, EI, k)
+                -Mz, Fy, L_h1, L_12, delta, G, EI, k)
     # 1. z-x
     G = m_carrier*gz
     F_mb1_z, F_mb2_z, M_mb2_z = solve_bearing_system(
-                -My, Fz, L_h1, L_12, delta, G, EI, k)
+                +My, Fz, L_h1, L_12, delta, G, EI, k)
 
     # assemble forces
     # --- MB1 (CRB) ---
