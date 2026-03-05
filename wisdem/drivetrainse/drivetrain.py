@@ -424,12 +424,12 @@ class DrivetrainSE_M4W( om.Group ):
                 promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
             )
             # -connecting = bear(1,2) -to- Analy_*
-            # self.connect("bear2.bearing_type", "mb_fls.mb2_type") # define outside after prob setup, coz bearing_type is user input
             self.connect("bear2.mb_p", "mb_fls.p_mb") # same for both MBs ---
             self.connect("bear2.mb_X1", "mb_fls.X1_mb")
             self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
             self.connect("bear2.mb_X2", "mb_fls.X2_mb")
-            self.connect("bear2.mb_Y2", "mb_fls.Y2_mb") # ---
+            self.connect("bear2.mb_Y2", "mb_fls.Y2_mb")
+            self.connect("bear2.mb_k", "mb_fls.k_mb2") # ---
             self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
             self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
 
