@@ -369,8 +369,8 @@ class DrivetrainSE_M4W( om.Group ):
         # All smaller components (from `dc`; empirical no load analysis)
         # - required by `Hub_Rotor_LSS_Frame`
         # 0. Main Bearings
-        self.add_subsystem("bear1", dc.MainBearing())
-        self.add_subsystem("bear2", dc.MainBearing())
+        self.add_subsystem("bear1", dc.MainBearing_withDerivatives())
+        self.add_subsystem("bear2", dc.MainBearing_withDerivatives())
         # -connecting = GearedLayout -to- bear(1,2) (NEW)
         self.connect("Dshaft_mb1", "bear1.D_shaft") #DONE: impl later
         self.connect("Dshaft_mb2", "bear2.D_shaft") #DONE: impl later
