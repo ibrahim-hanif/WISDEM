@@ -1322,7 +1322,7 @@ class PoseOptimization(object):
                     upper=float_constr[f"{modestr}_period"]["upper_bound"],
                 )
 
-        # User constraints
+        # User constraints #(v) DONE: with this as ref, analy yaml filled with 'user' MB FLS constrs
         user_constr = self.opt["constraints"]["user"]
         for k in range(len(user_constr)):
             var_k = user_constr[k]["name"]
