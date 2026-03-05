@@ -77,6 +77,7 @@ class MainBearing(om.ExplicitComponent):
         self.add_output('mb_X2', val=0.0, desc='Bearing heavy coefficient for P calculation')
         self.add_output('mb_Y2', val=0.0, desc='Bearing heavy coefficient for P calculation')
         self.add_output('mb_Reactions', val=np.zeros(6,dtype=int), desc='Bearing reaction constraints: [Rx,Ry,Rz,Rxx,Ryy,Rzz]')
+        self.add_output('mb_k', val=3e10, units="N*m/rad", desc='Torsional stiffness of the moment-reacting bearing (eg. TRB2)')
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         
@@ -102,6 +103,9 @@ class MainBearing(om.ExplicitComponent):
         FREE, RIGID = 0, 1
         mb_Reactions = np.array([FREE]*6) # ([ Rx, Ry, Rz, Rxx, Ryy, Rzz ])
         # note: mb_Reactions[4] = FREE always !
+
+        # torsional stiffness (k_yy = k_zz = k)
+        mb_k = 0.0 # 0 for all, except TRB1, TRB2
         # ----- (v) above -----
 
         # assume low load rating for bearing
@@ -147,6 +151,7 @@ class MainBearing(om.ExplicitComponent):
             max_ang = np.deg2rad(3.0 / 60.0) # 0.05
             Cr_rating = (1993.8 * D_shaft**0.318) * 1e3 #(v) kN -> N !!!
             mb_Reactions[:] = [RIGID, RIGID, RIGID, FREE, RIGID, RIGID] #(v) all rigid except torque TODO: check
+            mb_k = 3e10 # TODO: check value
 
         elif btype == "TRB2":  #(v) 2-row TRB, high load; cf. 2015_Guo-Analytical, fig.26
             face_width = 0.1541 * D_shaft + 0.2087
@@ -154,6 +159,7 @@ class MainBearing(om.ExplicitComponent):
             max_ang = np.deg2rad( (0.06+0.02)/2 )
             Cr_rating = (6579.9 * D_shaft**0.8592) * 1e3 #(v) kN -> N !!!
             mb_Reactions[:] = [RIGID, RIGID, RIGID, FREE, RIGID, RIGID] #(v) all rigid except torque
+            mb_k = 3e10
 
         else:
             raise ValueError("Bearing type must be: CARB / CRB / SRB / TRB / TRB2")
@@ -177,7 +183,7 @@ class MainBearing(om.ExplicitComponent):
         outputs["face_width"] = face_width
         if mb_Reactions[3] == RIGID: mb_Reactions[3] = FREE  # force allow bearing to not resist torque (captured by GB, in `Hub_*`)
         outputs["mb_Reactions"] = mb_Reactions
-
+        outputs["mb_k"] = mb_k
 
 # -------------------------------------------------------------------
 
