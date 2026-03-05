@@ -28,7 +28,7 @@ class MainBearing(om.ExplicitComponent):
     mb_mass_user : float, [kg]
         user override of component mass
 
-    ----- extended by Vasudev Gupta (v) -----
+    ----- extended by Vasudev Gupta (v) -----\\
 
     Returns
     -------
@@ -39,7 +39,7 @@ class MainBearing(om.ExplicitComponent):
     mb_I : numpy array[3], [kg*m**2]
         moments of Inertia for the component [Ixx, Iyy, Izz] around its center of mass
     
-    ----- extended by Vasudev Gupta (v) -----
+    ----- extended by Vasudev Gupta (v) -----\\
     mb_Cr : float, [N]
         Dynamic load rating, for bearing FLS calculations
             based on 2015_Guo-Analy... paper (SKF 2014 catalogue)
@@ -53,9 +53,8 @@ class MainBearing(om.ExplicitComponent):
     - NOTE : some Cr here emperical on VERY small bearings (<=2 m), may need update for large bearings: eg. CRB, TRB1, SRB, CARB
     - DONE : connect D_shaft(s) to lss_diameter[]
     - DONE : add reactions for each bearing type (Fa,Fr,M), which inputs to Hub_*
-    - TODO : analytical gradients wrt. D_shaft (DV); use JAX (easy iA)?
-    - TODO : change 'TRB2' name to 'DRTRB' (as per IEC-4)
-    - TODO : moment-reacting bearings = (TRB2, TRB, SRB) ?
+    - DONE : analytical gradients
+    - NOTE ! new MainBearing_withDerivatives component below & used from now
     """
 
     def setup(self):
@@ -1291,8 +1290,9 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
 
     Internal Progress
     _________________
-    - TODO : implement and check
-    - TODO : change to high-load values (now: some low, some high)
+    - DONE : implement and check
+    - DONE : change to high-load values (now: some low, some high)
+    - DONE : add mb_k (torsional stiffness for moment bearing bearings)
     """
     # ------------------------------------------------------------
     # Setup
@@ -1319,6 +1319,7 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
         self.add_output("mb_X2", 0.0) # TODO check wrt. e
         self.add_output("mb_Y2", 0.0)
         self.add_output("mb_Reactions", np.zeros(6, dtype=int))
+        self.add_output('mb_k', val=3e10, units="N*m/rad", desc='Torsional stiffness of the moment-reacting bearing (eg. TRB2)')
 
         # --------------------------------------------------------
         # partials
@@ -1350,23 +1351,33 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
 
         "CARB":
             dict(a=0.4299, b=0.0382, k=3682.8, n=2.7676, c=16676, m=1.4746,
-                 max_ang=np.deg2rad(0.5), reactions=[0,1,1,0,0,0]),
+                 max_ang=np.deg2rad(0.5), reactions=[0,1,1,0,0,0],
+                 mb_k=0.0
+                 ),
 
         "CRB":
             dict(a=0.157,  b=0.0849, k=1070.8, n=1.8278, c=4526.5, m=0.9556,
-                 max_ang=np.deg2rad(4/60), reactions=[0,1,1,0,0,0]),
+                 max_ang=np.deg2rad(4/60), reactions=[0,1,1,0,0,0],
+                 mb_k=0.0
+                 ),
 
         "SRB":
             dict(a=0.2463, b=0.185, k=2688.3,  n=1.8877, c=13878, m=1.0796,
-                 max_ang=0.078, reactions=[1,1,1,0,0,0]),
+                 max_ang=0.078, reactions=[1,1,1,0,0,0],
+                 mb_k=0.0
+                 ),
 
         "TRB":
             dict(a=0.1499, b=0.0,    k=543.01, n=1.9043, c=1993.8, m=0.318,
-                 max_ang=np.deg2rad(3/60), reactions=[1,1,1,0,1,1]),
+                 max_ang=np.deg2rad(3/60), reactions=[1,1,1,0,1,1],
+                 mb_k=3e10
+                 ),
 
         "TRB2":
             dict(a=0.1541, b=0.2087, k=1442.6, n=1.8932, c=6579.9, m=0.8592,
-                 max_ang=np.deg2rad((0.06+0.02)/2), reactions=[1,1,1,0,1,1]),
+                 max_ang=np.deg2rad((0.06+0.02)/2), reactions=[1,1,1,0,1,1],
+                 mb_k=3e10
+                 ),
     }
 
     housing_factor = 1 + 80.0/27.0
@@ -1393,6 +1404,8 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
         mb_Reactions = np.array([FREE]*6) # ([ Rx, Ry, Rz, Rxx, Ryy, Rzz ])
         mb_Reactions[:] = data["reactions"]
         if mb_Reactions[3] == RIGID: mb_Reactions[3] = FREE
+        # torsional stiffness: (k := k_yy = k_zz)
+        mb_k = data["mb_k"]
 
         # -----------------------------
         # analytic formulas
@@ -1447,6 +1460,7 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
         outputs["mb_X2"] = 0.67
         outputs["mb_Y2"] = outputs["mb_X2"]/np.tan(alpha)
         outputs["mb_p"] = 10/3
+        outputs["mb_k"] = mb_k # torsional stiffness: k_yy=k_zz=k
 
     # ------------------------------------------------------------
     # compute_partials (exact)
