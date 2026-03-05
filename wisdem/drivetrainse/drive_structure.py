@@ -2174,7 +2174,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_output('constr_L10_mb2', val=0.0, desc='Safety factor MB2')
         # self.add_output('constr_L10_mb_all', val=0.0, desc='Minimum safety factor')
         
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):
         # ---- Inputs ----
         # bearings
         D_mb2 = float(inputs['Dshaft_mb2'][0])
