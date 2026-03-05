@@ -36,9 +36,13 @@ class WindTurbineOntologyPython(object):
 
         # Generator flag
         flags["generator"] = (flags["nacelle"] and "generator" in self.wt_init["components"]["nacelle"]
-            and self.wt_init["components"]["nacelle"]["generator"]["h_s"] > 0.0)
+            and self.wt_init["components"]["nacelle"]["generator"]["h_s"] > 0.0) #(v) TODO: why depend on "h_s", and not override with "generator_mass_user"?
         if flags["generator"]:
             self.modeling_options["WISDEM"]["DriveSE"]["generator"]["type"] = self.wt_init["components"]["nacelle"]["generator"]["generator_type"].lower()
+
+        #(v) MB FLS flag (made like the generator flag)
+        flags["mb_fls"] = (flags["nacelle"] and "drivetrain" in self.wt_init["components"]["nacelle"]
+            and self.wt_init["components"]["nacelle"]["drivetrain"]["mb2_e"] > 0.0)
 
         # Offshore flags
         flags["floating"] = self.modeling_options["flags"]["floating_platform"]
