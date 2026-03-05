@@ -3,7 +3,7 @@ import openmdao.api as om
 
 from wisdem.glue_code.gc_WT_DataStruc import WindTurbineOntologyOpenMDAO
 from wisdem.rotorse.rotor import RotorSEProp, RotorSEPerf, RotorSE
-from wisdem.drivetrainse.drivetrain import DrivetrainSE
+from wisdem.drivetrainse.drivetrain import DrivetrainSE, DrivetrainSE_M4W #(v) added M4W version
 from wisdem.towerse.tower import TowerSEProp, TowerSEPerf, TowerSE
 from wisdem.floatingse.floating import FloatingSEProp, FloatingSEPerf, FloatingSE
 from wisdem.fixed_bottomse.monopile import MonopileSEProp, MonopileSEPerf, MonopileSE
@@ -69,9 +69,14 @@ class WT_RNA(om.Group):
         if modeling_options["flags"]["blade"]:
             self.add_subsystem("rotorse", RotorSEPerf(modeling_options=modeling_options, opt_options=opt_options))
 
-        if modeling_options["flags"]["nacelle"]:
-            self.add_subsystem("drivese", DrivetrainSE(modeling_options=modeling_options))
+        # if modeling_options["flags"]["nacelle"]:
+        #     self.add_subsystem("drivese", DrivetrainSE(modeling_options=modeling_options))
 
+        #(v) DrivetrainSE M4W version
+        if modeling_options["flags"]["nacelle"]:
+            self.add_subsystem("drivese", DrivetrainSE_M4W(
+                    modeling_options=modeling_options)
+                    )
 
 class WT_RNTA(om.Group):
     # Openmdao group to run the analysis of the wind turbine
@@ -389,9 +394,9 @@ class WT_RNTA(om.Group):
             self.connect("rotorse.rp.powercurve.rated_Q", "drivese.rated_torque")
             self.connect("configuration.rated_power", "drivese.machine_rating")
             if modeling_options["flags"]["tower"]:
-                self.connect("tower.diameter", "drivese.D_top", src_indices=[-1])
+                self.connect("tower.diameter", "drivese.D_top", src_indices=[-1]) #(v) TODO: why D_top (important for driveSE) depends on tower? what if user wants to only analyse driveSE (+rotorSE)?
 
-            self.connect("rotorse.rs.aero_hub_loads.Fhub", "drivese.F_aero_hub")
+            self.connect("rotorse.rs.aero_hub_loads.Fhub", "drivese.F_aero_hub") #(v) TODO: check and learn usage (coz these loads MUCH lower than ours)
             self.connect("rotorse.rs.aero_hub_loads.Mhub", "drivese.M_aero_hub")
             self.connect("rotorse.rs.frame.root_M", "drivese.pitch_system.BRFM", src_indices=[1])
 
@@ -416,14 +421,19 @@ class WT_RNTA(om.Group):
             if modeling_options["WISDEM"]["DriveSE"]["direct"]:
                 self.connect("nacelle.nose_diameter", "drivese.bear1.D_shaft", src_indices=[0])
                 self.connect("nacelle.nose_diameter", "drivese.bear2.D_shaft", src_indices=[-1])
-            else:
-                self.connect("nacelle.lss_diameter", "drivese.bear1.D_shaft", src_indices=[0])
-                self.connect("nacelle.lss_diameter", "drivese.bear2.D_shaft", src_indices=[-1])
+            else: #(v) DONE: changing lss_dia again with mb* dia? pass and removed!
+                pass
+                # self.connect("nacelle.lss_diameter", "drivese.bear1.D_shaft", src_indices=[0])
+                # self.connect("nacelle.lss_diameter", "drivese.bear2.D_shaft", src_indices=[-1])
             self.connect("nacelle.uptower", "drivese.uptower")
             self.connect("nacelle.brake_mass_user", "drivese.brake_mass_user")
             self.connect("nacelle.bedplate_mass_user", "drivese.bedplate_mass_user")
             self.connect("nacelle.mb1_mass_user", "drivese.bear1.mb_mass_user")
             self.connect("nacelle.mb2_mass_user", "drivese.bear2.mb_mass_user")
+            #(v) ---- 'mb_e' is an input (from geo yaml thru nacelle ivc): direct connections to rspt compns (within DrivetrainSE) ----
+            if modeling_options["flags"]["mb_fls"]:
+                self.connect("nacelle.mb1_e", "drivese.bear1.mb_e")
+                self.connect("nacelle.mb2_e", ["drivese.bear2.mb_e", "drivese.mb_fls.e_mb"]) #(v) ----
             self.connect("nacelle.hvac_mass_coeff", "drivese.hvac_mass_coeff")
             self.connect("nacelle.converter_mass_user", "drivese.converter_mass_user")
             self.connect("nacelle.transformer_mass_user", "drivese.transformer_mass_user")
@@ -841,7 +851,7 @@ class WT_RNTA(om.Group):
             self.connect("drivese.pitch_mass", "tcc.pitch_system_mass")
             self.connect("drivese.spinner_mass", "tcc.spinner_mass")
             self.connect("drivese.lss_mass", "tcc.lss_mass")
-            self.connect("drivese.mean_bearing_mass", "tcc.main_bearing_mass")
+            self.connect("drivese.mean_bearing_mass", "tcc.main_bearing_mass") #(v) TODO: use mean or total MB mass?
             self.connect("drivese.gearbox_mass", "tcc.gearbox_mass")
             self.connect("nacelle.gearbox_torque_density", "tcc.gearbox_torque_density")
             self.connect("drivese.hss_mass", "tcc.hss_mass")
