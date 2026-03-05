@@ -2151,7 +2151,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input("Dshaft_mb2", val=0.0, units="m")
         self.add_input("Tshaft_mb2", val=0.0, units="m")
         self.add_input('Cr_mb2', val=1e7, units='N', desc='Dynamic load rating MB2')
-        self.add_input('k_mb2', val=3e10, units="N*m/rad", desc='Torsional stiffness of the moment-reacting bearing (eg. TRB2)')
+        self.add_input('k_mb2', val=0.0, units="N*m/rad", desc='Torsional stiffness of the moment-reacting bearing (eg. TRB2)')
         self.add_input('p_mb', val=3.33, desc='Bearing life exponent')
         self.add_input('e_mb', val=0.35, desc='Bearing limiting factor, load ratio')
         self.add_input('X1_mb', val=1.0, desc='Bearing light coefficient for P calculation')
