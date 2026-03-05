@@ -2084,8 +2084,10 @@ class Nacelle(om.Group):
             ivc.add_output("transformer_mass_user", val=0.0, units="kg", desc="Override regular regression-based calculation of transformer mass with this value")
             ivc.add_output("mb1_mass_user", val=0.0, units="kg", desc="Override regular regression-based calculation of first main bearing mass with this value")
             ivc.add_output("mb2_mass_user", val=0.0, units="kg", desc="Override regular regression-based calculation of second main bearing mass with this value")
-            ivc.add_discrete_output( "mb1Type", val="CARB", desc="Type of main bearing: CARB / CRB / SRB / TRB")
-            ivc.add_discrete_output( "mb2Type", val="SRB", desc="Type of main bearing: CARB / CRB / SRB / TRB")
+            ivc.add_discrete_output( "mb1Type", val="CRB", desc="Type of main bearing: CARB / CRB / SRB / TRB / TRB2") #(v) desc with updated MBtypes and changes def (CARB, SRB)
+            ivc.add_discrete_output( "mb2Type", val="TRB2", desc="Type of main bearing: CARB / CRB / SRB / TRB / TRB2")
+            ivc.add_output("mb1_e", val=0.0, desc="limiting value of Fa/Fr for the applicability of different values of factors X and Y (ISO 281)") #(v) new
+            ivc.add_output("mb2_e", val=0.0, desc="limiting value of Fa/Fr for the applicability of different values of factors X and Y (ISO 281)") #(v) new
             ivc.add_discrete_output( "uptower", val=True, desc="If power electronics are located uptower (True) or at tower base (False)")
             ivc.add_discrete_output( "lss_material", val="steel", desc="Material name identifier for the low speed shaft")
             ivc.add_discrete_output( "hss_material", val="steel", desc="Material name identifier for the high speed shaft")
