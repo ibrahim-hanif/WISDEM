@@ -65,7 +65,7 @@ load_fls_loads = False
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 # TODO: mainshaft_loads: (old) "." , (newULS) "_M4W"
-loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
+loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_M4W.mat")
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
@@ -258,7 +258,8 @@ class LSS_layout( om.Group ):
             self.connect("bear2.mb_X1", "mb_fls.X1_mb")
             self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
             self.connect("bear2.mb_X2", "mb_fls.X2_mb")
-            self.connect("bear2.mb_Y2", "mb_fls.Y2_mb") # ---
+            self.connect("bear2.mb_Y2", "mb_fls.Y2_mb")
+            self.connect("bear2.mb_k", "mb_fls.k_mb2") # ---
             self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
             self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
 
@@ -408,7 +409,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # Add design variables
     prob.model.add_design_var("L_h1", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
     prob.model.add_design_var("L_12", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
-    # prob.model.add_design_var("delta", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
+    prob.model.add_design_var("delta", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
     prob.model.add_design_var("lss_diameter", lower=1.0, upper=5.0, ref=5.0, ref0=1.0)
     prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=1.0, ref=1.0, ref0=4e-3) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
 
@@ -431,7 +432,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # prob.model.add_constraint("constr_height", lower=0.0, ref=1e1)               #DONE: add later
     prob.model.add_constraint("constr_Lh1_MB1fw", lower=0.0)#, ref=1e1)            #DONE: add later
     prob.model.add_constraint("constr_L12_MBsFW", lower=0.0)#, ref=1e0)            #DONE: add later
-    # prob.model.add_constraint("constr_del_MB2fw", lower=0.0)#, ref=1e0)            #TODO: add later
+    prob.model.add_constraint("constr_del_MB2fw", lower=0.0)#, ref=1e0)            #TODO: add later
     # prob.model.add_constraint("L_lss", upper=7.0)#, ref=1e0)            #TODO: add later
 
 # %%
@@ -581,10 +582,9 @@ if not flag_load_from_data:
     prob["bear2.bearing_type"] = "TRB2" # 2. fixed MB
     prob["bear1.mb_e"] = 0.4 # from 3.5-4.0 (TODO: find ref.)
     prob["bear2.mb_e"] = 0.4
+    prob["bear2.mb_k"] = 3.0*1e10
     if doMBfls:
         prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
-        prob["mb_fls.mb2_type"] = prob["bear2.bearing_type"]
-        prob["mb_fls.mb2_k"] = 3.0*1e10
 
     # Layout / lss inputs
     prob["L_h1"] = 0.1 #(def: 0.5), 4.25; converg: 0.264
