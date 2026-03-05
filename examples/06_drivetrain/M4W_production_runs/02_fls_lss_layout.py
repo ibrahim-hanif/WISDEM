@@ -53,7 +53,7 @@ import utilities_drivetrain as utilsDT
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
 record_cases = False    #TODO: add in final setup (full problem)
-plot_cases = True      #NOTE: saved, not changing now (commented)
+plot_cases = False      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
 flag_load_from_data = False
@@ -65,7 +65,7 @@ load_fls_loads = False
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 # TODO: mainshaft_loads: (old) "." , (newULS) "_M4W"
-loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_M4W.mat")
+loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
@@ -409,7 +409,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # Add design variables
     prob.model.add_design_var("L_h1", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
     prob.model.add_design_var("L_12", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
-    prob.model.add_design_var("delta", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
+    # prob.model.add_design_var("delta", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
     prob.model.add_design_var("lss_diameter", lower=1.0, upper=5.0, ref=5.0, ref0=1.0)
     prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=1.0, ref=1.0, ref0=4e-3) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
 
@@ -432,7 +432,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # prob.model.add_constraint("constr_height", lower=0.0, ref=1e1)               #DONE: add later
     prob.model.add_constraint("constr_Lh1_MB1fw", lower=0.0)#, ref=1e1)            #DONE: add later
     prob.model.add_constraint("constr_L12_MBsFW", lower=0.0)#, ref=1e0)            #DONE: add later
-    prob.model.add_constraint("constr_del_MB2fw", lower=0.0)#, ref=1e0)            #TODO: add later
+    # prob.model.add_constraint("constr_del_MB2fw", lower=0.0)#, ref=1e0)            #TODO: add later
     # prob.model.add_constraint("L_lss", upper=7.0)#, ref=1e0)            #TODO: add later
 
 # %%
@@ -1056,50 +1056,51 @@ if flag_study_parametric and (param_for_study.lower() == "mb"):
 # ==== 1. MB type vary
 """ 
 {'status_driver_exit': ['SUCCESS', 'SUCCESS', 'SUCCESS', 'SUCCESS'],
-'time': array([[15.87260056],
-       [ 9.50170016],
-       [ 8.73832917],
-       [ 7.16219592]]),
+'time': array([[ 1.77283216],
+       [ 1.65579176],
+       [22.48433852],
+       [ 5.8125    ]]),
 'L_h1': array([[0.47302864],
        [0.34322159],
-       [0.20876778],
-       [0.26560464]]),
+       [0.30301161],
+       [0.27011457]]),
 'L_12': array([[8.        ],
        [7.05140913],
-       [3.37018827],
-       [2.39397285]]),
+       [4.76125648],
+       [2.6501254 ]]),
 'lss_diameter': array([[1.38378933, 3.8569349 ],
        [1.        , 3.88599545],
-       [2.19947652, 1.54049089],
-       [1.        , 1.92765165]]),
+       [3.49360325, 1.55337599],
+       [1.00298103, 2.13029332]]),
 'lss_wall_thickness': array([[0.06049266, 0.02409574],
        [0.08777663, 0.02330944],
-       [0.03491298, 0.17757456],
-       [0.26282628, 0.13408421]]),
-'constr_L10_mb1': array([[1.        ],
-       [2.88704918],
+       [0.004     , 0.14486062],
+       [0.22459363, 0.10045245]]),
+'constr_L10_mb1': array([[1.00000005],
+       [2.88704929],
        [1.        ],
-       [1.26386335]]),
+       [1.        ]]),
 'constr_L10_mb2': array([[1.        ],
        [0.99999995],
-       [1.        ],
-       [0.99999984]]),
-'mb1_mass': array([[ 9139.80361905],
-       [23225.73068036],
-       [16738.53040417],
-       [21322.40622518]]),
-'mb2_mass': array([[68986.8318912 ],
-       [70182.13183047],
-       [25089.82096123],
-       [34016.65724871]]),
-'lss_mass': array([[21846.40644692],
-       [21630.00270761],
-       [17616.94243159],
-       [18483.98342485]]),
-'msa_mass': array([[ 99973.04195717],
-       [115037.86521844],
-       [ 59445.29379699],
-       [ 73823.04689874]])}
+       [1.01520523],
+       [1.        ]]),
+'mb1_mass': array([[ 9139.80358247],
+       [23225.73067902],
+       [38026.53103277],
+       [22419.59592032]]),
+'mb2_mass': array([[68986.83181075],
+       [70182.13181737],
+       [27702.48550555],
+       [40972.66435748]]),
+'lss_mass': array([[21846.40591581],
+       [21630.00146927],
+       [20605.3949048 ],
+       [17894.44678987]]),
+'msa_mass': array([[ 99973.04130902],
+       [115037.86396566],
+       [ 86334.41144312],
+       [ 81286.70706768]])
+}
 """
 # ==== 1. MB type vary: new ULS
 """
