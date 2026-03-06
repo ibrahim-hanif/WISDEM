@@ -64,8 +64,7 @@ load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
-# TODO: mainshaft_loads: (old) "." , (newULS) "_M4W"
-loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
+loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
@@ -156,9 +155,9 @@ else:
 opts["DLC_driver"] = {}
 opts["DLC_driver"]["DLCs"] = [{}]
 opts["DLC_driver"]["DLCs"][0]["DLC"] = "1.2"
-opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23., 25.]
-opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332 , 0.05894909, 0.03942148, 0.02472593, 0.01457773, 0.00466888]
-
+opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.]
+opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.0083042]
+# TODO: probabs check with wind site
 # %% [markdown]
 # ### Defining the model `problem class`:
 # as an openMDAO group that uses DrivetrainSE classes as components
