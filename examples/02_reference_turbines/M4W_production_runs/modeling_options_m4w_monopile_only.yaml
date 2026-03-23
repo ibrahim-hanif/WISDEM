@@ -1,0 +1,74 @@
+# Generic modeling options file to run standard WISDEM case
+# NOTE: adapted from `modeling_options_1ea15_monopile_only_wisdemV3.yaml`
+# - `Loading` changed to final converged M4W DT and nacelle data
+General:
+    verbosity: False  # When set to True, the code prints to screen many infos
+WISDEM:
+    RotorSE:
+        flag: False
+        spar_cap_ss: Spar_Cap_SS # Name in the yaml of the spar cap laminate on the suction side
+        spar_cap_ps: Spar_Cap_PS # Name in the yaml of the spar cap laminate on the pressure side
+        te_ss: TE_reinforcement_SS # Name in the yaml of the trailing edge reinforcement on the suction side
+        te_ps: TE_reinforcement_PS # Name in the yaml of the trailing edge reinforcement on the pressure side
+    DriveSE:
+        flag: False
+    TowerSE:             # Options of TowerSE module
+        flag: True
+        wind: PowerWind
+        gamma_f: 1.2    # Safety factor for fatigue loads
+        gamma_m: 1.3     # Safety factor for material properties
+        gamma_n: 1.0     # Safety factor for consequence of failure
+        gamma_b: 1.1     # Safety factor for buckling
+        # gamma_fatigue: 1.755  # Safety factor for fatigue failure (def: 1.0)
+        # buckling_method: dnvgl # Buckling code type [eurocode or dnvgl] (def: dnvgl)
+        buckling_length: 15    # Buckling parameter
+        frame3dd:
+            shear: True
+            geom: True
+            tol: 1e-9
+    FixedBottomSE:             # Options of FixedBottomSE module
+        flag: True
+        wind: PowerWind  # Wind used
+        gamma_f: 1.2    # Safety factor for fatigue loads
+        gamma_m: 1.3     # Safety factor for material properties
+        gamma_n: 1.0     # Safety factor for ...
+        gamma_b: 1.1     # Safety factor for ...
+        gamma_fatigue: 1.755  # Safety factor for fatigue loads
+        buckling_method: dnvgl # Buckling code type [eurocode or dnvgl]
+        buckling_length: 15    # Buckling parameter
+        soil_springs: True
+        gravity_foundation: False
+        frame3dd:
+            shear: True
+            geom: True
+            tol: 1e-9
+    BOS:
+        flag: False
+    LCOE:
+        flag: False
+
+    Loading:
+        mass: 901557.7853892618 # rna_
+        center_of_mass: [-6.622163954365554, -0.14009140850075158, 3.819706238848932]
+        moment_of_inertia: [3.60301520e+08, 2.76620323e+08, 2.63751724e+08, 5.87253156545e+02, 1.2436985e+07, 2.26571e+05]
+        loads: # base_
+            - force: [4787209.667174622, 1369693.7631695871, 1278804.7882291656]
+              moment: [15563438.304735381, 143242361.0389744, 2559054.8513918277]
+              velocity: 11.73732
+
+#(v) -------------- NEW! TODO: MB FLS options --------------
+# ref to WEIS schema
+# - inputs needed:
+# -- openfast simulation time step (DT)
+# -- DLC, mean_wind_speed, probabilities
+
+OpenFAST: 
+    simulation:
+        DT: 0.05 # DONE: time step (for integration)
+    openfast_dir: 'M:\\Vasudev_Gupta\\outputs_mainshaft_loads\\hub_loads_M4w.mat' # DONE: loads dir
+
+DLC_driver: #(v) https://weis.readthedocs.io/en/latest/dlc_generator.html#design-load-cases-in-weis
+    DLCs:
+        - DLC: "1.2"
+          wind_speed: [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.] # DONE: mean_wind_speed
+          probabilities: [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.0083042] # DONE: probab
