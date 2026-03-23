@@ -12,11 +12,34 @@ WISDEM:
         flag: True
     TowerSE:             # Options of TowerSE module
         flag: True
-    FixedBottomSE:
-        flag: True
-        soil_springs: True
+        # wind: PowerWind
+        # gamma_f: 1.35    # Safety factor for fatigue loads
+        # gamma_m: 1.3     # Safety factor for material properties
+        # gamma_n: 1.0     # Safety factor for consequence of failure
+        # gamma_b: 1.1     # Safety factor for buckling
+        # gamma_fatigue: 1.755  # Safety factor for fatigue failure
+        # buckling_method: dnvgl # Buckling code type [eurocode or dnvgl]
+        # buckling_length: 15    # Buckling parameter
+        # frame3dd:
+        #     shear: True
+        #     geom: True
+        #     tol: 1e-9
+    FixedBottomSE:             # Options of FixedBottomSE module
+        flag: False
+        # wind: PowerWind  # Wind used
+        # gamma_f: 1.35    # Safety factor for fatigue loads
+        # gamma_m: 1.3     # Safety factor for material properties
+        # gamma_n: 1.0     # Safety factor for ...
+        # gamma_b: 1.1     # Safety factor for ...
+        # gamma_fatigue: 1.755  # Safety factor for fatigue loads
+        # buckling_method: dnvgl # Buckling code type [eurocode or dnvgl]
+        # buckling_length: 15    # Buckling parameter
+        # frame3dd:
+        #     shear: True
+        #     geom: True
+        #     tol: 1e-9
     BOS:
-        flag: True
+        flag: False
 
 #(v) -------------- NEW! TODO: MB FLS options --------------
 # ref to WEIS schema
@@ -27,10 +50,10 @@ WISDEM:
 OpenFAST: 
     simulation:
         DT: 0.05 # DONE: time step (for integration)
-    openfast_dir: 'M:\\Vasudev_Gupta\\outputs_mainshaft_loads\\mainshaft_loads.mat' # DONE: loads dir
+    openfast_dir: 'M:\\Vasudev_Gupta\\outputs_mainshaft_loads\\hub_loads_M4w.mat' # DONE: loads dir
 
 DLC_driver: #(v) https://weis.readthedocs.io/en/latest/dlc_generator.html#design-load-cases-in-weis
     DLCs:
         - DLC: "1.2"
-          wind_speed: [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23., 25.] # DONE: mean_wind_speed
-          probabilities: [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332 , 0.05894909, 0.03942148, 0.02472593, 0.01457773, 0.00466888] # DONE: probab
+          wind_speed: [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.] # DONE: mean_wind_speed
+          probabilities: [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.0083042] # DONE: probab
