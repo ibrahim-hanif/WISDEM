@@ -27,7 +27,7 @@ WISDEM:
             geom: True
             tol: 1e-9
     FixedBottomSE:             # Options of FixedBottomSE module
-        flag: True
+        flag: False # TODO
         wind: PowerWind  # Wind used
         gamma_f: 1.2    # Safety factor for fatigue loads
         gamma_m: 1.3     # Safety factor for material properties
@@ -50,13 +50,13 @@ WISDEM:
     Loading:
         mass: 901557.7853892618 # rna_
         center_of_mass: [-6.622163954365554, -0.14009140850075158, 3.819706238848932]
-        moment_of_inertia: [3.60301520e+08, 2.76620323e+08, 2.63751724e+08, 5.87253156545e+02, 1.2436985e+07, 2.26571e+05]
+        moment_of_inertia: [360301520.59889555, 276620323.56536335, 263751724.60723072, 587.2531565458048, 12436985.953506323, 226571.55932435632]
         loads: # base_
             - force: [4787209.667174622, 1369693.7631695871, 1278804.7882291656]
               moment: [15563438.304735381, 143242361.0389744, 2559054.8513918277]
               velocity: 11.73732
 
-#(v) -------------- NEW! TODO: MB FLS options --------------
+#(v) -------------- NEW! DONE: MB FLS options --------------
 # ref to WEIS schema
 # - inputs needed:
 # -- openfast simulation time step (DT)
