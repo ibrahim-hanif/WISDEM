@@ -15,7 +15,7 @@ WISDEM:
     TowerSE:             # Options of TowerSE module
         flag: True
         wind: PowerWind
-        gamma_f: 1.2    # Safety factor for fatigue loads
+        gamma_f: 1.2    # Safety factor for loads
         gamma_m: 1.3     # Safety factor for material properties
         gamma_n: 1.0     # Safety factor for consequence of failure
         gamma_b: 1.1     # Safety factor for buckling
@@ -27,7 +27,7 @@ WISDEM:
             geom: True
             tol: 1e-9
     FixedBottomSE:             # Options of FixedBottomSE module
-        flag: False # TODO
+        flag: True # TODO
         wind: PowerWind  # Wind used
         gamma_f: 1.2    # Safety factor for fatigue loads
         gamma_m: 1.3     # Safety factor for material properties
@@ -54,7 +54,7 @@ WISDEM:
         loads: # base_
             - force: [4787209.667174622, 1369693.7631695871, 1278804.7882291656]
               moment: [15563438.304735381, 143242361.0389744, 2559054.8513918277]
-              velocity: 11.73732
+              velocity: 11.0 # def.: 11.73732; cf. plot ms_loads_stats
 
 #(v) -------------- NEW! DONE: MB FLS options --------------
 # ref to WEIS schema
