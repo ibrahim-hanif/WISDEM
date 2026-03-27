@@ -64,8 +64,8 @@ else:
      fname_analysis_options = dir_m4w_run + os.sep + "analysis_options_NOopt.yaml"
 
 ## File Management (outputs)
-loc_scaling_report = os.path.join(mydir,
-      '01_outputs', 'tower_scaling_report.html')
+loc_scaling_report = os.path.join(dir_m4w_run,
+      'outputs', 'tower_scaling_report.html')
 
 #%% Loads from hub: overwrite values TODO: rotorse overwrites it at run
 if flag_override_hub_loads:
@@ -247,7 +247,7 @@ from plot_tower_geometry import plot_tower_geometry
 # 1. base IEA 15-MW
 iea_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub.yaml"
 # 2. Made4Wind
-m4w_yaml = mydir +os.sep+ "01_outputs" + os.sep+ "test_10m.yaml"
+m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_10m.yaml"
 plot_tower_geometry( m4w_yaml, iea_yaml )
 
 #%%[markdown]
