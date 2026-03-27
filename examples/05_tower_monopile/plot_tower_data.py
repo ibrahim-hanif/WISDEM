@@ -8,16 +8,6 @@ from my_util_tools.util_funcs import loc_clr_scheme_m4w, read_color_scheme
 
 clrs_m4w = read_color_scheme( loc_clr_scheme_m4w )
 
-
-plot_rcParams_update = {
-        "font.size": 16,
-        "axes.labelsize": 16,
-        "legend.fontsize": 16, # 16 for pdf of `var_with_iter` plot
-        "lines.linewidth": 3,
-        "lines.markersize": 6,
-    }
-plt.rcParams.update( plot_rcParams_update )
-
 #%%
 def parse_tower_data_from_yaml( yaml_file ):
     # ========================
@@ -52,13 +42,25 @@ def parse_tower_data_from_yaml( yaml_file ):
 
     return z, d, t_mm
 
-def plot_tower_geometry( m4w_yaml, iea15_yaml , clrs=clrs_m4w):
+def plot_tower_geo_comparison( m4w_yaml, iea15_yaml , clrs=clrs_m4w):
     # ========================
     # Load YAMLs
     # ========================
     # 1. Made4Wind
     z_m4w, d_m4w, t_m4w = parse_tower_data_from_yaml( m4w_yaml )
     z_iea, d_iea, t_iea = parse_tower_data_from_yaml( iea15_yaml )
+
+    # ========================
+    # Update plot settings
+    # ========================
+    plot_rcParams_update = {
+        "font.size": 16,
+        "axes.labelsize": 16,
+        "legend.fontsize": 16, # 16 for pdf of `var_with_iter` plot
+        "lines.linewidth": 3,
+        "lines.markersize": 6,
+    }
+    plt.rcParams.update( plot_rcParams_update )
 
     # ========================
     # Plot
@@ -115,7 +117,7 @@ if __name__ == "__main__":
     iea_yaml = mydir +os.sep+ "iea15mw_tower_semisub.yaml"
     # 2. Made4Wind
     m4w_yaml = mydir +os.sep+ "outputs" + os.sep+ "test.yaml"
-    plot_tower_geometry( m4w_yaml, iea_yaml )
+    plot_tower_geo_comparison( m4w_yaml, iea_yaml )
 # =======================================================================
 
 # %%[markdown]
@@ -155,7 +157,7 @@ def read_wisdem_loading(yaml_file):
 # ======================================================
 # 2. PLOTTING FUNCTION
 # ======================================================
-def plot_comparison(m4w, iea, clrs=clrs_m4w):
+def plot_loads_TT_comparison(m4w, iea, clrs=clrs_m4w):
 
     labels = ['IEA 15MW', 'Made4Wind']
     colors = [ clrs['Light_Green'], clrs['Aqua'] ]
@@ -311,6 +313,6 @@ if __name__ == "__main__":
     m4w = read_wisdem_loading(file_m4w)
     iea = read_wisdem_loading(file_iea)
 
-    plot_comparison(m4w, iea)
+    plot_loads_TT_comparison(m4w, iea)
 
 # %%
