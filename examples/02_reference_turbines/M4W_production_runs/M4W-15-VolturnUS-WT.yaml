@@ -488,11 +488,9 @@ components: #(v) specifications for individual components (blades, tower, nacell
                   material: steel
                   thickness:
                       grid: [0.0, 0.10047454902385111, 0.20094909804770222, 0.30142364707155334, 0.40189819609540445, 0.5023727451192556, 0.6028472941431067, 0.7033218431669578, 0.8037963921908089, 0.90427094121466, 1.0]
-                      values: [0.085, 0.085, 0.085, 0.030, 0.030, 0.030, 0.025, 0.025, 0.025, 0.020, 0.020] # mod wrt report.
-                      #(v) internal wall thickness (in wisdem = avg.)
-                      #           0.085   0.085   0.055   0.03   0.03   0.25   0.25   0.25   0.21   0.20
+                      values: [0.140, 0.030, 0.140, 0.030, 0.030, 0.030, 0.030, 0.020, 0.030, 0.020, 0.020] # acciona's: mod wrt report.
                       #(v) acciona's wall thickness (internal in wisdem = avg.)
-                      #           0.085   0.085   0.085   0.03   0.03   0.3   0.25   0.25   0.25   0.20
+                      #           0.085   0.085   0.085   0.03   0.03   0.03   0.25   0.25   0.25   0.20
     
     floating_platform: #(v) TODO: copied from iea15mw-volturnUS (floating_platform and mooring)
         transition_piece_mass: 100.e+3
