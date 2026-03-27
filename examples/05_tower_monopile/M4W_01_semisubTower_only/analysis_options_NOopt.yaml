@@ -1,0 +1,8 @@
+# Generic analysis options where nothing is run
+general: #(v) TODO: change?
+    folder_output: M4W_01_semisubTower_only//outputs
+    fname_output: M4Wturb_NOoptim # iea: refturb_output / m4w: M4Wturb_NOoptim
+
+driver:
+    optimization:
+        flag: False
