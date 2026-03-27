@@ -1,7 +1,7 @@
 # Generic analysis options where nothing is run
 general:
     folder_output: outputs
-    fname_output: M4Wtower_optim
+    fname_output: test
 
 design_variables:
     tower:                          # TODO
@@ -40,16 +40,16 @@ constraints:
             lower_bound: 120.0 # 90.0, 120
             upper_bound: 1000.0 # 500.0, 1000
         taper:
-            flag: True #True TODO
+            flag: False # TODO 1
             lower_bound: 0.4
         slope:
-            flag: True # TODO
+            flag: False # TODO 1
         thickness_slope:
-            flag: True # DONE
+            flag: False # TODO 1
         frequency:
-            flag: False #False
+            flag: False # always for just tower
         frequency_1:
-            flag: True #True TODO
+            flag: False #True TODO 2
             lower_bound: 0.13
             upper_bound: 0.40
     # monopile:                         # TODO
