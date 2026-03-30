@@ -229,3 +229,20 @@ def load_data(fname, prob, prefix_append=None, prefix_remove=None):
         raise Exception(f"Unknown file type, {fname}.  Expected xlsx or csv or npz or pkl")
     
     return transfer_data(mydf, prob, prefix_append=prefix_append, prefix_remove=prefix_remove)
+
+
+#(v) ---------- Vasudev Gupta ----------
+def var_df2dict( df ):
+    """
+    Inputs
+    _____
+    df : pd.DataFrame with columns: variables, type, units, values, description\\
+        such as one created and saved by `wisdem`
+
+    Outputs
+    _____
+    var_dict : dict
+        dictionary with keys as variable names and values as variable values, 
+        extracted from the input dataframe `df`
+    """
+    return dict( zip(df['variables'], df['values']) )
