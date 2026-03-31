@@ -421,34 +421,34 @@ components: #(v) specifications for individual components (blades, tower, nacell
         drivetrain:
             uptilt: 0.10471975511965977 # 6 deg
             distance_tt_hub: 5.614
-            distance_hub_mb: 0.345 #----result of 03_nacelle_optim+below----
-            distance_mb_mb: 5.673
+            distance_hub_mb: 0.647043519577522 #----result of 03_nacelle_optim+below----
+            distance_mb_mb: 5.741596386730307
             overhang: 12.0313 # def: 12.0313 & iea15: 11.35
 
-            gear_ratio: 50.0
-            gearbox_mass_user: 135.5e3
+            gear_ratio: 49.6031746
+            gearbox_mass_user: 99161.5
             gearbox_efficiency: 0.992 # 1.0; D5.1, R2
-            # gearbox_length_user: 1.8
-            # gearbox_radius_user: 2.5
+            gearbox_length_user: 2.42
+            gearbox_radius_user: 2.5
 
-            lss_diameter: [3.215, 1.637]
-            lss_wall_thickness: [0.004, 0.132]
+            lss_diameter: [2.9680997625186594, 4.086996953650849]
+            lss_wall_thickness: [0.08158021958141444, 0.08028119110271353]
             lss_material: steel_drive
 
-            hss_length: 0.153
-            hss_diameter: [0.5,0.636]
-            hss_wall_thickness: [0.048, 0.004]
+            hss_length: 0.5360978819168813
+            hss_diameter: [0.6050059560090356, 1.258251219274412]
+            hss_wall_thickness: [0.13670670952939193, 0.0510636486077866]
             hss_material: steel_drive
 
-            bedplate_flange_width: 1.724
-            bedplate_flange_thickness: 0.028
-            bedplate_web_thickness: 0.029
+            bedplate_flange_width: 1.317444935737794
+            bedplate_flange_thickness: 0.1631062726702499
+            bedplate_web_thickness: 0.11821193062863564
             bedplate_material: steel_drive
             # MB : TODO: add new inputs to main bearings and whole DT
             mb1Type: CRB
             mb2Type: TRB2
-            mb1_e: 3.5 # 0.0 (ULS); 3.5 (perform FLS)
-            mb2_e: 3.5
+            mb1_e: 0.4 # 0.0 (ULS); 0.4 (perform FLS)
+            mb2_e: 0.4
 
             uptower: True
 
