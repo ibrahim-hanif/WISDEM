@@ -186,8 +186,31 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         self.options.declare("n_dlcs")
         self.options.declare("direct_drive", default=True)
         self.options.declare("modeling_options")
+        self.options.declare("openfast_options", default={}) #(v) opt_openfast = self.options["modeling_options"]["OpenFAST"]
 
     def setup(self):
+        #(v) ---- Read own hub loads; if flag True, will overwrite rotorSE loads
+        # - read options
+        opts_openfast = self.options['openfast_options']
+        opts_drivese = self.options['modeling_options']
+        # - sanity check
+        if 'own_hub_loads' in opts_drivese:
+            own_hub_loads = opts_drivese['own_hub_loads']
+        else: own_hub_loads = False
+        # - main retrieval
+        self.flag_own_hub_loads = own_hub_loads and len(opts_openfast)>0
+        # print(f" - own_hub_loads = {self.flag_own_hub_loads}") # DONE debug rmv
+        if self.flag_own_hub_loads:
+            dir_loads = opts_openfast['openfast_dir'] # directory of MS loads
+            loads_dict, _ = load_all_mat_to_dict(dir_loads)
+            # here coz runs only once per model build
+            self.Fx_aero_hub = loads_dict['Fx_max'] # F
+            self.Fy_aero_hub = loads_dict['Fy_max']
+            self.Fz_aero_hub = loads_dict['Fz_max']
+            self.Mx_aero_hub = loads_dict['Mx_max'] # M
+            self.My_aero_hub = loads_dict['My_max']
+            self.Mz_aero_hub = loads_dict['Mz_max']
+        # ----
         n_dlcs = self.options["n_dlcs"]
 
         self.add_discrete_input("upwind", True)
@@ -293,6 +316,16 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         I_blades_hub = I_blades[:3] + I_hub[:3]
         F_hub = inputs["F_aero_hub"]
         M_hub = inputs["M_aero_hub"]
+        #(v) ---- Read own hub loads; if flag True, will overwrite rotorSE loads
+        if self.flag_own_hub_loads:
+            F_hub = np.array(
+                    [self.Fx_aero_hub, self.Fy_aero_hub, self.Fz_aero_hub]
+                ).reshape((3, 1))
+            # print(" - ", F_hub) # DONE debug rmv
+            M_hub = np.array(
+                    [self.Mx_aero_hub, self.My_aero_hub, self.Mz_aero_hub]
+                ).reshape((3, 1))
+        # ----
 
         torq_defl_allow = float(inputs["shaft_deflection_allowable"][0])
         torq_angle_allow = float(inputs["shaft_angle_allowable"][0])
@@ -417,7 +450,7 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         # ------ static load cases ------------
         n_dlcs = self.options["n_dlcs"]
         gy = 0.0
-        gx = -gravity * np.sin(tilt)
+        gx = -gravity * np.sin(tilt) #(v) TODO: shouldn't be +ve? DO * Cup
         gz = -gravity * np.cos(tilt)
         for k in range(n_dlcs):
             # gravity in the X, Y, Z, directions (global)
@@ -1915,7 +1948,7 @@ def solve_bearing_system(M,F, L_h1,L_12,delta, G,EI,k):
 
 def analytical_MBforces_EBbeam(
         Fx,Fy,Fz, Mx,My,Mz, m_carrier,delta,tilt,
-        L_h1,L_12, EI, k
+        L_h1,L_12, EI, k, return_M=False
     ):
     """
     Two-bearing euler-bernoulli beam shaft model for moment reacting MB2\\
@@ -1961,7 +1994,10 @@ def analytical_MBforces_EBbeam(
     F_mb1 = np.stack([F_mb1_ax, F_mb1_y, F_mb1_z, F_mb1_rad])
     F_mb2 = np.stack([F_mb2_ax, F_mb2_y, F_mb2_z, F_mb2_rad])
     
-    return F_mb1, F_mb2
+    if not return_M: return F_mb1, F_mb2
+    else:
+        M_mb2 = np.stack([M_mb2_y, M_mb2_z])
+        return F_mb1, F_mb2, M_mb2
 # ---------------
 
 # ---------------
