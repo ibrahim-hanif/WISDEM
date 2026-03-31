@@ -218,6 +218,10 @@ properties:
                                 maximum: 5.0
                                 default: 1.5
                                 unit: none
+                    own_hub_loads:
+                        type: boolean
+                        default: False
+                        description: if True, _aero_hub (max loads) in openFAST/openfast_dir internally (in Hub_Rotor_LSS_Frame) overwriting those from RotorSE
                     generator:
                         type: object
                         default: {}
@@ -473,7 +477,7 @@ properties:
             openfast_dir:
                 type: string
                 default: "unused"
-                description: input directory, containing MS loads .csv file. Absolute path or relative to modeling input
+                description: input directory, containing hub loads .mat file, in a particular format. Absolute path or relative to modeling input
 
 
     DLC_driver:
