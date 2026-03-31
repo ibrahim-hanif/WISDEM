@@ -397,10 +397,10 @@ components: #(v) specifications for individual components (blades, tower, nacell
         diameter: 7.94
         # ---- user pre-defined masses to override hub optim (within hub.py)
         #      below values from saved csv of 'drivetrain_direct' 15mw example
-        hub_shell_mass_user: 21530.918273952942
-        spinner_mass_user: 3037.7598549971094
-        pitch_system_mass_user: 37993.23906026087 # sum above 3 = 62561
-        hub_system_mass_user: 190e3 # iea15, tab.5-1
+        # hub_shell_mass_user: 21530.918273952942
+        # spinner_mass_user: 3037.7598549971094
+        # pitch_system_mass_user: 37993.23906026087 # sum above 3 = 62561
+        # hub_system_mass_user: 190e3 # iea15, tab.5-1
         # ----
         cone_angle: 0.06981317007977318 # 4 deg
         drag_coefficient: 0.5
