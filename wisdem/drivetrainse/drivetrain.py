@@ -403,7 +403,10 @@ class DrivetrainSE_M4W( om.Group ):
 
         # Hub_Rotor_LSS_Frame:
         self.add_subsystem(
-            "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt_drivese, direct_drive=direct),
+            "lss", ds.Hub_Rotor_LSS_Frame(
+                    n_dlcs=n_dlcs, modeling_options=opt_drivese,
+                    direct_drive=direct, openfast_options=opt_openfast
+                ),
                 promotes=["*"]
             )
         # -connecting = bear(1,2) -to- Hub_Rotor_LSS_Frame (NEW)
