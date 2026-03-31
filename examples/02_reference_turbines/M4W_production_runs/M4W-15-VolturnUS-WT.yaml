@@ -455,8 +455,8 @@ components: #(v) specifications for individual components (blades, tower, nacell
             converter_mass_user: 5625 #[kg] IND Bidane's email
 
         generator: # simple generator (cf. indar D5.4)
-            generator_mass_user: 34800
-            generator_length: 1.124
+            generator_mass_user: 34800.0
+            generator_length: 1.550736
             generator_radius_user: 1.4
             generator_rpm_efficiency_user:
                 grid: [0.0, 1.0]
