@@ -418,33 +418,33 @@ components: #(v) specifications for individual components (blades, tower, nacell
         hub_material: cast_iron
         spinner_material: glass_uni
     nacelle: # Made4Wind drivetrain here ----v----
-        drivetrain: # DONE: latest update
+        drivetrain:
             uptilt: 0.10471975511965977 # 6 deg
             distance_tt_hub: 5.614
-            distance_hub_mb: 0.647043519577522 #----result of 03_nacelle_optim+below----
-            distance_mb_mb: 5.741596386730307
+            distance_hub_mb: 0.5575931674058667 #----result of 03_nacelle_optim+below----
+            distance_mb_mb: 5.011389495320043
             overhang: 12.0313 # def: 12.0313 & iea15: 11.35
 
             gear_ratio: 49.6031746
-            gearbox_mass_user: 99161.5
+            gearbox_mass_user: 138728.6451
             gearbox_efficiency: 0.992 # 1.0; D5.1, R2
-            gearbox_length_user: 2.42
-            gearbox_radius_user: 2.5
+            gearbox_length_user: 2.7636198183
+            gearbox_radius_user: 2.312024
 
-            lss_diameter: [2.9680997625186594, 4.086996953650849]
-            lss_wall_thickness: [0.08158021958141444, 0.08028119110271353]
+            lss_diameter: [3.508486371738839, 3.3501710862921876]
+            lss_wall_thickness: [0.07525245291695476, 0.11632168455884717]
             lss_material: steel_drive
 
-            hss_length: 0.5360978819168813
-            hss_diameter: [0.6050059560090356, 1.258251219274412]
-            hss_wall_thickness: [0.13670670952939193, 0.0510636486077866]
+            hss_length: 1.1616408996473195
+            hss_diameter: [0.5161993076677188, 0.5000000000000002]
+            hss_wall_thickness: [0.10350654734272292, 0.004597425682038176]
             hss_material: steel_drive
 
-            bedplate_flange_width: 1.317444935737794
-            bedplate_flange_thickness: 0.1631062726702499
-            bedplate_web_thickness: 0.11821193062863564
+            bedplate_flange_width: 2.415372327102927
+            bedplate_flange_thickness: 0.0897599610835592
+            bedplate_web_thickness: 0.06265416462756287
             bedplate_material: steel_drive
-            # MB : TODO: add new inputs to main bearings and whole DT
+            # MB : DONE: add new inputs to main bearings and whole DT
             mb1Type: CRB
             mb2Type: TRB2
             mb1_e: 0.4 # 0.0 (ULS); 0.4 (perform FLS)
