@@ -42,7 +42,8 @@ def parse_tower_data_from_yaml( yaml_file ):
 
     return z, d, t_mm
 
-def plot_tower_geo_comparison( m4w_yaml, iea15_yaml , clrs=clrs_m4w):
+def plot_tower_geo_comparison( m4w_yaml, iea15_yaml,
+                              loc_save_img=None, clrs=clrs_m4w ):
     # ========================
     # Load YAMLs
     # ========================
@@ -101,9 +102,10 @@ def plot_tower_geo_comparison( m4w_yaml, iea15_yaml , clrs=clrs_m4w):
     axs[1].set_xlabel('Wall Thickness [mm]')
     axs[1].grid(True)
 
-    axs[0].legend(loc='upper center')
+    axs[0].legend(loc='upper right')
     
     plt.tight_layout()
+    if loc_save_img: plt.savefig(loc_save_img)
     plt.show()
 # ========================
 
@@ -111,12 +113,12 @@ def plot_tower_geo_comparison( m4w_yaml, iea15_yaml , clrs=clrs_m4w):
 # Run & plot
 if __name__ == "__main__":
     mydir = os.path.dirname(os.path.realpath(__file__))
-    
+    dir_m4w_run = mydir + os.sep + "M4W_01_semisubTower_only"
     # Geometry YAML files
     # 1. base IEA 15-MW
-    iea_yaml = mydir +os.sep+ "iea15mw_tower_semisub.yaml"
+    iea_yaml = dir_m4w_run +os.sep+ "iea15mw_tower_semisub_report.yaml"
     # 2. Made4Wind
-    m4w_yaml = mydir +os.sep+ "outputs" + os.sep+ "test.yaml"
+    m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_10m.yaml"
     plot_tower_geo_comparison( m4w_yaml, iea_yaml )
 # =======================================================================
 
@@ -126,7 +128,7 @@ if __name__ == "__main__":
 # ======================================================
 # 1. READ FUNCTION
 # ======================================================
-def read_wisdem_loading(yaml_file):
+def parse_Loading_modelYAML2dict(yaml_file):
     data = sch.load_yaml( yaml_file )
 
     loading = data['WISDEM']['Loading']
@@ -157,7 +159,8 @@ def read_wisdem_loading(yaml_file):
 # ======================================================
 # 2. PLOTTING FUNCTION
 # ======================================================
-def plot_loads_TT_comparison(m4w, iea, clrs=clrs_m4w):
+def plot_loads_TT_comparison(m4w, iea,
+                             loc_save_img=None, clrs=clrs_m4w):
 
     labels = ['IEA 15MW', 'Made4Wind']
     colors = [ clrs['Light_Green'], clrs['Aqua'] ]
@@ -190,7 +193,7 @@ def plot_loads_TT_comparison(m4w, iea, clrs=clrs_m4w):
 
     ax.set_xticks(x)
     ax.set_xticklabels(categories)
-    ax.set_ylabel( 'Mass [1e3 t]' )
+    ax.set_ylabel( 'Mass '+r'$[10^3 ~t]$' )
     ax.set_title('RNA Mass Comparison')
     # ax.legend()
     ax.grid(True)
@@ -250,7 +253,7 @@ def plot_loads_TT_comparison(m4w, iea, clrs=clrs_m4w):
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels_I)
-    ax.set_ylabel('MoI [1e6 kg·m²]')
+    ax.set_ylabel('MoI '+r'$[10^6 ~kg \cdot m^2]$')
     ax.set_title('Full Inertia Tensor Comparison')
     ax.legend()
     ax.grid(True)
@@ -272,7 +275,7 @@ def plot_loads_TT_comparison(m4w, iea, clrs=clrs_m4w):
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels_F)
-    ax.set_ylabel('Force [MN]')
+    ax.set_ylabel('Force '+r'$[MN]$')
     ax.set_title('Forces Comparison')
     ax.grid(True)
 
@@ -293,12 +296,13 @@ def plot_loads_TT_comparison(m4w, iea, clrs=clrs_m4w):
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels_M)
-    ax.set_ylabel('Moment [MN·m]')
+    ax.set_ylabel('Moment '+r'$[MNm]$')
     ax.set_title('Moments Comparison')
     ax.grid(True)
 
 
     plt.tight_layout()
+    if loc_save_img: plt.savefig(loc_save_img)
     plt.show()
 
 #%%
@@ -306,13 +310,18 @@ def plot_loads_TT_comparison(m4w, iea, clrs=clrs_m4w):
 # 3. MAIN
 # ======================================================
 if __name__ == "__main__":
-
-    file_m4w = "modeling_options_m4w_monopile_only.yaml"
-    file_iea = "modeling_options_iea15_monopile_only_wisdemV3.yaml"
-
-    m4w = read_wisdem_loading(file_m4w)
-    iea = read_wisdem_loading(file_iea)
-
+    dir_m4w_runs_main = mydir +os.sep+ "M4W_production_runs"
+    # model yaml files
+    file_m4w = dir_m4w_runs_main +os.sep+ "modeling_options_m4w_monopile_only.yaml"
+    file_iea = dir_m4w_runs_main +os.sep+ "modeling_options_iea15_monopile_only_wisdemV3.yaml"
+    # parse
+    m4w = parse_Loading_modelYAML2dict(file_m4w)
+    iea = parse_Loading_modelYAML2dict(file_iea)
+    # loc_save_img
+    loc_save_img = dir_m4w_runs_main +os.sep+ "outputs" +os.sep+ (
+            "compr_RNAprops_iea&m4w.pdf"
+        )
+    # plot
     plot_loads_TT_comparison(m4w, iea)
 
 # %%
