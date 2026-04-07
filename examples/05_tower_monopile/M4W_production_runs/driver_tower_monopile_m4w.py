@@ -27,8 +27,12 @@ from wisdem.commonse.utilities import load_all_mat_to_dict
 wt_m4w = True # turbine to analyse: True = m4w / False = iea15mw
 flag_plot = True
 verbose = False
+
+flag_opt_GBO = True
+flag_scaling_show_browser = False
+
 flag_override_hub_loads = False # TODO: not working; make a flag in model_opts which removes connections
-flag_opt = False
+flag_override_tower_init = False
 
 #%%
 ## File management
@@ -37,24 +41,22 @@ dir_examples = os.path.dirname( os.path.dirname(mydir) )
 dir_02_ref_turbines = dir_examples +os.sep+ "02_reference_turbines" # get path to 02_reference_turbines
 dir_02_rwt_m4w = dir_02_ref_turbines +os.sep+"M4W_production_runs"
 
-# ---- wind turbine geometry
-fname_wt_iea15mw = dir_02_ref_turbines + os.sep + "IEA-15-240-RWT.yaml"
-fname_wt_m4w = dir_02_rwt_m4w + os.sep + "M4W-15-ieaMonopile-WT.yaml"
-if wt_m4w:
-      fname_wt_input = fname_wt_m4w
-else:
-     fname_wt_input = fname_wt_iea15mw
+loc_scaling_report = os.path.join(mydir, 'outputs', 'tower_scaling_report.html')
+
+# ---- wind turbine geometry (same init for both iea and m4w)
+fname_wt_input = mydir + os.sep + "iea15mw_tower_semisub.yaml"
+# fname_wt_input = mydir + os.sep + "outputs/test.yaml"
 
 # ---- modelling options
 fname_model_opts_m4w = mydir + os.sep + "modeling_options_m4w_monopile_only.yaml"
 fname_model_opts_iea = mydir + os.sep + "modeling_options_iea15_monopile_only_wisdemV3.yaml"
 if wt_m4w:
-      fname_modelling = fname_model_opts_m4w
+      fname_modeling_options = fname_model_opts_m4w
 else:
-     fname_modelling = fname_model_opts_iea
+     fname_modeling_options = fname_model_opts_iea
 
 # ---- analysis/optimization options
-if flag_opt:
+if flag_opt_GBO:
      fname_analysis_options = mydir + os.sep + "analysis_options.yaml"
 else:
      fname_analysis_options = mydir + os.sep + "analysis_options_NOopt.yaml"
@@ -72,6 +74,13 @@ if flag_override_hub_loads:
       overrides = {
            'drivese.F_aero_hub': F_aero_hub, 'drivese.M_aero_hub': M_aero_hub
       }
+
+elif flag_override_tower_init:
+     overrides = {
+          'towerse.tower_outer_diameter': np.ones((1,20))*15,
+          'towerse.tower_layer_thickness': np.ones((1,20))*100e-3
+          }
+
 else: overrides = None
 
 #%%
@@ -90,57 +99,32 @@ wt_opt, analysis_options, opt_options = run_wisdem(
 # # _____ Post-processing _____
 
 # %%
-doMBfls = analysis_options["flags"]["mb_fls"]
-# Print the results
-print("F_aero_hub:")
-print(" ", wt_opt["drivese.F_aero_hub"]/1e6, " MN" )
-print("M_aero_hub:")
-print(" ", wt_opt["drivese.M_aero_hub"]/1e6, " MNm \n" )
-
 # ---- 1P and 3P freq ranges
-rpm_min = wt_opt['drivese.minimum_rpm'][0]
-rpm_rated = wt_opt['drivese.rated_rpm'][0]
+rpm_min = 5.0 # wt_opt['drivese.minimum_rpm'][0]
+rpm_rated = 7.56 # wt_opt['drivese.rated_rpm'][0]
 freq_range_1P = np.array( [rpm_min, rpm_rated] )/60
 freq_range_3P = 3* freq_range_1P
 print("1P (blade period) freq ranges:")
 print(" ", freq_range_1P, " Hz" )
 print("3P (blade passing) freq ranges:")
-print(" ", freq_range_3P, " Hz \n" )
+print(" ", freq_range_3P, " Hz" )
 
-print("LSS desvars:")
-print(" ", wt_opt["drivese.L_h1"], wt_opt["drivese.L_12"], wt_opt["drivese.lss_diameter"], wt_opt["drivese.lss_wall_thickness"] )
-# TODO: for flange mass, dohub (cf. var `flange_t2shell_t`)
-print("HSS desvars:")
-print(" ", wt_opt["drivese.L_hss"], wt_opt["drivese.hss_diameter"], wt_opt["drivese.hss_wall_thickness"] )
-print("Bedplate desvars (w_f, t_f, t_w):")
-print(" ", wt_opt["drivese.bedplate_flange_width"], wt_opt["drivese.bedplate_flange_thickness"], wt_opt["drivese.bedplate_web_thickness"] )
-print(" ")
-if doMBfls:
-    print("constr_L10_mb(1,2):", wt_opt["drivese.constr_L10_mb1"], wt_opt["drivese.constr_L10_mb2"] )
-print("--- constr_ max ---")
-print("- lss: ",
-      np.max(wt_opt["drivese.constr_lss_vonmises"])
-      )
-print("- hss: ",
-      np.max(wt_opt["drivese.constr_hss_vonmises"])
-      )
-print("- bedplate: ",
-      np.max(wt_opt["drivese.constr_bedplate_vonmises"])
-      )
-
-print("\nTower-top / drivetrain bedplate base loads:")
-print(" - base_F: ", wt_opt['drivese.base_F'])
-print(" - base_M: ", wt_opt['drivese.base_M'])
 #
-print("\n--- obj: masses ---")
-print(f"MSA mass: {wt_opt["drivese.msa_mass"]}")
-print(f"nacelle mass: {wt_opt["drivese.nacelle_mass"]}")
-print(f"nacelle cm: {wt_opt["drivese.nacelle_cm"]}")
-
 print("\n--- RNA properties ---")
-print(f"RNA mass: {wt_opt["drivese.rna_mass"]}")
-print(f"RNA cm: {wt_opt["drivese.rna_cm"]}")
+print(f"RNA mass: {wt_opt["towerse.rna_mass"]}") # drivese.rna_mass
+print(f"RNA cm: {wt_opt["towerse.rna_cg"]}") # drivese.rna_cm
+print(f"RNA MoI: {wt_opt["towerse.rna_I"]}") # drivese.rna_I_TT
+#
+print("\nTower-top / drivetrain bedplate base loads:")
+print(" - base_F: ", wt_opt['towerse.tower.rna_F']) # drivese.base_F
+print(" - base_M: ", wt_opt['towerse.tower.rna_M']) # drivese.base_M
 # -----------------------------------------------------------------------
+
+#%%
+# Driver scaling report 
+wt_opt.driver.scaling_report(
+    outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
+);
 
 #%% plotting options
 # main colors
