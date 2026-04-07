@@ -28,7 +28,7 @@ wt_m4w = True # turbine to analyse: True = m4w / False = iea15mw
 flag_plot = True
 verbose = False
 
-flag_opt_GBO = True
+flag_opt_GBO = False
 flag_scaling_show_browser = False
 
 flag_override_hub_loads = False # TODO: not working; make a flag in model_opts which removes connections
@@ -45,8 +45,9 @@ dir_02_rwt_m4w = dir_02_ref_turbines +os.sep+"M4W_production_runs"
 dir_m4w_run = mydir + os.sep + "M4W_01_semisubTower_only"
 
 # ---- wind turbine geometry (same init for both iea and m4w)
-fname_wt_input = dir_m4w_run +os.sep + "iea15mw_tower_semisub.yaml"
-# fname_wt_input = mydir + os.sep + "outputs/test.yaml"
+# fname_wt_input = dir_m4w_run +os.sep + "iea15mw_tower_semisub_report.yaml"
+# fname_wt_input = dir_m4w_run +os.sep + "iea15mw_tower_semisub_acciona.yaml"
+fname_wt_input = dir_m4w_run + os.sep + "outputs//test_10m.yaml"
 
 # ---- modelling options
 dir_m4w_runs_main = mydir +os.sep+ "M4W_production_runs"
@@ -114,6 +115,9 @@ print("1P (blade period) freq ranges:")
 print(" ", freq_range_1P, " Hz" )
 print("3P (blade passing) freq ranges:")
 print(" ", freq_range_3P, " Hz" )
+freq_tower = wt_opt["towerse.tower.structural_frequencies"]
+print("Tower fore-aft/side-side freq range:")
+print(" ", freq_tower[0:2], " Hz" )
 
 #
 print("\n--- RNA properties ---")
@@ -124,13 +128,18 @@ print(f"RNA MoI: {wt_opt["towerse.rna_I"]}") # drivese.rna_I_TT
 print("\nTower-top / drivetrain bedplate base loads:")
 print(" - base_F: ", wt_opt['towerse.tower.rna_F']) # drivese.base_F
 print(" - base_M: ", wt_opt['towerse.tower.rna_M']) # drivese.base_M
+#
+print("\n Tower mass: ", wt_opt['towerse.tower_mass'])
 # -----------------------------------------------------------------------
 
 #%%
 # Driver scaling report 
-wt_opt.driver.scaling_report(
-    outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
-);
+try:
+    wt_opt.driver.scaling_report(
+        outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
+    )
+except Exception as e:
+    print("Error giving scaling report (maybe coz of analysis, not optim): ", e)
 
 #%% plotting options
 # main colors
@@ -159,6 +168,7 @@ def get_tower_utilizations( wt_opt ):
      constr_stress = wt_opt["towerse.post.constr_stress"]
      constr_buckle_GL = wt_opt["towerse.post.constr_global_buckling"]
      constr_buckle_Sh = wt_opt["towerse.post.constr_shell_buckling"]
+     tower_mass = wt_opt["towerse.tower_mass"]
      # return all as dict
      return {
            'zs': zs, 'ds': ds, 'ts': ts, 'mass': mass, 'cg': cg,
@@ -166,7 +176,8 @@ def get_tower_utilizations( wt_opt ):
            'wind': wind, 'freq': freq, 'modes_FA': modes_FA, 'modes_SS': modes_SS,
            'defl_top': defl_top, 'F_tower_base': F_tower_base, 'M_tower_base': M_tower_base,
            'constr_stress': constr_stress, 'constr_buckle_GL': constr_buckle_GL,
-           'constr_buckle_Sh': constr_buckle_Sh
+           'constr_buckle_Sh': constr_buckle_Sh,
+           'tower_mass': tower_mass
       }
      
 
@@ -189,6 +200,7 @@ def print_tower_utilizations( dict_tower_utils ):
       constr_stress = dict_tower_utils['constr_stress']
       constr_buckle_GL = dict_tower_utils['constr_buckle_GL']
       constr_buckle_Sh = dict_tower_utils['constr_buckle_Sh']
+      tower_mass = dict_tower_utils['tower_mass']
 
       print("zs =", zs)
       print("ds =", ds)
@@ -208,8 +220,11 @@ def print_tower_utilizations( dict_tower_utils ):
       print("stress =", constr_stress)
       print("GL buckling =", constr_buckle_GL)
       print("Shell buckling =", constr_buckle_Sh)
+      print("\n----------\n")
+      print("Tower mass =", tower_mass)
 
 #%%
+# plot tower utilization
 z = 0.5 * (wt_opt["towerse.z_full"][:-1] + wt_opt["towerse.z_full"][1:])
 dict_tower_utils = get_tower_utilizations(wt_opt)
 if verbose: print_tower_utilizations( dict_tower_utils)
@@ -240,15 +255,21 @@ if flag_plot:
 #%%[markdown]
 # ### Tower geometry
 #%%
-from plot_tower_geometry import plot_tower_geometry
+from plot_tower_data import plot_tower_geo_comparison
 #%%
 # define yamls and run plot
 # Geometry YAML files
 # 1. base IEA 15-MW
-iea_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub.yaml"
+iea_report_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub_report.yaml"
+acciona_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub_acciona.yaml"
 # 2. Made4Wind
 m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_10m.yaml"
-plot_tower_geometry( m4w_yaml, iea_yaml )
+# loc save img
+loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
+            "geometry_tower_noFreqConstr_m4w&ieaReport.png"
+        )
+# plot
+plot_tower_geo_comparison( m4w_yaml, iea_report_yaml )
 
 #%%[markdown]
 # ### Monopile utilizations
