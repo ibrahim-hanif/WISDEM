@@ -1,0 +1,162 @@
+name: IEA 15MW Offshore Reference Turbine, with taped chord tip design, with IEA tower+monopile, with M4W drivetrain design #(v)[link](https://ieawindsystems.github.io/windIO/main/source/how_to_build_a_turbine_model.html)
+assembly: #(v) 9 entries to describe the WT config and its components
+    turbine_class: I
+    turbulence_class: C
+    drivetrain: geared
+    rotor_orientation: Upwind
+    number_of_blades: 3
+    hub_height: 150.0
+    rotor_diameter: 240.0 # def: 241.35064632 & iea15: 240.0
+    rated_power: 15.e+6
+    lifetime: 25.0
+components: #(v) specifications for individual components (blades, tower, nacelle, etc)
+    tower: # copy of results from 01_semisubTower_only
+        outer_shape_bem:
+            reference_axis:
+                x:
+                    grid: [0.0, 0.10038997644696708, 0.20077995289393416, 0.3011699293409012, 0.4015599057878683, 0.5019498822348353, 0.6023398586818024, 0.7027298351287694, 0.8031198115757365, 0.9035097880227035, 1.0]
+                    values: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                y:
+                    grid: [0.0, 0.10038997644696708, 0.20077995289393416, 0.3011699293409012, 0.4015599057878683, 0.5019498822348353, 0.6023398586818024, 0.7027298351287694, 0.8031198115757365, 0.9035097880227035, 1.0]
+                    values: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                z:
+                    grid: [0.0, 0.10038997644696708, 0.20077995289393416, 0.3011699293409012, 0.4015599057878683, 0.5019498822348353, 0.6023398586818024, 0.7027298351287694, 0.8031198115757365, 0.9035097880227035, 1.0]
+                    values: [15.0, 28.0, 41.0, 54.0, 67.0, 80.0, 93.0, 106.0, 119.0, 132.0, 144.495]
+            outer_diameter:
+                grid: [0.0, 0.10038997644696708, 0.20077995289393416, 0.3011699293409012, 0.4015599057878683, 0.5019498822348353, 0.6023398586818024, 0.7027298351287694, 0.8031198115757365, 0.9035097880227035, 1.0]
+                values: [10.0, 9.999999999999998, 10.0, 10.0, 9.775355825799263, 9.115882800178749, 8.4007230795365, 7.647695903023772, 6.791802851949308, 6.5, 6.5]
+            drag_coefficient:
+                grid: [0.0, 1.0]
+                values: [0.5, 0.5]
+        internal_structure_2d_fem:
+            outfitting_factor: 1.07
+            reference_axis:
+                x:
+                    grid: [0.0, 0.10047454902385111, 0.20094909804770222, 0.30142364707155334, 0.40189819609540445, 0.5023727451192556, 0.6028472941431067, 0.7033218431669578, 0.8037963921908089, 0.90427094121466, 1.0]
+                    values: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                y:
+                    grid: [0.0, 0.10047454902385111, 0.20094909804770222, 0.30142364707155334, 0.40189819609540445, 0.5023727451192556, 0.6028472941431067, 0.7033218431669578, 0.8037963921908089, 0.90427094121466, 1.0]
+                    values: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                z:
+                    grid: [0.0, 0.10047454902385111, 0.20094909804770222, 0.30142364707155334, 0.40189819609540445, 0.5023727451192556, 0.6028472941431067, 0.7033218431669578, 0.8037963921908089, 0.90427094121466, 1.0]
+                    values: [15.0, 28.0, 41.0, 54.0, 67.0, 80.0, 93.0, 106.0, 119.0, 132.0, 144.495]
+            layers:
+               -  name: tower_wall
+                  material: steel
+                  thickness:
+                      grid: [0.0, 0.10038997644696708, 0.20077995289393416, 0.3011699293409012, 0.4015599057878683, 0.5019498822348353, 0.6023398586818024, 0.7027298351287694, 0.8031198115757365, 0.9035097880227035, 1.0]
+                      values: [0.08088377124640599, 0.05316095821292967, 0.06837902476448808, 0.04081141300789835, 0.05694836816651923, 0.03419371279439272, 0.056657862077795745, 0.033915385325971076, 0.05591822503089719, 0.03086275658611215, 0.03801305065203544]
+        
+    monopile: # from iea monopile report
+        transition_piece_mass: 100000.0
+        outer_shape_bem:
+            reference_axis: &id004
+                x:
+                    grid: [0.0, 0.50000000000000000, 0.55555555555555558, 0.61111111111111116, 0.66666666666666663, 0.72222222222222221, 0.77777777777777779, 0.83333333333333337, 0.88888888888888884, 0.94444444444444442, 1.00000000000000000]
+                    values: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                y:
+                    grid: [0.0, 0.50000000000000000, 0.55555555555555558, 0.61111111111111116, 0.66666666666666663, 0.72222222222222221, 0.77777777777777779, 0.83333333333333337, 0.88888888888888884, 0.94444444444444442, 1.00000000000000000]
+                    values: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                z:
+                    grid: [0.0, 0.50000000000000000, 0.55555555555555558, 0.61111111111111116, 0.66666666666666663, 0.72222222222222221, 0.77777777777777779, 0.83333333333333337, 0.88888888888888884, 0.94444444444444442, 1.00000000000000000]
+                    values: [-75.000, -30.000, -25.000, -20.000, -15.000, -10.000, -5.000, 0.000, 5.000, 10.000, 15.000]
+            outer_diameter:
+                grid: [0.0, 0.50000000000000000, 0.55555555555555558, 0.61111111111111116, 0.66666666666666663, 0.72222222222222221, 0.77777777777777779, 0.83333333333333337, 0.88888888888888884, 0.94444444444444442, 1.00000000000000000]
+                values: [10.000, 10.000, 10.000, 10.000, 10.000, 10.000, 10.000, 10.000, 10.000, 10.000, 10.000]
+            drag_coefficient:
+                grid: [0.0, 1.0]
+                values: [0.5, 0.5]
+        internal_structure_2d_fem:
+            outfitting_factor: 1.07
+            reference_axis: *id004
+            layers:
+               -  name: monopile_wall
+                  material: steel
+                  thickness:
+                      grid: [0.0, 0.50000000000000000, 0.55555555555555558, 0.61111111111111116, 0.66666666666666663, 0.72222222222222221, 0.77777777777777779, 0.83333333333333337, 0.88888888888888884, 0.94444444444444442, 1.00000000000000000]
+                      values: [0.055341, 0.055341, 0.055341, 0.053449, 0.051509, 0.049527, 0.047517, 0.045517, 0.043527, 0.042242, 0.041058]
+        transition_piece_cost: 0.0
+        gravity_foundation_mass: 0.0
+
+materials: #(v) Database of matertial used in the turbine model. (TODO: iron-MS? + add GB mats <- cf. bill_of_mats.xls, sharepoint/WP5/Mats )
+   -  name: steel
+      description: Steel of the tower and monopile ASTM A572 Grade 50
+      source: http://www.matweb.com/search/DataSheet.aspx?MatGUID=9ced5dc901c54bd1aef19403d0385d7f
+      orth: 0
+      rho: 7800
+      alpha: 0.0
+      E: 200.e+009
+      nu: 0.3
+      G: 79.3e+009
+      GIc: 0  #Place holder, currently not used
+      GIIc: 0  #Place holder, currently not used
+      alp0: 0  #Place holder, currently not used
+      Xt: 450.e+006
+      Xc: 450.e+006
+      S: 0
+      Xy: 345.e+6
+      m: 3
+      A: 3.5534648443719767e10 #DOI 10.1016/j.proeng.2013.12.061 eqn 5
+      unit_cost: 0.7
+
+environment: #(v) TODO: air=utsira, ocean=default
+    air_density: 1.225
+    air_dyn_viscosity: 1.81e-5
+    weib_shape_parameter: 1.97
+    air_speed_sound: 340.
+    shear_exp: 0.08
+    water_density: 1025.0 # ---- ocean condns unchanged
+    water_dyn_viscosity: 1.3351e-3
+    soil_shear_modulus: 140.e+6
+    soil_poisson: 0.4 # ----
+    water_depth: 30.0
+    significant_wave_height: 1.1 #4.52 # ---- @ max wind speed
+    significant_wave_period: 7.203 #9.45 # ----
+    
+# bos:
+#     plant_turbine_spacing: 7
+#     plant_row_spacing: 7
+#     commissioning_cost_kW: 44.0
+#     decommissioning_cost_kW: 58.0
+#     distance_to_substation: 1.0
+#     distance_to_interconnection: 8.5
+#     interconnect_voltage: 130.
+#     distance_to_site: 115.
+#     distance_to_landfall: 50.
+#     port_cost_per_month: 2e6
+#     boem_review_cost: 0.0
+#     construction_insurance: 44.0
+#     construction_financing: 183.0
+#     contingency: 316.0
+#     site_auction_price: 100e6
+#     site_assessment_cost: 50e6
+#     construction_plan_cost: 2.5e5
+#     installation_plan_cost: 1e6
+costs: # TODO
+    # wake_loss_factor: 0.15
+    # fixed_charge_rate: 0.056
+    # bos_per_kW: 4053.
+    # opex_per_kW: 137.
+    # turbine_number: 40.
+    labor_rate: 58.8
+    painting_rate: 30.0
+    # blade_mass_cost_coeff: 14.6
+    # hub_mass_cost_coeff: 3.9
+    # pitch_system_mass_cost_coeff: 22.1
+    # spinner_mass_cost_coeff: 11.1
+    # lss_mass_cost_coeff: 11.9
+    # bearing_mass_cost_coeff: 4.5
+    # gearbox_mass_cost_coeff: 12.9
+    # hss_mass_cost_coeff: 6.8
+    # generator_mass_cost_coeff: 12.4
+    # bedplate_mass_cost_coeff: 2.9
+    # yaw_mass_cost_coeff: 8.3
+    # converter_mass_cost_coeff: 18.8
+    # transformer_mass_cost_coeff: 18.8
+    # hvac_mass_cost_coeff: 124.0
+    # cover_mass_cost_coeff: 5.7
+    # elec_connec_machine_rating_cost_coeff: 41.85
+    # platforms_mass_cost_coeff: 17.1
+    # tower_mass_cost_coeff: 2.9
+    # controls_machine_rating_cost_coeff: 21.15
+    # crane_cost: 12.e+3
