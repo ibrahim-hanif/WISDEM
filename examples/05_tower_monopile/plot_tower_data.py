@@ -9,13 +9,13 @@ from my_util_tools.util_funcs import loc_clr_scheme_m4w, read_color_scheme
 clrs_m4w = read_color_scheme( loc_clr_scheme_m4w )
 
 #%%
-def parse_tower_data_from_yaml( yaml_file ):
+def parse_bowt_data_from_yaml( yaml_file, towerORmonopile='tower' ):
     # ========================
     # Load YAML
     # ========================
     data = sch.load_yaml( yaml_file )
 
-    tower = data['components']['tower']
+    tower = data['components'][towerORmonopile]
 
     # ========================
     # Extract data
@@ -42,14 +42,36 @@ def parse_tower_data_from_yaml( yaml_file ):
 
     return z, d, t_mm
 
-def plot_tower_geo_comparison( m4w_yaml, iea15_yaml,
+def plot_tower_geo_comparison( m4w_yaml, iea15_yaml, only_tower=True,
                               loc_save_img=None, clrs=clrs_m4w ):
     # ========================
     # Load YAMLs
     # ========================
-    # 1. Made4Wind
-    z_m4w, d_m4w, t_m4w = parse_tower_data_from_yaml( m4w_yaml )
-    z_iea, d_iea, t_iea = parse_tower_data_from_yaml( iea15_yaml )
+    # 1. tower
+    z_m4w, d_m4w, t_m4w = parse_bowt_data_from_yaml( m4w_yaml )
+    z_iea, d_iea, t_iea = parse_bowt_data_from_yaml( iea15_yaml )
+    # ---- Reference lines ---- 
+    waterline = 0.0 # always?
+    transition = z_iea[0] # 15.0
+    # 2. monopile
+    if not only_tower:
+        z_m4w_mp, d_m4w_mp, t_m4w_mp = parse_bowt_data_from_yaml( m4w_yaml, towerORmonopile='monopile' )
+        z_iea_mp, d_iea_mp, t_iea_mp = parse_bowt_data_from_yaml( iea15_yaml, towerORmonopile='monopile' )
+        # ---- Reference lines ---- 
+        mudline = z_iea_mp[1] # -30.0
+
+    # ========================
+    # stack d and t for tower+monopile
+    # ========================
+    if not only_tower:
+        # 1. M4W
+        z_m4w = np.hstack( (z_m4w_mp, z_m4w) )
+        d_m4w = np.hstack( (d_m4w_mp, d_m4w) )
+        t_m4w = np.hstack( (t_m4w_mp, t_m4w) )
+        # 2. IEA
+        z_iea = np.hstack( (z_iea_mp, z_iea) )
+        d_iea = np.hstack( (d_iea_mp, d_iea) )
+        t_iea = np.hstack( (t_iea_mp, t_iea) )
 
     # ========================
     # Update plot settings
@@ -66,22 +88,21 @@ def plot_tower_geo_comparison( m4w_yaml, iea15_yaml,
     # ========================
     # Plot
     # ========================
-    fig, axs = plt.subplots(1, 2, figsize=(10, 6), sharey=True)
-
-    # ---- Reference lines ---- 
-    waterline = 0.0
-    mudline = -30.0
-    transition = 15.0
+    if only_tower: figsize = (10,6)
+    else: figsize = (10,10)
+    fig, axs = plt.subplots(1, 2, figsize=figsize, sharey=True)
 
     for ax in axs:
         ax.axhline(transition, linestyle='--',color=clrs['Dark_Green'])
-        # ax.axhline(waterline, linestyle='--',color=clrs['Dark_Blue'])
-        # ax.axhline(mudline, linestyle='--',color=clrs['Dark_Red'])
+        if not only_tower:
+            ax.axhline(waterline, linestyle='--',color=clrs['Dark_Blue'])
+            ax.axhline(mudline, linestyle='--',color=clrs['Dark_Red'])
 
     # Labels only once (left plot)
     axs[0].text(d_iea.min(), transition + 2, 'Tower transition')
-    # axs[0].text(d_iea.min(), waterline + 2, 'Water line')
-    # axs[0].text(d_iea.min(), mudline + 2, 'Mud line')
+    if not only_tower:
+        axs[0].text(d_iea.min(), waterline + 2, 'Water line')
+        axs[0].text(d_iea.min(), mudline + 2, 'Mud line')
 
     # ---- Outer Diameter ----
     axs[0].plot(d_iea, z_iea,
