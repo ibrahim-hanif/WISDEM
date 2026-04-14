@@ -12,7 +12,8 @@ import numpy as np
 import openmdao.api as om
 import matplotlib.pyplot as plt
 # import scipy.io as sio # --- not used in here, but within imports
-# import pickle
+import csv
+import pandas as pd
 
 # %%
 # import needed `WISDEM` modules
@@ -26,9 +27,29 @@ import matplotlib.pyplot as plt
 # import wisdem.drivetrainse.drive_components as dc
 
 import wisdem.drivetrainse.drive_structure as ds
+import wisdem.drivetrainse.drive_components as dc
 
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, pdf_norm_int_using_cdf, bin_counting_of_load, compute_LRD, compute_LRD_matrix_vectorized
-# from wisdem.commonse.fileIO import save_data
+from wisdem.commonse.fileIO import var_df2dict
+import utilities_drivetrain as utilsDT
+
+#%%
+# paths / locations
+results_dir = "00_results"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+results_path = os.path.join(script_dir, results_dir)
+loc_save_data = os.path.join(results_path, "00")
+
+# 02 results
+results_02_dir = "02_results"
+results_02_path = os.path.join(script_dir, results_02_dir)
+loc_saved_02_data = os.path.join(results_02_path, "02")
+
+#%%
+# load and read from saved csv file
+flag_load_from_data = True
+
+if flag_load_from_data: df_02results = pd.read_csv( loc_saved_02_data+".csv")
 
 #%% Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -36,42 +57,174 @@ load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 
-dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
+dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
+loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
+loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_new.mat")
+loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
 if part_loads: # define paths
-    loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
 
+    F_uls = np.array( [S_all['Fx_max'], S_all['Fy_max'], S_all['Fz_max']] ).reshape((3, 1))
+    M_uls = np.array( [S_all['Mx_max'], S_all['My_max'], S_all['Mz_max']] ).reshape((3, 1))
+
 else: # define paths
-    loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
-    loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
     if load_fls_loads: # load from paths
         Snew, keys_new = mainshaft_loads_from_mat_to_dict(
             loc_FLS_loads_mat_file, loc_ULS_loads_mat_file)
-#%% segment loads for testing
-Fx, Fy, Fz = S_all['Fx'][:3,:2], S_all['Fy'][:3,:2], S_all['Fz'][:3,:2]
-Mx, My, Mz = S_all['Mx'][:3,:2], S_all['My'][:3,:2], S_all['Mz'][:3,:2]
+        F_uls_full = np.array( [Snew['Fx_max'], Snew['Fy_max'], Snew['Fz_mean']] ).reshape((3, 1))
+        M_uls_full = np.array( [Snew['Mx_max'], Snew['My_max'], Snew['Mz_max']] ).reshape((3, 1))
 
-#%% test forces
-myForces = np.ones((2,2)) * 5 #(3,2)
-Fx, Fy, Fz = myForces, myForces, myForces
-Mx, My, Mz = myForces, myForces, myForces
+# %%
+# Define plotting options
+from my_util_tools import analyseWTLoads, util_funcs
+loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
+clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
+
+params_plot_rc = {
+        "font.size": 24,
+        "axes.labelsize": 24,
+        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+        "lines.linewidth": 2,
+        "lines.markersize": 6,
+    }
+plt.rcParams.update( params_plot_rc )
+# %%
+# Plot hub load statistics
+loc_hub_loads_stats = os.path.join(dir_loads, "hub_loads_M4W_stats.pdf")
+
+analyseWTLoads.plot_ms_load_statistics(
+    S_all,clrs_m4w["Turquoise"],clrs_m4w["Aqua"], (15,15)
+    ) 
+
+#%%
+# define `modelling_options`
+opts = {}
+
+opts["WISDEM"] = {}
+opts["WISDEM"]["n_dlc"] = 1
+opts["WISDEM"]["DriveSE"] = {}
+# NOTE "hub": 'Hub_System' component are NOT included in the 'DrivetrainSE_M4W' component 
+opts["WISDEM"]["DriveSE"]["hub"] = {}
+opts["WISDEM"]["DriveSE"]["hub"]["hub_gamma"] = 2.0
+opts["WISDEM"]["DriveSE"]["hub"]["spinner_gamma"] = 1.5
+
+opts["WISDEM"]["DriveSE"]["direct"] = False
+opts["WISDEM"]["DriveSE"]["use_gb_torque_density"] = True # False =(GB  optim, in-capabale)
+
+opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
+opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
+opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0  #IEC-1, 7.6.1.3, pg.55
+# used as: gamma = gamma_f * gamma_m * gamma_n (within TODO)
+# opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
+# opts["WISDEM"]["DriveSE"]["own_hub_loads"] = False
+
+opts["WISDEM"]["RotorSE"] = {}
+opts["WISDEM"]["RotorSE"]["n_pc"] = 2 #cf. RPM_Input in drive_components.py
+            # `n_pc`: Number of wind speeds to compute the power curve
+opts["materials"] = {}
+opts["materials"]["n_mat"] = 4
+
+opts["flags"] = {}
+dogen = opts["flags"]["generator"] = False
+dohub = opts["flags"]["hub"] = False #(v)
+doMBfls = opts["flags"]["mb_fls"] = True
+
+opts["OpenFAST"] = {}
+opts["OpenFAST"]["simulation"] = {}
+opts["OpenFAST"]["simulation"]["DT"] = 0.05
+# dir(ectory) where MS loads are stored .csv (?)
+if part_loads:
+    opts["OpenFAST"]["openfast_dir"] = loc_all_loads_mat_file
+else:
+    ValueError('Full loads not defined in openfast_dir<-OpenFAST<-modelling_options. Please define it first. jazakumAllahu khayr.')
+
+opts["DLC_driver"] = {}
+opts["DLC_driver"]["DLCs"] = [{}]
+opts["DLC_driver"]["DLCs"][0]["DLC"] = "1.2"
+opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.]
+opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.0083042]
+
+opt_drivese = opts["WISDEM"]["DriveSE"]
+# OpenFAST: containing 1. simulation DT and 2. MS loads dir
+opt_openfast = opts["OpenFAST"]
+# DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
+opt_DLC = opts["DLC_driver"]["DLCs"][0]
+
+#%%
+# Define Loads
+flag_loads_simple = False
+iWSrated = 4 # index @ rated wind speed (10-11 m/s)
+# iWSrated = [0,1,2] # prev
+startTS = 1000
+numTS = 10 # TODO
+
+f = S_all['Fx'][startTS:startTS+numTS,4]
+Fx = np.reshape(f,(1,numTS))
+# segment loads for testing
+if not flag_loads_simple:
+    # Forces
+    Fx = np.reshape(
+        S_all['Fx'][startTS:startTS+numTS,4],
+        (1,numTS)
+        )
+    Fy = np.reshape(
+        S_all['Fy'][startTS:startTS+numTS,4],
+        (1,numTS)
+        )
+    Fz = np.reshape(
+        S_all['Fz'][startTS:startTS+numTS,4],
+        (1,numTS)
+        )
+    # Moments
+    Mx = np.reshape(
+        S_all['Mx'][startTS:startTS+numTS,4],
+        (1,numTS)
+        )
+    My = np.reshape(
+        S_all['My'][startTS:startTS+numTS,4],
+        (1,numTS)
+        )
+    Mz = np.reshape(
+        S_all['Mz'][startTS:startTS+numTS,4],
+        (1,numTS)
+        )
+    # OLD impl
+    # Fx, Fy, Fz = S_all['Fx'][:3,4], S_all['Fy'][:3,iWSrated], S_all['Fz'][:3,iWSrated]
+    # Mx, My, Mz = S_all['Mx'][:3,iWSrated], S_all['My'][:3,iWSrated], S_all['Mz'][:3,iWSrated]
+
+# test forces
+else:
+    myForces = np.ones((2,2)) * 5 #(3,2)
+    Fx, Fy, Fz = myForces, myForces, myForces
+    Mx, My, Mz = myForces, myForces, myForces
+
+#%%[markdown]
+# ### Compare mb* loads (F,M) btw analy_*(s) (and Hub_* `pyFrame3DD`)
+# -----------------------------------------------------------------
+#%%
+# define constants and parameters from saved file `df_02results`
+var_dict = var_df2dict( df_02results )
+
+# - overall
+machine_rating = eval( var_dict['machine_rating'] )*1e3 # W
+# - lss
+L_h1 = eval( var_dict['L_h1'] ) # test: 2; converg: 0.2550491141298319
+L_12 = eval( var_dict['L_12'] ) # test: 5; converg: 7.998456970161276
+# - drivetrain
+tilt_rad = np.deg2rad(
+    eval( var_dict['tilt'] )
+)
+delta = eval( var_dict['delta'] )
+m_carrier = eval( var_dict['carrier_mass'] )
+# - materials
+E_lss = eval( var_dict['lss_E'] ) # Pa = 1 N/m^2
 
 # %% F_* computation
-L_h1 = 0.264 # test: 2; converg: 0.264
-L_12 = 6.935 # test: 5; converg: 6.935
 Fmb1, Fmb2, dFmb1dLh1, dFmb1dL12, dFmb2dLh1, dFmb2dL12 = ds.analytical_MB_Forces(
     Fx,Fy,Fz,Mx,My,Mz,L_h1,L_12, flag_jac=True)
 
 #%%
-machine_rating = 15e6 #MW
-tilt_rad = np.deg2rad(6)
-delta = 0.5
-
-m_shrink_disc = (machine_rating*1e-3)/3.0
-m_carrier = 8e3
-carrier_mass = m_shrink_disc + m_carrier
-
 Fmb1_real, Fmb2_real = ds.analytical_MBforces_realistic(
     Fx,Fy,Fz,Mx,My,Mz,
     m_carrier, delta, tilt_rad,
@@ -90,12 +243,13 @@ dP_dLh1 = dFmb1dLh1[3,:,:]
 dP_dL12 = dFmb1dL12[3,:,:]
 
 # %%
+ws = np.append(ws_full,25.0)
 # ws pdf computation
 coeff_weibull = (1.95, 11.6)
 pdf_ws = pdf_norm_int_using_cdf( ws, coeff_weibull )
-pdf_ws_full = pdf_norm_int_using_cdf( ws_full, coeff_weibull )
-print(f"pdf_ws = {pdf_ws}" )
-print(f"pdf_ws_full = {pdf_ws_full}" )
+pdf_ws_full = pdf_norm_int_using_cdf( ws_full.append(25), coeff_weibull )
+print(f"pdf_ws = {pdf_ws}; sum={np.sum(pdf_ws)}" )
+print(f"pdf_ws_full = {pdf_ws_full}; sum={np.sum(pdf_ws_full)}" )
 
 #%%
 # P_eq (LDD, LRD, DEL) computation
@@ -121,59 +275,20 @@ print(dDEL_dL12)
 
 #%%[markdown]
 # ## === test `om._Component` ===
+# =====================================================================
+#%% # MainBearing_withDerivatives
+prob = om.Problem( )
+prob.model.add_subsystem( 'mb', dc.MainBearing_withDerivatives(), promotes=['*'] )
+prob.setup(force_alloc_complex=True)
+prob["bearing_type"] = "TRB2"
+prob["D_shaft"] = 3.0
+prob["mb_e"] = 0.35
+
+prob.check_partials( compact_print=True, method='cs' );
+
+prob.run_model()
 #%%[markdown]
 # ### Test: Bearing Life Module `Analytical_FLS_Bearing_Life` 
-#%%
-# define `modelling_options`
-opts = {}
-
-opts["WISDEM"] = {}
-opts["WISDEM"]["n_dlc"] = 1
-opts["WISDEM"]["DriveSE"] = {}
-# NOTE "hub": 'Hub_System' component are NOT included in the 'DrivetrainSE_M4W' component 
-opts["WISDEM"]["DriveSE"]["hub"] = {}
-opts["WISDEM"]["DriveSE"]["hub"]["hub_gamma"] = 2.0
-opts["WISDEM"]["DriveSE"]["hub"]["spinner_gamma"] = 1.5
-
-opts["WISDEM"]["DriveSE"]["direct"] = False
-opts["WISDEM"]["DriveSE"]["use_gb_torque_density"] = True # False =(GB  optim, in-capabale)
-
-opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
-opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
-opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0  #IEC-1, 7.6.1.3, pg.55
-opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
-# used as: gamma = gamma_f * gamma_m * gamma_n (within TODO)
-
-opts["WISDEM"]["RotorSE"] = {}
-opts["WISDEM"]["RotorSE"]["n_pc"] = 2 #cf. RPM_Input in drive_components.py
-            # `n_pc`: Number of wind speeds to compute the power curve
-opts["materials"] = {}
-opts["materials"]["n_mat"] = 4
-
-opts["flags"] = {}
-dogen = opts["flags"]["generator"] = False
-dohub = opts["flags"]["hub"] = False #(v)
-
-opts["OpenFAST"] = {}
-opts["OpenFAST"]["simulation"] = {}
-opts["OpenFAST"]["simulation"]["DT"] = 0.05
-# dir(ectory) where MS loads are stored .csv (?)
-if part_loads:
-    opts["OpenFAST"]["openfast_dir"] = loc_all_loads_mat_file
-else:
-    ValueError('Error: full loads not defined in openfast_dir<-OpenFAST<-modelling_options. Please define it first. jazakumAllahu khayr.')
-
-opts["DLC_driver"] = {}
-opts["DLC_driver"]["DLCs"] = [{}]
-opts["DLC_driver"]["DLCs"][0]["DLC"] = "1.2"
-opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23., 25.] #TODO
-opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332 , 0.05894909, 0.03942148, 0.02472593, 0.01457773, 0.00466888]
-
-opt_drivese = opts["WISDEM"]["DriveSE"]
-# OpenFAST: containing 1. simulation DT and 2. MS loads dir
-opt_openfast = opts["OpenFAST"]
-# DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
-opt_DLC = opts["DLC_driver"]["DLCs"][0]
 
 #%%[markdown]
 # ### problem: setup and check partials
@@ -346,5 +461,51 @@ print(f"Analy, shape={dims}, in time {t1_ana-t0_ana}s") # J = {J_analy},
 # Output:
 # [[1. 1. 0. 0.]
 #  [0. 0. 1. 1.]]
+#%%[markdown]
+# ### DOE cases
+# =====================================================================
+#%%
+import pandas as pd
+loc_DOEcsv_GBgen = "M:\\Vasudev_Gupta\\WISDEM\\examples\\06_drivetrain\\M4W_production_runs\\03_results\\DOE_GBgen_cleaned.csv"
+cases = pd.read_csv( loc_DOEcsv_GBgen )
+len_steps = cases.shape[0]
+
+this_case = cases.loc[0]
+# iter over this_case 
+for key, value in this_case.items():
+    # skip non-DV keys
+    if key in ["status_driver_exit","time"]: continue
+    # work on DVs
+    # 1. float type
+    if type(value) in [float, np.float64]: prob[key] = value
+    # 2. str type for vector DVs
+    elif type(value) == str: prob[key] = np.array(eval( value ))
+
+myargs = []
+for i,row in cases.iterrows():
+    print(f" - {i}: gear_ratio = { row["gear_ratio"] }")
+    myargs.append( [i, row] )
+
+for thisIter in myargs:
+    print(thisIter, "\n")
+
+# %% # PARALLEL DOE ;)
+import multiprocessing as mp
+ncore = max(1, mp.cpu_count() - 2)
+print(ncore)
+pool = mp.Pool(processes=ncore)
+
+# %%
+import sys
+pathFiles = sys.path
+for file in pathFiles:
+    print(file)
+# %%
+import sys
+print(sys.executable)
+
+# %%
+import pkgutil
+print([m.name for m in pkgutil.iter_modules()])
 
 # %%
