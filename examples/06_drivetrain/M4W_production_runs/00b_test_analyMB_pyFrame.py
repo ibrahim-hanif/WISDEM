@@ -43,7 +43,7 @@ loc_save_data = os.path.join(results_path, "00")
 # 02 results
 results_02_dir = "02_results"
 results_02_path = os.path.join(script_dir, results_02_dir)
-loc_saved_02_data = os.path.join(results_02_path, "02")
+loc_saved_02_data = os.path.join(results_02_path, "02newULS")
 
 #%%
 # load and read from saved csv file
@@ -246,7 +246,7 @@ I_lss = lssMB2section.Iyy # m^2
 # bending stiffness EI
 EI = E_lss*I_lss
 # -- bearing torsional stiffness
-k_torsional = eval( var_dict['mb_fls.mb2_k'] ) # 3.e10 Nm/rad
+k_torsional = eval( var_dict['mb_fls.k_mb2'] ) # 3.e10 Nm/rad
 # k_torsional = 5.e1
 # lambda
 lam = (k_torsional*L_12)/(3*EI)
