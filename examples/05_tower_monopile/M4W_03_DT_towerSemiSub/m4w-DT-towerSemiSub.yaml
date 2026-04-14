@@ -1,0 +1,237 @@
+name: M4W 15MW Offshore Turbine with optimized= DT (03_DT), Semi-sub tower (01_tower)
+
+assembly: #(v) 9 entries to describe the WT config and its components
+    turbine_class: I
+    turbulence_class: C
+    drivetrain: geared
+    rotor_orientation: Upwind
+    number_of_blades: 3
+    hub_height: 150.0
+    rotor_diameter: 240.0 # def: 241.35064632 & iea15: 240.0
+    rated_power: 15.e+6
+    lifetime: 25.0
+
+components: #(v) specifications for individual components (blades, tower, nacelle, etc)
+    hub: # fixed, same as iea15
+        diameter: 7.94
+        # ---- user pre-defined masses to override hub optim (within hub.py)
+        #      below values from saved csv of 'drivetrain_direct' 15mw example
+        # hub_shell_mass_user: 21530.918273952942
+        # spinner_mass_user: 3037.7598549971094
+        # pitch_system_mass_user: 37993.23906026087 # sum above 3 = 62561
+        # hub_system_mass_user: 190e3 # iea15, tab.5-1
+        # ----
+        cone_angle: 0.06981317007977318 # 4 deg
+        drag_coefficient: 0.5
+        flange_t2shell_t: 6.0
+        flange_OD2hub_D: 0.6
+        flange_ID2OD: 0.8
+        hub_blade_spacing_margin: 1.2
+        hub_stress_concentration: 3.0
+        n_front_brackets: 5
+        n_rear_brackets: 5
+        clearance_hub_spinner: 0.5
+        spin_hole_incr: 1.2
+        pitch_system_scaling_factor: 0.75
+        spinner_gust_ws: 70.0
+        hub_material: cast_iron
+        spinner_material: glass_uni
+        
+    nacelle: # copy of results from 03_DT_layout
+        drivetrain:
+            uptilt: 0.10471975511965977 # 6 deg
+            distance_tt_hub: 5.614
+            distance_hub_mb: 0.5575931674058667 #----result of 03_nacelle_optim+below----
+            distance_mb_mb: 5.011389495320043
+            overhang: 12.0313 # def: 12.0313 & iea15: 11.35
+
+            gear_ratio: 49.6031746
+            gearbox_mass_user: 138728.6451
+            gearbox_efficiency: 0.992 # 1.0; D5.1, R2
+            gearbox_length_user: 2.7636198183
+            gearbox_radius_user: 2.312024
+
+            lss_diameter: [3.508486371738839, 3.3501710862921876]
+            lss_wall_thickness: [0.07525245291695476, 0.11632168455884717]
+            lss_material: steel_drive
+
+            hss_length: 1.1616408996473195
+            hss_diameter: [0.5161993076677188, 0.5000000000000002]
+            hss_wall_thickness: [0.10350654734272292, 0.004597425682038176]
+            hss_material: steel_drive
+
+            bedplate_flange_width: 2.415372327102927
+            bedplate_flange_thickness: 0.0897599610835592
+            bedplate_web_thickness: 0.06265416462756287
+            bedplate_material: steel_drive
+            # MB : DONE: add new inputs to main bearings and whole DT
+            mb1Type: CRB
+            mb2Type: TRB2
+            mb1_e: 0.4 # 0.0 (ULS); 0.4 (perform FLS)
+            mb2_e: 0.4
+
+            uptower: True
+
+            converter_mass_user: 5625 #[kg] IND Bidane's email
+
+        generator: # simple generator (cf. indar D5.4)
+            generator_mass_user: 34800.0
+            generator_length: 1.550736
+            generator_radius_user: 1.4
+            generator_rpm_efficiency_user:
+                grid: [0.0, 1.0]
+                values: [0.9805, 0.9805]
+            
+    tower: # copy of results from 01_semisubTower_only
+        outer_shape_bem:
+            reference_axis: &id003
+                x:
+                    grid: &grid [0.0, 0.10038997644696708, 0.20077995289393416, 0.3011699293409012, 0.4015599057878683, 0.5019498822348353, 0.6023398586818024, 0.7027298351287694, 0.8031198115757365, 0.9035097880227035, 1.0]
+                    values: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                y:
+                    grid: *grid #[0.0, 0.10038997644696708, 0.20077995289393416, 0.3011699293409012, 0.4015599057878683, 0.5019498822348353, 0.6023398586818024, 0.7027298351287694, 0.8031198115757365, 0.9035097880227035, 1.0]
+                    values: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                z:
+                    grid: *grid #[0.0, 0.10038997644696708, 0.20077995289393416, 0.3011699293409012, 0.4015599057878683, 0.5019498822348353, 0.6023398586818024, 0.7027298351287694, 0.8031198115757365, 0.9035097880227035, 1.0]
+                    values: [15.0, 28.0, 41.0, 54.0, 67.0, 80.0, 93.0, 106.0, 119.0, 132.0, 144.495]
+            outer_diameter:
+                grid: *grid #[0.0, 0.10038997644696708, 0.20077995289393416, 0.3011699293409012, 0.4015599057878683, 0.5019498822348353, 0.6023398586818024, 0.7027298351287694, 0.8031198115757365, 0.9035097880227035, 1.0]
+                values: [10.0, 9.999999999999998, 10.0, 10.0, 9.775355825799263, 9.115882800178749, 8.4007230795365, 7.647695903023772, 6.791802851949308, 6.5, 6.5]
+            drag_coefficient:
+                grid: [0.0, 1.0]
+                values: [0.5, 0.5]
+        internal_structure_2d_fem:
+            outfitting_factor: 1.07
+            reference_axis: *id003
+            layers:
+               -  name: tower_wall
+                  material: steel
+                  thickness:
+                      grid: *grid #[0.0, 0.10038997644696708, 0.20077995289393416, 0.3011699293409012, 0.4015599057878683, 0.5019498822348353, 0.6023398586818024, 0.7027298351287694, 0.8031198115757365, 0.9035097880227035, 1.0]
+                      values: [0.08088377124640599, 0.05316095821292967, 0.06837902476448808, 0.04081141300789835, 0.05694836816651923, 0.03419371279439272, 0.056657862077795745, 0.033915385325971076, 0.05591822503089719, 0.03086275658611215, 0.03801305065203544]    
+
+materials: #(v) Database of matertial used in the turbine model. (TODO: iron-MS? + add GB mats <- cf. bill_of_mats.xls, sharepoint/WP5/Mats )
+   -  name: steel
+      description: Steel of the tower and monopile ASTM A572 Grade 50
+      source: http://www.matweb.com/search/DataSheet.aspx?MatGUID=9ced5dc901c54bd1aef19403d0385d7f
+      orth: 0
+      rho: 7800
+      alpha: 0.0
+      E: 200.e+009
+      nu: 0.3
+      G: 79.3e+009
+      GIc: 0  #Place holder, currently not used
+      GIIc: 0  #Place holder, currently not used
+      alp0: 0  #Place holder, currently not used
+      Xt: 450.e+006
+      Xc: 450.e+006
+      S: 0
+      Xy: 345.e+6
+      m: 3
+      A: 3.5534648443719767e10 #DOI 10.1016/j.proeng.2013.12.061 eqn 5
+      unit_cost: 0.7
+   -  name: steel_drive
+      description: Steel of the drivetrain ASTM 4140 40Cr1Mo28
+      source: http://www.matweb.com/search/DataSheet.aspx?MatGUID=38108bfd64c44b4c9c6a02af78d5b6c6
+      orth: 0
+      rho: 7850
+      alpha: 0.0
+      E: 205.e+009
+      nu: 0.3
+      G: 80.0e+009
+      GIc: 0  #Place holder, currently not used
+      GIIc: 0  #Place holder, currently not used
+      alp0: 0  #Place holder, currently not used
+      Xt: 814.e+006
+      Xc: 814.e+006
+      S: 0
+      Xy: 485.e+6
+      m: 3
+      A: 3.5534648443719767e10 #DOI 10.1016/j.proeng.2013.12.061 eqn 5
+      unit_cost: 0.9
+   -  name: glass_uni
+      description: Vectorply E-LT-5500, Epikote MGS RIMR 135/Epicure MGS RIMH 1366 epoxy
+      source: MSU composites database 3D property tests, Engineering Mechanics of Composite Materials, Daniel, I & Ishai, O., 1994, pg. 34
+      orth: 1
+      rho: 1940.0
+      E: [4.46E+10, 1.7E+10, 1.67E+10]
+      G: [3.27E+9, 3.48E+9, 3.5E+9]
+      nu: [0.262, 0.35, 0.264]
+      Xt: [6.092E+8, 3.81E+7, 1.529E+7]
+      Xc: [4.7471E+8, 1.1264E+8, 1.1322E+8]
+      S: [1.891E+7, 1.724E+7, 1.316E+7]
+      m: 10
+      GIc: 303
+      GIIc: 3446
+      alp0: 53
+      fvf: 0.57
+      fwf: 0.7450682696347697
+      ply_t: 0.005
+      unit_cost: 1.87
+      waste: 0.05
+      fiber_density: 2535.5
+      area_density_dry: 7.227162215457267
+      component_id: 5
+
+environment: #(v) TODO: air=utsira, ocean=default
+    air_density: 1.225
+    air_dyn_viscosity: 1.81e-5
+    weib_shape_parameter: 1.97
+    air_speed_sound: 340.
+    shear_exp: 0.08
+    water_density: 1025.0 # ---- ocean condns unchanged
+    water_dyn_viscosity: 1.3351e-3
+    soil_shear_modulus: 140.e+6
+    soil_poisson: 0.4 # ----
+    water_depth: 30.0
+    significant_wave_height: 1.1 #4.52 # ---- @ max wind speed
+    significant_wave_period: 7.203 #9.45 # ----
+
+# bos:
+#     plant_turbine_spacing: 7
+#     plant_row_spacing: 7
+#     commissioning_cost_kW: 44.0
+#     decommissioning_cost_kW: 58.0
+#     distance_to_substation: 1.0
+#     distance_to_interconnection: 8.5
+#     interconnect_voltage: 130.
+#     distance_to_site: 115.
+#     distance_to_landfall: 50.
+#     port_cost_per_month: 2e6
+#     boem_review_cost: 0.0
+#     construction_insurance: 44.0
+#     construction_financing: 183.0
+#     contingency: 316.0
+#     site_auction_price: 100e6
+#     site_assessment_cost: 50e6
+#     construction_plan_cost: 2.5e5
+#     installation_plan_cost: 1e6
+
+costs: # TODO: coz merit func in analy_opts is lcoe
+    wake_loss_factor: 0.15
+    fixed_charge_rate: 0.056
+    bos_per_kW: 4053.
+    opex_per_kW: 137.
+    turbine_number: 40.
+    labor_rate: 58.8
+    painting_rate: 30.0
+    blade_mass_cost_coeff: 14.6
+    hub_mass_cost_coeff: 3.9
+    pitch_system_mass_cost_coeff: 22.1
+    spinner_mass_cost_coeff: 11.1
+    lss_mass_cost_coeff: 11.9
+    bearing_mass_cost_coeff: 4.5
+    gearbox_mass_cost_coeff: 12.9
+    hss_mass_cost_coeff: 6.8
+    generator_mass_cost_coeff: 12.4
+    bedplate_mass_cost_coeff: 2.9
+    yaw_mass_cost_coeff: 8.3
+    converter_mass_cost_coeff: 18.8
+    transformer_mass_cost_coeff: 18.8
+    hvac_mass_cost_coeff: 124.0
+    cover_mass_cost_coeff: 5.7
+    elec_connec_machine_rating_cost_coeff: 41.85
+    platforms_mass_cost_coeff: 17.1
+    tower_mass_cost_coeff: 2.9
+    controls_machine_rating_cost_coeff: 21.15
+    crane_cost: 12.e+3
