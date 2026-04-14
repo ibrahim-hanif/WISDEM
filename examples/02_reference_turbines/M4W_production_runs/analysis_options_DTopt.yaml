@@ -1,0 +1,97 @@
+# Generic analysis options where nothing is run
+general: #(v) TODO: change?
+    folder_output: outputs
+    fname_output: M4Wturb_optim
+
+design_variables:
+    drivetrain:
+        # ---- LSS ----
+        distance_hub_mb:
+            flag: True
+            lower_bound: 0.1
+            upper_bound: 5.0
+        distance_mb_mb:
+            flag: True
+            lower_bound: 0.1
+            upper_bound: 8.0
+        lss_diameter:
+            flag: True
+            lower_bound: 1.0
+            upper_bound: 5.0
+        lss_wall_thickness:
+            flag: True
+            lower_bound: 4e-3
+            upper_bound: 1.0
+        # ---- HSS ----
+        hss_length:                 # TODO: absent in analy_opts schema!
+            flag: True
+            lower_bound: 1.0
+            upper_bound: 5.0
+        hss_diameter:
+            flag: True
+            lower_bound: 0.5
+            upper_bound: 5.0
+        hss_wall_thickness:
+            flag: True
+            lower_bound: 4e-3
+            upper_bound: 0.2
+        # ---- bedplate ----
+        bedplate_web_thickness:
+            flag: True
+            lower_bound: 5e-3
+            upper_bound: 1.0
+        bedplate_flange_thickness:
+            flag: True
+            lower_bound: 5e-3
+            upper_bound: 1.0
+        bedplate_flange_width:
+            flag: True
+            lower_bound: 0.01
+            upper_bound: 3.0
+
+constraints:
+    drivetrain:
+        # ---- LSS ----
+        lss: # von mises
+            flag: True
+        mb1: # deflection
+            flag: True
+        mb2:
+            flag: True
+        shaft_deflection:
+            flag: True
+        shaft_angle:
+            flag: True
+        # ---- HSS ----
+        hss: # von mises
+            flag: True
+        # ---- bedplate ----
+        bedplate:
+            flag: True
+        stator_angle:
+            flag: True
+        # ---- overall nacelle ----
+        height:
+            flag: True
+        length:
+            flag: True
+
+    #(v) ---- NEW! MB FLS constraints ----
+    user: # DONE: checked with runWISDEM -> gc_PoseOptimization, line 1325
+        - name: "drivese.constr_Lh1_MB1fw"
+          lower_bound: [0.0]
+        #   ref: 1e1
+        - name: "drivese.constr_L12_MBsFW"
+          lower_bound: [0.0]
+        #   ref: 1e0
+        - name: "drivese.constr_L10_mb1" # ---- MB FLS only when mb_e > 0.0 in geometry yaml file ----
+          lower_bound: [1.0]
+        - name: "drivese.constr_L10_mb2"
+          lower_bound: [1.0]
+
+merit_figure: "nacelle_mass"
+
+driver:
+    optimization:
+        flag: True
+        debug_print: True
