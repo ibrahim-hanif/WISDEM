@@ -159,7 +159,7 @@ iWSrated = 4 # index @ rated wind speed (10-11 m/s)
 startTS = 1000
 numTS = 10 # TODO
 
-f = S_all['Fx'][startTS:startTS+numTS,4]
+f = S_all['Fx'][startTS:startTS+numTS,iWSrated]
 Fx = np.reshape(f,(1,numTS))
 # segment loads for testing
 if not flag_loads_simple:
@@ -415,23 +415,25 @@ plt.rcParams.update( params_plot_rc )
 #%%
 # plot and compare loads from analy_ and Hub_]
 # F_mb1_beam.shape# = (4,1,numTS)
-fig = plt.figure(figsize=(40, 6))
-gs = fig.add_gridspec(1, 5, hspace=0.35, wspace=0.25)
-# ---- grid = [ mb1 rad, mb2: ax, rad, My, Mz ]
+fig = plt.figure(figsize=(16,16))
+gs = fig.add_gridspec(3, 2, hspace=0.35, wspace=0.25)
+# ---- grid = [ mb1 rad,
+#               mb2: ax, rad,
+#               mb2 My, Mz ]
 # ===== mb1 =====
 # ----- [0] = rad
-ax1 = fig.add_subplot(gs[0])
+ax1 = fig.add_subplot(gs[0,:])
 ax1.plot( F_mb1_beam[3,0,:],
          label="EBbeam", color=clr_Beam )
 ax1.plot( F_mb1_frame[3,:],
          label="Frame", color=clr_Frame )
 ax1.legend()
-ax1.set_title(r"$F_{ax}^{mb1}$")
+ax1.set_title(r"$F_{rad}^{mb1}$")
 ax1.set_xticks([])
 ax1.set_xlabel(r'$t$')
 # ===== mb2 =====
 # ----- [1] = x
-ax2 = fig.add_subplot(gs[1])
+ax2 = fig.add_subplot(gs[1,0])
 ax2.plot( np.abs(F_mb2_beam[0,0,:]),
          label="EBbeam", color=clr_Beam )
 ax2.plot( np.abs(F_mb2_frame[0,:]),
@@ -441,7 +443,7 @@ ax2.set_title(r"$F_{ax}^{mb2}$")
 ax2.set_xticks([])
 ax2.set_xlabel(r'$t$')
 # ----- [2] = rad
-ax3 = fig.add_subplot(gs[2])
+ax3 = fig.add_subplot(gs[1,1])
 ax3.plot( F_mb2_beam[3,0,:],
          label="EBbeam", color=clr_Beam )
 ax3.plot( F_mb2_frame[3,:],
@@ -451,7 +453,7 @@ ax3.set_title(r"$F_{rad}^{mb2}$")
 ax3.set_xlabel(r"$t$")
 ax3.set_xticks([])
 # ----- [3] = My
-ax4 = fig.add_subplot(gs[3])
+ax4 = fig.add_subplot(gs[2,0])
 ax4.plot( M_mb2_beam[0,0,:],
          label="EBbeam", color=clr_Beam )
 ax4.plot( M_mb2_frame[1,:],
@@ -461,7 +463,7 @@ ax4.set_title(r"$M_{y}^{mb2}$")
 ax4.set_xlabel(r"$t$")
 ax4.set_xticks([])
 # ----- [4] = Mz
-ax5 = fig.add_subplot(gs[4])
+ax5 = fig.add_subplot(gs[2,1])
 ax5.plot( M_mb2_beam[1,0,:],
          label="EBbeam", color=clr_Beam )
 ax5.plot( M_mb2_frame[2,:],
