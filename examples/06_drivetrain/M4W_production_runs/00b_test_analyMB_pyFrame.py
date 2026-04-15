@@ -246,7 +246,7 @@ I_lss = lssMB2section.Iyy # m^2
 # bending stiffness EI
 EI = E_lss*I_lss
 # -- bearing torsional stiffness
-k_torsional = eval( var_dict['mb_fls.k_mb2'] ) # 3.e10 Nm/rad
+k_torsional = eval( var_dict['mb_fls.k_mb2'] ) * 0 # 3.e10 Nm/rad
 # k_torsional = 5.e1
 # lambda
 lam = (k_torsional*L_12)/(3*EI)
@@ -255,6 +255,7 @@ F_mb1_beam, F_mb2_beam, M_mb2_beam = ds.analytical_MBforces_EBbeam(
     Fx,Fy,Fz, Mx,My,Mz, m_carrier, delta, tilt_rad, L_h1, L_12,
     EI, k_torsional, return_M=True
 )
+M_mb2_beam_norm = np.hypot(M_mb2_beam[0,0,:], M_mb2_beam[1,0,:])
 #%%
 # compare with Hub_* (NOTE: below is 1 / 1e6)
 """
@@ -353,8 +354,11 @@ prob['carrier_mass'] = m_carrier
 prob['carrier_I'] = eval( var_dict['carrier_I'] )
 prob['mb1_face_width'] = eval( var_dict['mb1_face_width'] )
 prob['mb2_face_width'] = eval( var_dict['mb2_face_width'] )
+# --- CRB
 prob['mb1_Reactions'] = eval( var_dict['mb1_Reactions'] )
+# --- TRB2
 prob['mb2_Reactions'] = eval( var_dict['mb2_Reactions'] )
+prob['mb2_Reactions'] = [1.0,1.0,1.0, 0.0,0.0,0.0]
 # - materials
 prob['lss_E'] = E_lss
 prob['lss_G'] = eval( var_dict['lss_G'] )
@@ -368,8 +372,8 @@ prob['shaft_angle_allowable'] = eval( var_dict['shaft_angle_allowable'] )
 # Init outputs: loads on MBs
 F_mb1_frame = np.zeros((4,numTS)) # x,y,z,rad
 F_mb2_frame = np.zeros((4,numTS))
-# M_mb1_frame = np.zeros((3,numTS)) # == 0
-M_mb2_frame = np.zeros((3,numTS))
+# M_mb1_frame = np.zeros((4,numTS)) # == 0
+M_mb2_frame = np.zeros((4,numTS))
 # Loop over hub loads
 for iF in range(numTS):
     # loads
@@ -387,10 +391,12 @@ for iF in range(numTS):
     # M_mb1_frame[:,iF] = prob['M_mb1'][:,0] # == 0
     # - mb2
     F_mb2_frame[:3,iF] = prob['F_mb2'][:,0]
-    M_mb2_frame[:,iF] = prob['M_mb2'][:,0]
+    M_mb2_frame[:3,iF] = prob['M_mb2'][:,0]
 # - radial forces
 F_mb1_frame[3,:] = np.hypot(F_mb1_frame[1,:], F_mb1_frame[2,:])
 F_mb2_frame[3,:] = np.hypot(F_mb2_frame[1,:], F_mb2_frame[2,:])
+# - M_norm
+M_mb2_frame[3,:] = np.hypot(M_mb2_frame[1,:], M_mb2_frame[2,:])
 
 #%%
 # plot options
@@ -416,16 +422,16 @@ plt.rcParams.update( params_plot_rc )
 # plot and compare loads from analy_ and Hub_]
 # F_mb1_beam.shape# = (4,1,numTS)
 fig = plt.figure(figsize=(16,16))
-gs = fig.add_gridspec(3, 2, hspace=0.35, wspace=0.25)
+gs = fig.add_gridspec(4, 2, hspace=0.35, wspace=0.25)
 # ---- grid = [ mb1 rad,
 #               mb2: ax, rad,
 #               mb2 My, Mz ]
 # ===== mb1 =====
 # ----- [0] = rad
 ax1 = fig.add_subplot(gs[0,:])
-ax1.plot( F_mb1_beam[3,0,:],
+ax1.plot( np.abs(F_mb1_beam[3,0,:]),
          label="EBbeam", color=clr_Beam )
-ax1.plot( F_mb1_frame[3,:],
+ax1.plot( np.abs(F_mb1_frame[3,:]),
          label="Frame", color=clr_Frame )
 ax1.legend()
 ax1.set_title(r"$F_{rad}^{mb1}$")
@@ -444,9 +450,9 @@ ax2.set_xticks([])
 ax2.set_xlabel(r'$t$')
 # ----- [2] = rad
 ax3 = fig.add_subplot(gs[1,1])
-ax3.plot( F_mb2_beam[3,0,:],
+ax3.plot( np.abs(F_mb2_beam[3,0,:]),
          label="EBbeam", color=clr_Beam )
-ax3.plot( F_mb2_frame[3,:],
+ax3.plot( np.abs(F_mb2_frame[3,:]),
          label="Frame", color=clr_Frame )
 # ax3.legend()
 ax3.set_title(r"$F_{rad}^{mb2}$")
@@ -454,9 +460,9 @@ ax3.set_xlabel(r"$t$")
 ax3.set_xticks([])
 # ----- [3] = My
 ax4 = fig.add_subplot(gs[2,0])
-ax4.plot( M_mb2_beam[0,0,:],
+ax4.plot( np.abs(M_mb2_beam[0,0,:]),
          label="EBbeam", color=clr_Beam )
-ax4.plot( M_mb2_frame[1,:],
+ax4.plot( np.abs(M_mb2_frame[1,:]),
          label="Frame", color=clr_Frame )
 # ax4.legend()
 ax4.set_title(r"$M_{y}^{mb2}$")
@@ -464,14 +470,25 @@ ax4.set_xlabel(r"$t$")
 ax4.set_xticks([])
 # ----- [4] = Mz
 ax5 = fig.add_subplot(gs[2,1])
-ax5.plot( M_mb2_beam[1,0,:],
+ax5.plot( np.abs(M_mb2_beam[1,0,:]),
          label="EBbeam", color=clr_Beam )
-ax5.plot( M_mb2_frame[2,:],
+ax5.plot( np.abs(M_mb2_frame[2,:]),
          label="Frame", color=clr_Frame )
 # ax4.legend()
 ax5.set_title(r"$M_{z}^{mb2}$")
 ax5.set_xlabel(r"$t$")
 ax5.set_xticks([])
+# ----- [5] = M_rad
+ax6 = fig.add_subplot(gs[3,:])
+
+ax6.plot( M_mb2_beam_norm,
+         label="EBbeam", color=clr_Beam )
+ax6.plot( M_mb2_frame[3,:],
+         label="Frame", color=clr_Frame )
+# ax4.legend()
+ax6.set_title(r"$M_{norm}^{mb2}$")
+ax6.set_xlabel(r"$t$")
+ax6.set_xticks([])
 
 # ----------
 fig.tight_layout()
@@ -479,7 +496,7 @@ fig.tight_layout()
 plt.show()
 
 # NOTE: const diff
-# F_mb1_beam[3,0,:] - F_mb1_frame[3,:] # ~ 7.6 * 1e6
-# F_mb2_beam[0,0,:] - F_mb2_frame[0,:] # = 446457 or 390900
+# F_mb1_beam[3,0,:] - F_mb1_frame[3,:] # - 95600
+# F_mb2_beam[0,0,:] - F_mb2_frame[0,:] # = 78546 (due to gravity loads each ele)
 # F_mb2_beam[3,0,:] - F_mb2_frame[3,:] # = -1.0 * 1e6
 # %%
