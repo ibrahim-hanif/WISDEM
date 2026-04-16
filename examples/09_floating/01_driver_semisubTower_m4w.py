@@ -49,9 +49,8 @@ fname_wt_input = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
 # fname_wt_input = dir_m4w_run + os.sep + "outputs//test.yaml"
 
 # ---- modelling options
-dir_m4w_runs_main = mydir +os.sep+ "M4W_production_runs"
-fname_model_opts_m4w = dir_m4w_runs_main+os.sep+ "modelOpts_m4w.yaml"
-fname_model_opts_iea = dir_m4w_runs_main+os.sep+ "modelOpts_iea15.yaml"
+fname_model_opts_m4w = dir_m4w_run+os.sep+ "modelOpts_m4w.yaml"
+fname_model_opts_iea = dir_m4w_run+os.sep+ "modelOpts_iea15.yaml"
 if wt_m4w:
       fname_modeling_options = fname_model_opts_m4w
 else:
@@ -59,9 +58,9 @@ else:
 
 # ---- analysis/optimization options
 if flag_opt_GBO:
-     fname_analysis_options = dir_m4w_run + os.sep + "analysis_options.yaml"
+     fname_analysis_options = dir_m4w_run + os.sep + "analyOpts.yaml"
 else:
-     fname_analysis_options = dir_m4w_run + os.sep + "analysis_options_NOopt.yaml"
+     fname_analysis_options = dir_m4w_run + os.sep + "analyOpts_NOopt.yaml"
 
 ## File Management (outputs)
 loc_scaling_report = os.path.join(dir_m4w_run,
@@ -94,13 +93,7 @@ wt_opt, analysis_options, opt_options = run_wisdem(
     fname_wt_input, fname_modeling_options, fname_analysis_options,
     overridden_values=overrides
 )
-# TODO
-# 1. overwrite hub loads from saved (ULS) file?
-# 2. check iea report for tower util plots... not mentioned?
-# 3. ! ~ full DT optimization takes toooo LOOOONG !
-# - do full DT optim using 03_
-# - restrict to some DT DVs? take vals from 03_
-# - check gradients wrt. each DV -- bad scaling?
+
 # %%[markdown]
 # # _____ Post-processing _____
 
