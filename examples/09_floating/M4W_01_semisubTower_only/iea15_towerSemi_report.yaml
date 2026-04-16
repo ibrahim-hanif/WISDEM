@@ -1,0 +1,585 @@
+name: IEA 15MW Offshore Reference Turbine, report's tower only #(v) cf. report
+
+assembly: #(v) 9 entries to describe the WT config and its components
+    turbine_class: I
+    turbulence_class: C
+    drivetrain: geared
+    rotor_orientation: Upwind
+    number_of_blades: 3
+    hub_height: 150.0
+    rotor_diameter: 240.0 # def: 241.35064632 & iea15: 240.0
+    rated_power: 15.e+6
+    lifetime: 25.0
+
+components: #(v) specifications for individual components (blades, tower, nacelle, etc)           
+    tower: # from report of semi-sub
+        outer_shape_bem:
+            reference_axis: &id003
+                x:  # 11 grid points ---- so 10 sections of the tower
+                    grid: [0.0, 0.10047454902385111, 0.20094909804770222, 0.30142364707155334, 0.40189819609540445, 0.5023727451192556, 0.6028472941431067, 0.7033218431669578, 0.8037963921908089, 0.90427094121466, 1.0]
+                    values: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                y:
+                    grid: [0.0, 0.10047454902385111, 0.20094909804770222, 0.30142364707155334, 0.40189819609540445, 0.5023727451192556, 0.6028472941431067, 0.7033218431669578, 0.8037963921908089, 0.90427094121466, 1.0]
+                    values: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                z:
+                    grid: [0.0, 0.10047454902385111, 0.20094909804770222, 0.30142364707155334, 0.40189819609540445, 0.5023727451192556, 0.6028472941431067, 0.7033218431669578, 0.8037963921908089, 0.90427094121466, 1.0]
+                    values: [15.0, 28.0, 41.0, 54.0, 67.0, 80.0, 93.0, 106.0, 119.0, 132.0, 144.582]
+            outer_diameter:
+                grid: [0.0, 0.10047454902385111, 0.20094909804770222, 0.30142364707155334, 0.40189819609540445, 0.5023727451192556, 0.6028472941431067, 0.7033218431669578, 0.8037963921908089, 0.90427094121466, 1.0]
+                values: [10.00, 9.964, 9.967, 9.927, 9.528, 9.149, 8.945, 8.735, 8.405, 7.321, 6.5] # cf. report
+            drag_coefficient:
+                grid: [0.0, 1.0]
+                values: [0.5, 0.5]
+        internal_structure_2d_fem:
+            outfitting_factor: 1.07 # an extra 7% of outfitting mass beyond the cylindrical shell mass (cf. report iea monopile)
+            reference_axis: *id003
+            layers:
+               -  name: tower_wall
+                  material: steel
+                  thickness:
+                      grid: [0.0, 0.10047454902385111, 0.20094909804770222, 0.30142364707155334, 0.40189819609540445, 0.5023727451192556, 0.6028472941431067, 0.7033218431669578, 0.8037963921908089, 0.90427094121466, 1.0]
+                      #values: [0.085, 0.085, 0.085, 0.030, 0.030, 0.030, 0.025, 0.025, 0.025, 0.020, 0.020] # acciona's: mod wrt report.
+                      #(v) internal wall thickness (in wisdem = avg.)
+                      #           0.085   0.085   0.055   0.03   0.03   0.25   0.25   0.25   0.21   0.20
+                      #(v) acciona's wall thickness (internal in wisdem = avg.)
+                      #           0.085   0.085   0.085   0.03   0.03   0.3   0.25   0.25   0.25   0.20
+                      # report's thickness vals (semi-sub tower)
+                      values: [0.082954, 0.082954, 0.083073, 0.082799, 0.0299, 0.027842, 0.025567, 0.022854, 0.020250, 0.018339, 0.021211]
+
+    floating_platform: #(v) TODO: copied from iea15mw-volturnUS (floating_platform and mooring)
+        transition_piece_mass: 100.e+3
+        transition_piece_cost: 100.e+3
+        joints:
+            - name: main_keel
+              location: [0.0, 0.0, -20.0]
+
+            - name: main_freeboard
+              location: [0.0, 0.0, 15.0]
+              transition: True
+
+            - name: col1_keel
+              location: [51.75, 3.14159265, -20.0] #3.14159265 = 180deg
+              cylindrical: True
+
+            - name: col1_freeboard
+              location: [51.75, 3.14159265, 15.0] # 3.14159265 = 180deg
+              cylindrical: True
+
+            - name: col2_keel
+              location: [51.75, 1.0471976, -20.0] #1.0471975 = 60 deg
+              cylindrical: True
+
+            - name: col2_freeboard
+              location: [51.75, 1.0471975, 15.0]
+              cylindrical: True
+
+            - name: col3_keel
+              location: [51.75, -1.0471976, -20.0] #-1.0471975 = -60 deg
+              cylindrical: True
+
+            - name: col3_freeboard
+              location: [51.75, -1.0471976, 15.0] #-1.0471975 = -60 deg
+              cylindrical: True
+
+            - name: anchor1
+              location: [837.8, 3.14159265, -200.0]
+              cylindrical: True
+
+            - name: anchor2
+              location: [837.8, 1.0471976, -200.0]  # 1.0471975 = 60 deg
+              cylindrical: True
+
+            - name: anchor3
+              location: [837.8, -1.0471976, -200.0]  #-1.0471975 = -60 deg
+              cylindrical: True
+
+        members:
+            - name: main_column
+              joint1: main_keel
+              joint2: main_freeboard
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape:
+                shape: circular
+                outer_diameter:
+                    grid: [0.0, 1.0]
+                    values: [10.0, 10.0]
+              internal_structure:
+                layers:
+                    - name: main_twall
+                      material: steel
+                      thickness:
+                        grid: [0.0, 1.0]
+                        values: [0.05, 0.05]
+                bulkhead:
+                    material: steel
+                    thickness:
+                        grid: [0.0, 1.0]
+                        values: [0.05, 0.05]
+              axial_joints:
+                - name: main_upper_pontoon
+                  grid: 0.987
+
+                - name: main_lower_pontoon
+                  grid: 0.1
+
+            - name: column1
+              joint1: col1_keel
+              joint2: col1_freeboard
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: &col_out
+                shape: circular
+                outer_diameter:
+                    grid: [0.0, 1.0]
+                    values: [12.5, 12.5]
+              internal_structure: &col_int
+                layers:
+                    - name: col_twall
+                      material: steel
+                      thickness:
+                        grid: [0.0, 1.0]
+                        values: [0.05, 0.05]
+                bulkhead:
+                    material: steel
+                    thickness:
+                        grid: [0.0, 0.05, 0.2, 1.0]
+                        values: [0.05, 0.05, 0.05, 0.05]
+                ballasts:
+                    - variable_flag: False
+                      material: slurry
+                      volume: 169.333333
+                      grid: [0.0, 0.05]
+                    - variable_flag: True
+                      grid: [0.05, 0.2]
+              axial_joints:
+                - name: col1_upper_pontoon
+                  grid: 0.987
+
+                - name: col1_lower_pontoon
+                  grid: 0.1
+
+                - name: col1_fairlead
+                  grid: 0.1714
+
+            - name: column2
+              joint1: col2_keel
+              joint2: col2_freeboard
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *col_out
+              internal_structure: *col_int
+              axial_joints:
+                - name: col2_upper_pontoon
+                  grid: 0.987
+
+                - name: col2_lower_pontoon
+                  grid: 0.1
+
+                - name: col2_fairlead
+                  grid: 0.1714
+
+            - name: column3
+              joint1: col3_keel
+              joint2: col3_freeboard
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *col_out
+              internal_structure: *col_int
+              axial_joints:
+                - name: col3_upper_pontoon
+                  grid: 0.987
+
+                - name: col3_lower_pontoon
+                  grid: 0.1
+
+                - name: col3_fairlead
+                  grid: 0.1714
+
+
+            - name: Y_pontoon_upper1
+              joint1: main_upper_pontoon
+              joint2: col1_upper_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: &pontup_out
+                shape: circular
+                outer_diameter:
+                    grid: [0.0, 1.0]
+                    values: [0.91, 0.91]
+              internal_structure: &pontup_int
+                layers:
+                    - name: pontoon_upper_twall
+                      material: steel
+                      thickness:
+                        grid: [0.0, 1.0]
+                        values: [0.02, 0.02]
+
+            - name: Y_pontoon_upper2
+              joint1: main_upper_pontoon
+              joint2: col2_upper_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *pontup_out
+              internal_structure: *pontup_int
+
+            - name: Y_pontoon_upper3
+              joint1: main_upper_pontoon
+              joint2: col3_upper_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *pontup_out
+              internal_structure: *pontup_int
+
+            - name: Y_pontoon_lower1
+              joint1: main_lower_pontoon
+              joint2: col1_lower_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: &pontlow_out
+                shape: circular
+                outer_diameter:
+                    grid: [0.0, 1.0]
+                    values: [9.6148, 9.6148] #equates displacement not circle: [12.5, 12.5]
+                #shape: polygonal
+                #side_lengths: [12.5, 7.0, 12.5, 7.0] # rectangle dimensions
+                #angles: [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.5707963267948966] # rectangle angles
+                #rotation: 0.0
+              internal_structure: &pontlow_int
+                  # Probably needs longitudinal stiffeners
+                layers:
+                    - name: pontoon_lower_twall
+                      material: steel
+                      thickness:
+                        grid: [0.0, 1.0]
+                        values: [0.04, 0.04]
+                ballasts:
+                    - variable_flag: True
+                      grid: [0.0, 1.0]
+
+            - name: Y_pontoon_lower2
+              joint1: main_lower_pontoon
+              joint2: col2_lower_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *pontlow_out
+              internal_structure: *pontlow_int
+
+            - name: Y_pontoon_lower3
+              joint1: main_lower_pontoon
+              joint2: col3_lower_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *pontlow_out
+              internal_structure: *pontlow_int
+    mooring:
+        nodes:
+            - name: line1_anchor
+              node_type: fixed
+              joint: anchor1
+              anchor_type: drag_embedment
+            - name: line2_anchor
+              node_type: fixed
+              joint: anchor2
+              anchor_type: drag_embedment
+            - name: line3_anchor
+              node_type: fixed
+              joint: anchor3
+              anchor_type: drag_embedment
+
+            - name: line1_vessel
+              node_type: vessel
+              joint: col1_fairlead
+              fairlead_type: rigid
+            - name: line2_vessel
+              node_type: vessel
+              joint: col2_fairlead
+              fairlead_type: rigid
+            - name: line3_vessel
+              joint: col3_fairlead
+              node_type: vessel
+              fairlead_type: rigid
+
+        lines:
+            - name: line1
+              node1: line1_anchor
+              node2: line1_vessel
+              line_type: main
+              unstretched_length: 850.0
+            - name: line2
+              node1: line2_anchor
+              node2: line2_vessel
+              line_type: main
+              unstretched_length: 850.0
+            - name: line3
+              node1: line3_anchor
+              node2: line3_vessel
+              line_type: main
+              unstretched_length: 850.0
+
+        line_types:
+            - name: main
+              diameter: 0.333 # volume-equivalent
+              type: chain
+              transverse_added_mass: 1.0
+              tangential_added_mass: 0.0
+              transverse_drag: 1.6
+              tangential_drag: 0.1
+
+        anchor_types:
+            - name: drag_embedment
+              type: drag_embedment
+
+materials: #(v) Database of matertial used in the turbine model. (TODO: iron-MS? + add GB mats <- cf. bill_of_mats.xls, sharepoint/WP5/Mats )
+   -  name: Gelcoat
+      orth: 0
+      rho: 1235.0
+      E: 3.440e+009
+      G: 1.323e+009
+      nu: 0.300
+      alpha: 0.0
+      Xt: 74.e+06
+      Xc: 87.e+06
+      S: 2.126E+7
+      GIc: 303
+      GIIc: 3446
+      alp0: 53
+      ply_t: 5.0E-4
+      waste: 0.25
+      unit_cost: 7.23
+      component_id: 0
+   -  name: steel
+      description: Steel of the tower and monopile ASTM A572 Grade 50
+      source: http://www.matweb.com/search/DataSheet.aspx?MatGUID=9ced5dc901c54bd1aef19403d0385d7f
+      orth: 0
+      rho: 7800
+      alpha: 0.0
+      E: 200.e+009
+      nu: 0.3
+      G: 79.3e+009
+      GIc: 0  #Place holder, currently not used
+      GIIc: 0  #Place holder, currently not used
+      alp0: 0  #Place holder, currently not used
+      Xt: 450.e+006
+      Xc: 450.e+006
+      S: 0
+      Xy: 345.e+6
+      m: 3
+      A: 3.5534648443719767e10 #DOI 10.1016/j.proeng.2013.12.061 eqn 5
+      unit_cost: 0.7
+   -  name: steel_drive
+      description: Steel of the drivetrain ASTM 4140 40Cr1Mo28
+      source: http://www.matweb.com/search/DataSheet.aspx?MatGUID=38108bfd64c44b4c9c6a02af78d5b6c6
+      orth: 0
+      rho: 7850
+      alpha: 0.0
+      E: 205.e+009
+      nu: 0.3
+      G: 80.0e+009
+      GIc: 0  #Place holder, currently not used
+      GIIc: 0  #Place holder, currently not used
+      alp0: 0  #Place holder, currently not used
+      Xt: 814.e+006
+      Xc: 814.e+006
+      S: 0
+      Xy: 485.e+6
+      m: 3
+      A: 3.5534648443719767e10 #DOI 10.1016/j.proeng.2013.12.061 eqn 5
+      unit_cost: 0.9
+   -  name: cast_iron
+      description: Cast iron for hub and nacelle components
+      source: TODO
+      orth: 0
+      rho: 7200
+      alpha: 0.0
+      E: 118.e+009
+      nu: 0.3
+      G: 47.6e+009
+      GIc: 0  #Place holder, currently not used
+      GIIc: 0  #Place holder, currently not used
+      alp0: 0  #Place holder, currently not used
+      Xt: 310.e+006
+      Xc: 310.e+006
+      S: 0
+      Xy: 265.e+6
+      m: 3
+      unit_cost: 0.5
+   -  name: glass_uni
+      description: Vectorply E-LT-5500, Epikote MGS RIMR 135/Epicure MGS RIMH 1366 epoxy
+      source: MSU composites database 3D property tests, Engineering Mechanics of Composite Materials, Daniel, I & Ishai, O., 1994, pg. 34
+      orth: 1
+      rho: 1940.0
+      E: [4.46E+10, 1.7E+10, 1.67E+10]
+      G: [3.27E+9, 3.48E+9, 3.5E+9]
+      nu: [0.262, 0.35, 0.264]
+      Xt: [6.092E+8, 3.81E+7, 1.529E+7]
+      Xc: [4.7471E+8, 1.1264E+8, 1.1322E+8]
+      S: [1.891E+7, 1.724E+7, 1.316E+7]
+      m: 10
+      GIc: 303
+      GIIc: 3446
+      alp0: 53
+      fvf: 0.57
+      fwf: 0.7450682696347697
+      ply_t: 0.005
+      unit_cost: 1.87
+      waste: 0.05
+      fiber_density: 2535.5
+      area_density_dry: 7.227162215457267
+      component_id: 5
+   -  name: CarbonUD
+      E: [114500000000.0, 8390000000.0, 8390000000.0]
+      G: [5990000000.0, 5990000000.0, 5990000000.0]
+      rho: 1220.0
+      orth: 1
+      nu: [0.27, 0.27, 0.27]
+      Xt: [1546.e+6, 0.0, 0.0]
+      Xc: [1047.e+6, 0.0, 0.0]
+      S: [0.0, 0.0, 0.0]
+      m: 16.1
+      GIc: 0.0
+      GIIc: 0.0
+      alp0: 0.0
+      fvf: 0.1076923076923077 #0.5384615384615385
+      fwf: 0.15889029003783103 #0.6461538461538463
+      ply_t: 0.005158730158730159 #0.0010317460317460314
+      unit_cost: 30.
+      waste: 0.05
+      fiber_density: 1800.
+      area_density_dry: 1.000
+      component_id: 4
+   -  name: glass_biax
+      description: Vectorply E-LT-5500, Epikote MGS RIMR 135/Epicure MGS RIMH 1366 epoxy
+      source: MSU composites database 3D property tests, Engineering Mechanics of Composite Materials, Daniel, I & Ishai, O., 1994, pg. 34
+      orth: 1
+      rho: 1940.0
+      E: [1.11E+10, 1.11E+10, 1.67E+10]
+      G: [1.353E+10, 3.49E+9, 3.49E+9]
+      nu: [0.5, 0.0, 0.066]
+      Xt: [4.29E+7, 4.26E+7, 1.53E+7]
+      Xc: [7.07E+7, 7.07E+7, 1.132E+8]
+      S: [1.034E+8, 1.72E+7, 1.32E+7]
+      m: 10
+      GIc: 303
+      GIIc: 3446
+      alp0: 53
+      fvf: 0.57
+      fwf: 0.7450682696347697
+      ply_t: 0.001
+      waste: 0.15
+      unit_cost: 3.00
+      fiber_density: 2535.5
+      area_density_dry: 1.4454324430914534
+      component_id: 3
+      roll_mass: 181.4368
+   -  name: glass_triax
+      description: Vectorply E-LT-5500, Epikote MGS RIMR 135/Epicure MGS RIMH 1366 epoxy
+      source: MSU composites database 3D property tests, Engineering Mechanics of Composite Materials, Daniel, I & Ishai, O., 1994, pg. 34
+      orth: 1.0
+      rho: 1940.0
+      E: [2.87E+10, 1.66E+10, 1.67E+10]
+      G: [8.4E+9, 3.49E+9, 3.49E+9]
+      nu: [0.5, 0.0, 0.17]
+      Xt: [3.96E+8, 7.64E+7, 1.53E+7]
+      Xc: [4.489E+8, 1.747E+8, 1.132E+8]
+      S: [1.034E+8, 1.72E+7, 1.32E+7]
+      m: 10
+      GIc: 303
+      GIIc: 3446
+      alp0: 53
+      fvf: 0.57
+      fwf: 0.7450682696347697
+      ply_t: 0.001
+      unit_cost: 2.86
+      waste: 0.15
+      fiber_density: 2535.5
+      area_density_dry: 1.4454324430914534
+      component_id: 2
+      roll_mass: 181.4368
+   -  name: medium_density_foam
+      description: Airex C70.130 PVC Foam, source 'https://www.3accorematerials.com/uploads/documents/TDS-AIREX-C70-E_1106.pdf'
+      orth: 0.0
+      rho: 130.0
+      E: 1.292E+8
+      G: 4.8946969696969695E+7
+      nu: 0.32
+      Xt: 2083000.0
+      Xc: 1563000.0
+      S: 1250000.0
+      GIc: 303
+      GIIc: 3446
+      alp0: 53
+      component_id: 1
+      waste: 0.2
+      unit_cost: 13
+   -  name: resin
+      description: epoxy
+      E: 1.e+6
+      nu: 0.3  #Place holder, currently not used
+      G: 312500.0  #Place holder, currently not used
+      GIc: 0  #Place holder, currently not used
+      GIIc: 0  #Place holder, currently not used
+      alp0: 0  #Place holder, currently not used
+      Xt: 0  #Place holder, currently not used
+      Xc: 0  #Place holder, currently not used
+      S: 0  #Place holder, currently not used
+      rho: 1150.
+      alpha: 0.0
+      orth: 0
+      unit_cost: 3.63
+   -  name: adhesive
+      description: Sample adhesive
+      source: https://www.nrel.gov/docs/fy19osti/73585.pdf
+      orth: 0
+      rho: 1100
+      E: 4.56e+006
+      nu: 0.49
+      alpha: 0.0
+      Xt: 0.69e+006
+      Xc: 0.4e+006
+      S: 0.31e+006
+      G: 1520000.0
+      unit_cost: 9.0
+
+environment:
+    air_density: 1.225
+    air_dyn_viscosity: 1.81e-5
+    weib_shape_parameter: 2.
+    air_speed_sound: 340.
+    shear_exp: 0.12
+    water_density: 1025.0
+    water_dyn_viscosity: 1.3351e-3
+    soil_shear_modulus: 140.e+6
+    soil_poisson: 0.4
+    water_depth: 30.0
+    significant_wave_height: 4.52
+    significant_wave_period: 9.45
+
+# costs:
+    # wake_loss_factor: 0.15
+    # fixed_charge_rate: 0.056
+    # bos_per_kW: 4053.
+    # opex_per_kW: 137.
+    # turbine_number: 40.
+    # labor_rate: 58.8
+    # painting_rate: 30.0
+    # blade_mass_cost_coeff: 14.6
+    # hub_mass_cost_coeff: 3.9
+    # pitch_system_mass_cost_coeff: 22.1
+    # spinner_mass_cost_coeff: 11.1
+    # lss_mass_cost_coeff: 11.9
+    # bearing_mass_cost_coeff: 4.5
+    # gearbox_mass_cost_coeff: 12.9
+    # hss_mass_cost_coeff: 6.8
+    # generator_mass_cost_coeff: 12.4
+    # bedplate_mass_cost_coeff: 2.9
+    # yaw_mass_cost_coeff: 8.3
+    # converter_mass_cost_coeff: 18.8
+    # transformer_mass_cost_coeff: 18.8
+    # hvac_mass_cost_coeff: 124.0
+    # cover_mass_cost_coeff: 5.7
+    # elec_connec_machine_rating_cost_coeff: 41.85
+    # platforms_mass_cost_coeff: 17.1
+    # tower_mass_cost_coeff: 2.9
+    # controls_machine_rating_cost_coeff: 21.15
+    # crane_cost: 12.e+3
