@@ -27,7 +27,6 @@ verbose = False
 flag_opt_GBO = False
 flag_scaling_show_browser = False
 
-flag_override_hub_loads = False # TODO: not working; make a flag in model_opts which removes connections
 flag_override_tower_init = False
 
 #%%
@@ -51,7 +50,7 @@ if wt_m4w:
 else:
       fname_wt_input = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
 
-# fname_wt_input = dir_m4w_run + os.sep + "outputs//test.yaml"
+fname_wt_input = dir_m4w_run + os.sep + "outputs\\test.yaml"
 
 # ---- modelling options
 fname_model_opts_m4w = dir_m4w_run+os.sep+ "modelOpts_m4w.yaml"
@@ -71,21 +70,8 @@ else:
 loc_scaling_report = os.path.join(dir_m4w_run,
       'outputs', 'scaling_report.html')
 
-#%% Loads from hub: overwrite values TODO: rotorse overwrites it at run
-if flag_override_hub_loads:
-      dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
-      loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4w.mat")
-      S_all,_ = load_all_mat_to_dict(loc_all_loads_mat_file)
-
-      F_aero_hub =np.array( [S_all['Fx_max'], S_all['Fy_max'], S_all['Fz_max']] ).reshape((3, 1))
-      M_aero_hub =np.array( [S_all['Mx_max'], S_all['My_max'], S_all['Mz_max']] ).reshape((3, 1))
-      
-      # can't override coz (required) rotorse overwrites them in run
-      overrides = {
-           'drivese.F_aero_hub': F_aero_hub, 'drivese.M_aero_hub': M_aero_hub
-      }
-
-elif flag_override_tower_init:
+#%% overwrite values TODO
+if flag_override_tower_init:
      overrides = {
           'towerse.tower_outer_diameter': np.ones((1,20))*15,
           'towerse.tower_layer_thickness': np.ones((1,20))*100e-3
@@ -112,7 +98,7 @@ print("1P (blade period) freq ranges:")
 print(" ", freq_range_1P, " Hz" )
 print("3P (blade passing) freq ranges:")
 print(" ", freq_range_3P, " Hz" )
-freq_tower = wt_opt["towerse.tower.structural_frequencies"]
+freq_tower = wt_opt["floatingse.structural_frequencies"]
 print("Tower fore-aft/side-side freq range:")
 print(" ", freq_tower[0:2], " Hz" )
 
@@ -156,7 +142,7 @@ def get_tower_utilizations( wt_opt ):
      constr_d_to_t = wt_opt["towerse.constr_d_to_t"]
      constr_taper = wt_opt["towerse.constr_taper"]
      wind = wt_opt["towerse.env.Uref"]
-     freq = wt_opt["towerse.tower.structural_frequencies"]
+     freq = wt_opt["floatingse.structural_frequencies"]
      modes_FA = wt_opt["towerse.tower.fore_aft_modes"]
      modes_SS = wt_opt["towerse.tower.side_side_modes"]
      defl_top = wt_opt["towerse.tower.top_deflection"]
@@ -257,8 +243,8 @@ from wisdem.postprocessing.plot_tower_data import plot_tower_geo_comparison
 # define yamls and run plot
 # Geometry YAML files
 # 1. base IEA 15-MW
-iea_report_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub_report.yaml"
-acciona_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub_acciona.yaml"
+iea_report_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
+acciona_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_acciona.yaml"
 # 2. Made4Wind
 m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_10m.yaml"
 # loc save img
@@ -268,5 +254,4 @@ loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
 # plot
 plot_tower_geo_comparison( m4w_yaml, iea_report_yaml )
 
-#%%[markdown]
-# ### Monopile utilizations (rmv)
+#%%
