@@ -10,6 +10,7 @@ WISDEM:
         te_ps: TE_reinforcement_PS # Name in the yaml of the trailing edge reinforcement on the pressure side
     DriveSE:
         flag: True
+        own_hub_loads: True
     TowerSE:             # Options of TowerSE module
         flag: True
         # wind: PowerWind

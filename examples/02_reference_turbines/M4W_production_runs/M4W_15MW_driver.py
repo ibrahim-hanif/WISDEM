@@ -35,7 +35,7 @@ mydir = os.path.dirname(os.path.realpath(__file__))  # get path to this file
 dir_02_ref_turbines = os.path.dirname(mydir)  # get path to 02_reference_turbines
 
 # ---- wind turbine geometry
-fname_wt_m4w = mydir + os.sep + "M4W-15-ieaMonopile-WT.yaml"
+fname_wt_m4w = mydir + os.sep + "M4W-15-VolturnUS-WT.yaml"
 fname_wt_iea15mw = dir_02_ref_turbines + os.sep + "IEA-15-240-RWT.yaml"
 if wt_m4w:
       fname_wt_input = fname_wt_m4w

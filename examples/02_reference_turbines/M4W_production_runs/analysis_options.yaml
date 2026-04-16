@@ -1,18 +1,86 @@
 # Generic analysis options where nothing is run
 general: #(v) TODO: change?
     folder_output: outputs
-    fname_output: refturb_output
+    fname_output: M4Wturb_optim
 
-#(v) -------------- NEW! MB FLS constraints --------------
+design_variables:
+    tower:
+        outer_diameter:
+            flag: True
+            lower_bound: 6.5
+            upper_bound: 10.0
+        layer_thickness:
+            flag: True
+            lower_bound: 4e-3
+            upper_bound: 2e-1
+    # monopile:
+    #     outer_diameter:
+    #         flag: True
+    #         lower_bound: 6.5
+    #         upper_bound: 10.0
+    #     layer_thickness:
+    #         flag: True
+    #         lower_bound: 4e-3
+    #         upper_bound: 2e-1
+
 constraints:
-    user: # check with runWISDEM code impl
-        - name: "nacelle.constr_L10_mb1"
-          lower_bound: [1.0]
-        - name: "nacelle.constr_L10_mb2"
-          lower_bound: [1.0]
-        - name: "nacelle.constr_Lh1_MB1fw"
-          lower_bound: [0.0]
-          ref: 1e1
-        - name: "nacelle.constr_L12_MBsFW"
-          lower_bound: [0.0]
-          ref: 1e0
+    tower:
+        height_constraint:
+            flag: False #False
+            lower_bound: 1.e-2
+            upper_bound: 1.e-2
+        stress:
+            flag: True
+        global_buckling:
+            flag: True
+        shell_buckling:
+            flag: True
+        d_to_t:
+            flag: False #False
+            lower_bound: 120.0
+            upper_bound: 2000.0
+        taper:
+            flag: False #False
+            lower_bound: 0.2
+        slope:
+            flag: True
+        frequency:
+            flag: False #False
+        frequency_1:
+            flag: False #False
+            lower_bound: 0.13
+            upper_bound: 0.40
+    # monopile:
+    #     stress:
+    #         flag: True
+    #     global_buckling:
+    #         flag: True
+    #     shell_buckling:
+    #         flag: True
+    #     d_to_t:
+    #         flag: False
+    #         lower_bound: 120.0
+    #         upper_bound: 2000.0
+    #     taper:
+    #         flag: False
+    #         lower_bound: 0.2
+    #     slope:
+    #         flag: True
+    #     thickness_slope:
+    #         flag: True
+    #     frequency_1:
+    #         flag: True
+    #         lower_bound: 0.13
+    #         upper_bound: 0.40
+    #     pile_depth:
+    #         flag: True
+    #         lower_bound: 0.0
+    #     tower_diameter_coupling:
+    #         flag: True
+
+merit_figure: tower_mass # structural_mass #(tower+monpoile)
+
+driver:
+    optimization:
+        flag: True
+        debug_print: True
