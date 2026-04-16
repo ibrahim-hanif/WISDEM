@@ -3,7 +3,7 @@
 # purpose: copy of `driver_tower_monopile_m4w.py` to test M4W modifications
 # 
 # ### current version:
-# mainly 'support structure' optimization with a (given) drivetrain/RNA (result of 03_)
+# mainly 'tower' optimization with a (given) drivetrain/RNA (result of 03_)
 #
 # - objective: (1) `tower_mass` minimization
 #
@@ -255,7 +255,7 @@ if flag_plot:
 #%%[markdown]
 # ### Tower geometry
 #%%
-from plot_tower_data import plot_tower_geo_comparison
+from wisdem.postprocessing.plot_tower_data import plot_tower_geo_comparison
 #%%
 # define yamls and run plot
 # Geometry YAML files
