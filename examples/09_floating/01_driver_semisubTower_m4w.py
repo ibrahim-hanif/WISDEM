@@ -18,7 +18,9 @@ import matplotlib.pyplot as plt
 from wisdem.commonse.utilities import load_all_mat_to_dict
 
 #%%
-wt_m4w = False # turbine to analyse: True = m4w / False = iea15mw
+wt_m4w = True # turbine to analyse: True = m4w / False = iea15mw
+loads_m4w = True
+
 flag_plot = True
 verbose = False
 
@@ -44,14 +46,17 @@ dir_m4w_run = mydir + os.sep + "M4W_01_semisubTower_only"
 # - m4w 15mw 
 # fname_wt_input = dir_02_rwt_m4w + os.sep + "M4W-15-VolturnUS-WT.yaml"
 
-fname_wt_input = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
-# fname_wt_input = dir_m4w_run +os.sep + "iea15_towerSemi_acciona.yaml"
+if wt_m4w:
+     fname_wt_input = dir_m4w_run +os.sep + "iea15_towerSemi_acciona.yaml"
+else:
+      fname_wt_input = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
+
 # fname_wt_input = dir_m4w_run + os.sep + "outputs//test.yaml"
 
 # ---- modelling options
 fname_model_opts_m4w = dir_m4w_run+os.sep+ "modelOpts_m4w.yaml"
 fname_model_opts_iea = dir_m4w_run+os.sep+ "modelOpts_iea15.yaml"
-if wt_m4w:
+if loads_m4w:
       fname_modeling_options = fname_model_opts_m4w
 else:
      fname_modeling_options = fname_model_opts_iea
@@ -247,7 +252,7 @@ if flag_plot:
 #%%[markdown]
 # ### Tower geometry
 #%%
-from plot_tower_data import plot_tower_geo_comparison
+from wisdem.postprocessing.plot_tower_data import plot_tower_geo_comparison
 #%%
 # define yamls and run plot
 # Geometry YAML files
@@ -264,103 +269,4 @@ loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
 plot_tower_geo_comparison( m4w_yaml, iea_report_yaml )
 
 #%%[markdown]
-# ### Monopile utilizations
-#%%
-def get_monopile_utilizations( wt_opt ):
-      zs = wt_opt["fixedse.z_full"]
-      ds = wt_opt["fixedse.outer_diameter_full"]
-      ts = wt_opt["fixedse.t_full"]
-      mass = wt_opt["fixedse.monopile_mass"]
-      cg = wt_opt["fixedse.monopile_z_cg"]
-      constr_d_to_t = wt_opt["fixedse.constr_d_to_t"]
-      constr_taper = wt_opt["fixedse.constr_taper"]
-      wind = wt_opt["fixedse.env.Uref"]
-      freq = wt_opt["fixedse.structural_frequencies"]
-      modes_FA = wt_opt["fixedse.fore_aft_modes"]
-      modes_SS = wt_opt["fixedse.side_side_modes"]
-      defl_top = wt_opt["fixedse.monopile.top_deflection"]
-      F_mudline = wt_opt["fixedse.monopile.mudline_F"]
-      M_mudline = wt_opt["fixedse.monopile.mudline_M"]
-      constr_stress = wt_opt["fixedse.post.constr_stress"]
-      constr_buckle_GL = wt_opt["fixedse.post.constr_global_buckling"]
-      constr_buckle_Sh = wt_opt["fixedse.post.constr_shell_buckling"]
-      # return all as dict
-      return {
-           'zs': zs, 'ds': ds, 'ts': ts, 'mass': mass, 'cg': cg,
-           'constr_d_to_t': constr_d_to_t, 'constr_taper': constr_taper,
-           'wind': wind, 'freq': freq, 'modes_FA': modes_FA, 'modes_SS': modes_SS,
-           'defl_top': defl_top, 'F_mudline': F_mudline, 'M_mudline': M_mudline,
-           'constr_stress': constr_stress, 'constr_buckle_GL': constr_buckle_GL,
-           'constr_buckle_Sh': constr_buckle_Sh
-      }
-
-def print_monopile_utilizations( dict_monopile_utils ):
-      # unpack dict
-      zs = dict_monopile_utils['zs']
-      ds = dict_monopile_utils['ds']
-      ts = dict_monopile_utils['ts']
-      mass = dict_monopile_utils['mass']
-      cg = dict_monopile_utils['cg']
-      constr_d_to_t = dict_monopile_utils['constr_d_to_t']
-      constr_taper = dict_monopile_utils['constr_taper']
-      wind = dict_monopile_utils['wind']
-      freq = dict_monopile_utils['freq']
-      modes_FA = dict_monopile_utils['modes_FA']
-      modes_SS = dict_monopile_utils['modes_SS']
-      defl_top = dict_monopile_utils['defl_top']
-      F_mudline = dict_monopile_utils['F_mudline']
-      M_mudline = dict_monopile_utils['M_mudline']
-      constr_stress = dict_monopile_utils['constr_stress']
-      constr_buckle_GL = dict_monopile_utils['constr_buckle_GL']
-      constr_buckle_Sh = dict_monopile_utils['constr_buckle_Sh']
-
-     # print results from the analysis or optimization
-      print("zs =", zs)
-      print("ds =", ds)
-      print("ts =", ts)
-      print("mass (kg) =", mass)
-      print("cg (m) =", cg)
-      print("d:t constraint =", constr_d_to_t)
-      print("taper ratio constraint =", constr_taper)
-
-      print("\nwind: ", wind )
-      print("freq (Hz) =", freq)
-      print("Fore-aft mode shapes =", modes_FA)
-      print("Side-side mode shapes =", modes_SS)
-      print("top_deflection (m) =", defl_top)
-      print("Tower base forces (N) =", F_mudline)
-      print("Tower base moments (Nm) =", M_mudline)
-      print("stress =", constr_stress)
-      print("GL buckling =", constr_buckle_GL)
-      print("Shell buckling =", constr_buckle_Sh)
-
-#%%
-z_monopile = 0.5 * (
-     wt_opt["fixedse.z_full"][:-1] + wt_opt["fixedse.z_full"][1:] )
-dict_monopile_utils = get_monopile_utilizations(wt_opt)
-if verbose: print_monopile_utilizations( dict_monopile_utils )
-
-if flag_plot:
-    stress = wt_opt["fixedse.post.constr_stress"]
-    shellBuckle = wt_opt["fixedse.post.constr_shell_buckling"]
-    globalBuckle = wt_opt["fixedse.post.constr_global_buckling"]
-
-    plt.figure(figsize=(5.0, 3.5))
-    plt.subplot2grid((3, 3), (0, 0), colspan=2, rowspan=3)
-    plt.plot(stress, z_monopile,
-      label="stress", color=clrs_m4w['Aqua'])
-#     plt.plot(stress[:, 1], z, label="stress 2")
-    plt.plot(shellBuckle, z_monopile,
-      label="shell buckling", color=clrs_m4w['Red'])
-#     plt.plot(shellBuckle[:, 1], z, label="shell buckling 2")
-    plt.plot(globalBuckle, z_monopile,
-      label="global buckling", color=clrs_m4w['Dark_Green'])
-#     plt.plot(globalBuckle[:, 1], z, label="global buckling 2")
-    plt.axvline(1.0, color='k', linestyle='--', linewidth=1, label='1.0 limit')
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc=2)
-    plt.xlabel("utilization")
-    plt.ylabel("height along monopile (m)")
-    plt.tight_layout()
-    plt.show()
-
-# %%
+# ### Monopile utilizations (rmv)

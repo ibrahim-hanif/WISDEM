@@ -540,6 +540,18 @@ materials: #(v) Database of matertial used in the turbine model. (TODO: iron-MS?
       S: 0.31e+006
       G: 1520000.0
       unit_cost: 9.0
+   -  name: slurry
+      description: fixed/permanent ballast
+      E: 1.0 # compliant
+      nu: 0.3  #Place holder, currently not used
+      G: 1.0  # compliant
+      Xt: 0  #Place holder, currently not used
+      Xc: 0  #Place holder, currently not used
+      S: 0  #Place holder, currently not used
+      rho: 5000.
+      alpha: 0.0
+      unit_cost: 1.0
+      orth: 0.0
 
 environment: #(v) TODO: air=utsira, ocean=default
     air_density: 1.225
@@ -555,14 +567,14 @@ environment: #(v) TODO: air=utsira, ocean=default
     significant_wave_height: 1.1 #4.52 # ---- @ max wind speed
     significant_wave_period: 7.203 #9.45 # ----
 
-# costs:
+costs:
     # wake_loss_factor: 0.15
     # fixed_charge_rate: 0.056
     # bos_per_kW: 4053.
     # opex_per_kW: 137.
     # turbine_number: 40.
-    # labor_rate: 58.8
-    # painting_rate: 30.0
+    labor_rate: 58.8
+    painting_rate: 30.0
     # blade_mass_cost_coeff: 14.6
     # hub_mass_cost_coeff: 3.9
     # pitch_system_mass_cost_coeff: 22.1
