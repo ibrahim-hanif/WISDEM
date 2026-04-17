@@ -550,11 +550,11 @@ for iF in range(numTS):
     # reactions on mbs
     k=0
     # - mb1
-    F_mb1_myframe[:3,iF] = np.array([reactions.Fx[k,0], reactions.Fy[k, 0], reactions.Fz[k, 0]])
+    F_mb1_myframe[:3,iF] = np.array([np.abs(reactions.Fx[k,0]), reactions.Fy[k, 0], reactions.Fz[k, 0]])
     # M_mb1_frame[:,iF] = prob['M_mb1'][:,0] # == 0
     # - mb2
-    F_mb2_myframe[:3,iF] = np.array([reactions.Fx[k, 1], reactions.Fy[k, 1], reactions.Fz[k, 1]])
-    M_mb2_frame[:3,iF] = np.array([reactions.Mxx[k, 0], reactions.Myy[k, 0], reactions.Mzz[k, 0]])
+    F_mb2_myframe[:3,iF] = np.array([np.abs(reactions.Fx[k, 1]), reactions.Fy[k, 1], reactions.Fz[k, 1]])
+    M_mb2_myframe[:3,iF] = np.array([reactions.Mxx[k, 1], reactions.Myy[k, 1], reactions.Mzz[k, 1]])
 # - radial forces
 F_mb1_myframe[3,:] = np.hypot(F_mb1_myframe[1,:], F_mb1_myframe[2,:])
 F_mb2_myframe[3,:] = np.hypot(F_mb2_myframe[1,:], F_mb2_myframe[2,:])
@@ -594,10 +594,10 @@ gs = fig.add_gridspec(5, 2, hspace=0.35, wspace=0.25)
 # ===== mb1 =====
 # ----- [0] = rad
 ax1 = fig.add_subplot(gs[0,:])
+ax1.plot( np.abs(F_mb1_myframe[3,:]),
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
 ax1.plot( np.abs(F_mb1_beam[3,0,:]),
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
-ax1.plot( np.abs(F_mb1_frame[3,:]),
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
 ax1.legend()
 ax1.set_title(r"$F_{rad}^{mb1}$")
 ax1.set_xticks([])
@@ -606,17 +606,17 @@ ax1.set_xlabel(r'$t$')
 # ===== mb2 =====
 # ----- [1] = x
 ax2 = fig.add_subplot(gs[1,0])
-ax2.plot( np.abs(F_mb2_frame[0,:]),
+ax2.plot( np.abs(F_mb2_myframe[0,:]),
          label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
 ax2.plot( np.abs(F_mb2_beam[0,0,:]),
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
 # ax2.legend()
-ax2.set_title(r"$F_{ax}^{mb2}$")
+ax2.set_title(r"$|F_{ax}^{mb2}|$")
 ax2.set_xticks([])
 # ax2.set_xlabel(r'$t$')
 # ----- [2] = rad
 ax3 = fig.add_subplot(gs[1,1])
-ax3.plot( np.abs(F_mb2_frame[3,:]),
+ax3.plot( np.abs(F_mb2_myframe[3,:]),
          label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
 ax3.plot( np.abs(F_mb2_beam[3,0,:]),
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
@@ -626,7 +626,7 @@ ax3.set_title(r"$F_{rad}^{mb2}$")
 ax3.set_xticks([])
 # ----- [3] = y
 ax = fig.add_subplot(gs[2,0])
-ax.plot( np.abs(F_mb2_frame[1,:]),
+ax.plot( np.abs(F_mb2_myframe[1,:]),
          label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
 ax.plot( np.abs(F_mb2_beam[1,0,:]),
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
@@ -636,7 +636,7 @@ ax.set_title(r"$F_{y}^{mb2}$")
 ax.set_xticks([])
 # ----- [3] = z
 ax = fig.add_subplot(gs[2,1])
-ax.plot( np.abs(F_mb2_frame[2,:]),
+ax.plot( np.abs(F_mb2_myframe[2,:]),
          label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
 ax.plot( np.abs(F_mb2_beam[2,0,:]),
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
@@ -647,7 +647,7 @@ ax.set_xticks([])
 
 # ----- [3] = My
 ax4 = fig.add_subplot(gs[3,0])
-ax4.plot( np.abs(M_mb2_frame[1,:]),
+ax4.plot( np.abs(M_mb2_myframe[1,:]),
          label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
 ax4.plot( np.abs(M_mb2_beam[0,0,:]),
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
@@ -657,7 +657,7 @@ ax4.set_title(r"$M_{y}^{mb2}$")
 ax4.set_xticks([])
 # ----- [4] = Mz
 ax5 = fig.add_subplot(gs[3,1])
-ax5.plot( np.abs(M_mb2_frame[2,:]),
+ax5.plot( np.abs(M_mb2_myframe[2,:]),
          label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
 ax5.plot( np.abs(M_mb2_beam[1,0,:]),
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
@@ -667,7 +667,7 @@ ax5.set_title(r"$M_{z}^{mb2}$")
 ax5.set_xticks([])
 # ----- [5] = M_rad
 ax6 = fig.add_subplot(gs[4,:])
-ax6.plot( M_mb2_frame[3,:],
+ax6.plot( M_mb2_myframe[3,:],
          label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
 ax6.plot( M_mb2_beam_norm,
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
@@ -695,23 +695,31 @@ def mapError( vData, vRef ):
     return np.sum( np.abs( (vData-vRef)*1e2 / vRef ) )/N
 
 # F_mb1_rad
-err_Fmb1_rad = F_mb1_beam[3,0,:] - F_mb1_frame[3,:] # - 95600
-mape_Fmb1_rad = mapError( F_mb1_beam[3,0,:], F_mb1_frame[3,:] )
+err_Fmb1_rad = F_mb1_beam[3,0,:] - F_mb1_myframe[3,:] # - 95600
+mape_Fmb1_rad = mapError( F_mb1_beam[3,0,:], F_mb1_myframe[3,:] )
 print(
     f"F_mb1_rad | Error: max= {np.max( err_Fmb1_rad )}; map= {mape_Fmb1_rad}"
 )
 
 # F_mb2_ax
-err_Fmb2_ax = F_mb2_beam[0,0,:] - F_mb2_frame[0,:] # = 78546 (due to gravity loads each ele)
-mape_Fmb2_ax = mapError( F_mb2_beam[0,0,:], F_mb2_frame[0,:] )
+err_Fmb2_ax = F_mb2_beam[0,0,:] - F_mb2_myframe[0,:] # = 78546 (due to gravity loads each ele)
+mape_Fmb2_ax = mapError( F_mb2_beam[0,0,:], F_mb2_myframe[0,:] )
 print(
     f"F_mb2_ax | Error: max= {np.max( err_Fmb2_ax )}; map= {mape_Fmb2_ax}"
 )
 
 # F_mb2_rad
-err_Fmb2_rad = F_mb2_beam[3,0,:] - F_mb2_frame[3,:] # = -1.0 * 1e6
-mape_Fmb2_rad = mapError( F_mb2_beam[3,0,:], F_mb2_frame[3,:] )
+err_Fmb2_rad = F_mb2_beam[3,0,:] - F_mb2_myframe[3,:] # = -1.0 * 1e6
+mape_Fmb2_rad = mapError( F_mb2_beam[3,0,:], F_mb2_myframe[3,:] )
 print(
     f"F_mb2_rad | Error: max= {np.max( err_Fmb2_rad )}; map= {mape_Fmb2_rad}"
 )
+
+# M_mb2_norm
+if k_torsional > 0.0:
+    err_Mmb2_rad = M_mb2_beam_norm - M_mb2_myframe[3,:]
+    mape_Mmb2_rad = mapError( M_mb2_beam_norm, M_mb2_myframe[3,:] )
+    print(
+        f"F_mb2_rad | Error: max= {np.max( err_Mmb2_rad )}; map= {mape_Mmb2_rad}"
+    )
 # %%
