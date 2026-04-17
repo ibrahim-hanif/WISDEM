@@ -406,6 +406,8 @@ loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
 clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
 clr_Frame = clrs_m4w['Dark_Blue']
 clr_Beam = clrs_m4w['Aqua']
+lineWidth_Frame = 4.0
+lineStyle_Beam = 'dashed'
 # -------------------------
 # options: Journal polish
 # plot rc params
@@ -422,7 +424,7 @@ plt.rcParams.update( params_plot_rc )
 # plot and compare loads from analy_ and Hub_]
 # F_mb1_beam.shape# = (4,1,numTS)
 fig = plt.figure(figsize=(16,16))
-gs = fig.add_gridspec(4, 2, hspace=0.35, wspace=0.25)
+gs = fig.add_gridspec(5, 2, hspace=0.35, wspace=0.25)
 # ---- grid = [ mb1 rad,
 #               mb2: ax, rad,
 #               mb2 My, Mz ]
@@ -430,61 +432,82 @@ gs = fig.add_gridspec(4, 2, hspace=0.35, wspace=0.25)
 # ----- [0] = rad
 ax1 = fig.add_subplot(gs[0,:])
 ax1.plot( np.abs(F_mb1_beam[3,0,:]),
-         label="EBbeam", color=clr_Beam )
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
 ax1.plot( np.abs(F_mb1_frame[3,:]),
-         label="Frame", color=clr_Frame )
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
 ax1.legend()
 ax1.set_title(r"$F_{rad}^{mb1}$")
 ax1.set_xticks([])
 ax1.set_xlabel(r'$t$')
+
 # ===== mb2 =====
 # ----- [1] = x
 ax2 = fig.add_subplot(gs[1,0])
-ax2.plot( np.abs(F_mb2_beam[0,0,:]),
-         label="EBbeam", color=clr_Beam )
 ax2.plot( np.abs(F_mb2_frame[0,:]),
-         label="Frame", color=clr_Frame )
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax2.plot( np.abs(F_mb2_beam[0,0,:]),
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
 # ax2.legend()
 ax2.set_title(r"$F_{ax}^{mb2}$")
 ax2.set_xticks([])
-ax2.set_xlabel(r'$t$')
+# ax2.set_xlabel(r'$t$')
 # ----- [2] = rad
 ax3 = fig.add_subplot(gs[1,1])
-ax3.plot( np.abs(F_mb2_beam[3,0,:]),
-         label="EBbeam", color=clr_Beam )
 ax3.plot( np.abs(F_mb2_frame[3,:]),
-         label="Frame", color=clr_Frame )
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax3.plot( np.abs(F_mb2_beam[3,0,:]),
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
 # ax3.legend()
 ax3.set_title(r"$F_{rad}^{mb2}$")
-ax3.set_xlabel(r"$t$")
+# ax3.set_xlabel(r"$t$")
 ax3.set_xticks([])
+# ----- [3] = y
+ax = fig.add_subplot(gs[2,0])
+ax.plot( np.abs(F_mb2_frame[1,:]),
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax.plot( np.abs(F_mb2_beam[1,0,:]),
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+# ax3.legend()
+ax.set_title(r"$F_{y}^{mb2}$")
+# ax.set_xlabel(r"$t$")
+ax.set_xticks([])
+# ----- [3] = z
+ax = fig.add_subplot(gs[2,1])
+ax.plot( np.abs(F_mb2_frame[2,:]),
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax.plot( np.abs(F_mb2_beam[2,0,:]),
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+# ax3.legend()
+ax.set_title(r"$F_{z}^{mb2}$")
+# ax.set_xlabel(r"$t$")
+ax.set_xticks([])
+
 # ----- [3] = My
-ax4 = fig.add_subplot(gs[2,0])
-ax4.plot( np.abs(M_mb2_beam[0,0,:]),
-         label="EBbeam", color=clr_Beam )
+ax4 = fig.add_subplot(gs[3,0])
 ax4.plot( np.abs(M_mb2_frame[1,:]),
-         label="Frame", color=clr_Frame )
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax4.plot( np.abs(M_mb2_beam[0,0,:]),
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
 # ax4.legend()
 ax4.set_title(r"$M_{y}^{mb2}$")
-ax4.set_xlabel(r"$t$")
+# ax4.set_xlabel(r"$t$")
 ax4.set_xticks([])
 # ----- [4] = Mz
-ax5 = fig.add_subplot(gs[2,1])
-ax5.plot( np.abs(M_mb2_beam[1,0,:]),
-         label="EBbeam", color=clr_Beam )
+ax5 = fig.add_subplot(gs[3,1])
 ax5.plot( np.abs(M_mb2_frame[2,:]),
-         label="Frame", color=clr_Frame )
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax5.plot( np.abs(M_mb2_beam[1,0,:]),
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
 # ax4.legend()
 ax5.set_title(r"$M_{z}^{mb2}$")
-ax5.set_xlabel(r"$t$")
+# ax5.set_xlabel(r"$t$")
 ax5.set_xticks([])
 # ----- [5] = M_rad
-ax6 = fig.add_subplot(gs[3,:])
-
-ax6.plot( M_mb2_beam_norm,
-         label="EBbeam", color=clr_Beam )
+ax6 = fig.add_subplot(gs[4,:])
 ax6.plot( M_mb2_frame[3,:],
-         label="Frame", color=clr_Frame )
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax6.plot( M_mb2_beam_norm,
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
 # ax4.legend()
 ax6.set_title(r"$M_{norm}^{mb2}$")
 ax6.set_xlabel(r"$t$")
@@ -496,7 +519,7 @@ fig.tight_layout()
 plt.show()
 
 # NOTE: const diff
-# F_mb1_beam[3,0,:] - F_mb1_frame[3,:] # - 95600
-# F_mb2_beam[0,0,:] - F_mb2_frame[0,:] # = 78546 (due to gravity loads each ele)
-# F_mb2_beam[3,0,:] - F_mb2_frame[3,:] # = -1.0 * 1e6
+print(F_mb1_beam[3,0,:] - F_mb1_frame[3,:]) # - 95600
+print(F_mb2_beam[0,0,:] - F_mb2_frame[0,:]) # = 78546 (due to gravity loads each ele)
+print(F_mb2_beam[3,0,:] - F_mb2_frame[3,:]) # = -1.0 * 1e6
 # %%
