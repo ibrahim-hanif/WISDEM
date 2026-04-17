@@ -355,14 +355,14 @@ prob['carrier_I'] = eval( var_dict['carrier_I'] )
 prob['mb1_face_width'] = eval( var_dict['mb1_face_width'] )
 prob['mb2_face_width'] = eval( var_dict['mb2_face_width'] )
 # --- CRB
-prob['mb1_Reactions'] = eval( var_dict['mb1_Reactions'] )
+mb1_Reactions = prob['mb1_Reactions'] = eval( var_dict['mb1_Reactions'] )
 # --- TRB2
-prob['mb2_Reactions'] = eval( var_dict['mb2_Reactions'] )
-prob['mb2_Reactions'] = [1.0,1.0,1.0, 0.0,0.0,0.0]
+mb2_Reactions = prob['mb2_Reactions'] = eval( var_dict['mb2_Reactions'] )
+mb2_Reactions = prob['mb2_Reactions'] = [1.0,1.0,1.0, 0.0,0.0,0.0]
 # - materials
 prob['lss_E'] = E_lss
-prob['lss_G'] = eval( var_dict['lss_G'] )
-prob['lss_rho'] = eval( var_dict['lss_rho'] )
+G_lss = prob['lss_G'] = eval( var_dict['lss_G'] )
+rho_lss = prob['lss_rho'] = eval( var_dict['lss_rho'] )
 prob['lss_Xy'] = eval( var_dict['lss_Xy'] )
 # - constrs
 prob['shaft_deflection_allowable'] = eval( var_dict['shaft_deflection_allowable'] )
@@ -397,6 +397,169 @@ F_mb1_frame[3,:] = np.hypot(F_mb1_frame[1,:], F_mb1_frame[2,:])
 F_mb2_frame[3,:] = np.hypot(F_mb2_frame[1,:], F_mb2_frame[2,:])
 # - M_norm
 M_mb2_frame[3,:] = np.hypot(M_mb2_frame[1,:], M_mb2_frame[2,:])
+
+#%%
+# build_lss_pyframe3dd
+import wisdem.pyframe3dd.pyframe3dd as frame3dd
+from wisdem.drivetrainse.drive_structure import tube_prop
+from wisdem.commonse import gravity
+
+def build_lss_pyframe3dd(
+        Fx,Fy,Fz, Mx,My,Mz, m_carrier, delta, tilt,
+        L_h1,L_12, D_lss, t_lss,
+        E,G,rho, mb1_Reactions,mb2_Reactions
+    ):
+    """
+    Inputs
+    _____
+    tilt : rad
+    D_lss : "lss_diameter"
+    t_lss : "lss_wall_thickness"
+    E : "lss_E"
+    G : "lss_G"
+    rho : "lss_rho"
+    mb1_Reactions : "mb1_Reactions"
+    mb2_Reactions : "mb2_Reactions"
+    
+    Outputs
+    _____
+    results : from `pyframe3dd.run()`, with all data (forces, reactions etc.)
+    """
+    # -----------------------------
+    # Geometry
+    # -----------------------------
+    x = np.array([0.0, L_h1, (L_h1+L_12), (L_h1+L_12+delta)])
+    y = z = r = np.zeros_like(x)
+    nnodes = len(x)
+
+    # -----------------------------
+    # Node data
+    # -----------------------------
+    inode = np.arange(1, nnodes+1)
+    nodes = frame3dd.NodeData(inode, x, y, z, r)
+    # - take out indices
+    i1 = 2
+    i2 = 3
+    itorq = 4
+
+    # -----------------------------
+    # Elements (3 beam elements)
+    # -----------------------------
+    lsscyl = tube_prop(x, D_lss, t_lss)
+
+    ielement = np.arange(1,nnodes) #elem = np.array([1, 2, 3])
+    N1 = np.arange(1,nnodes)
+    N2 = np.arange(2,nnodes+1)
+    roll = np.zeros(nnodes - 1)
+    myones = np.ones(nnodes - 1)
+    # Section properties
+    Ax = lsscyl.Area
+    As = lsscyl.Asx
+    S = lsscyl.S    #(v) bending modulus for tubular sections: line 114, cross_sections.py
+    C = lsscyl.C    #(v) torsional shear constant for tubular sections: line 122, cross_sections.py
+    J0 = lsscyl.J0  #(v) polar moment of inertia w.r.t. x-x axis (torsional)
+    Jx = lsscyl.Ixx #(v) 2nd area moment of inertia w.r.t. y-y axis (Iyy=Izz for tubes)
+
+    elements = frame3dd.ElementData(
+            ielement, N1, N2, Ax, As, As, J0, Jx, Jx, E * myones, G * myones, roll, rho * myones
+        )
+
+    # -----------------------------
+    # Boundary conditions
+    # -----------------------------
+    # DOF order: [Tx, Ty, Tz, Rx, Ry, Rz]; num = 6
+    FREE, RIGID = 0, 1 # 1 = fixed, 0 = free
+    rnode = np.r_[i1, i2, itorq] #r = np.zeros((nnodes, 6))
+    # TODO
+    Rx = np.array([mb1_Reactions[0], mb2_Reactions[0], FREE])  # (v, def) RIGID, FREE, FREE: Upwind bearing restricts translational
+    Ry = np.array([mb1_Reactions[1], mb2_Reactions[1], FREE])  # (v, def) RIGID, FREE, FREE: Upwind bearing restricts translational
+    Rz = np.array([mb1_Reactions[2], mb2_Reactions[2], FREE])  # (v, def) RIGID, FREE, FREE: Upwind bearing restricts translational
+    Rxx = np.array([FREE, FREE, RIGID])  # (v, def) FREE, FREE, RIGID: Torque is absorbed by stator, so this is the best way to capture that
+    Ryy = np.array([mb1_Reactions[4], mb2_Reactions[4], FREE])  # (v, def) FREE, RIGID, FREE: downwind bearing carry moments
+    Rzz = np.array([mb1_Reactions[5], mb2_Reactions[5], FREE])  # (v, def) FREE, RIGID, FREE:  downwind bearing carry moments
+    # print("LSS Bearing Reactions (Rx,Ry,Rz,Rxx,Ryy,Rzz): ", np.array((Rx,Ry,Rz,Rxx,Ryy,Rzz))) #(v) debugging
+    reactions = frame3dd.ReactionData(rnode, Rx, Ry, Rz, Rxx, Ryy, Rzz, rigid=RIGID)
+    
+
+    # ------ options ------------
+    shear = geom = True #(v) 1: include shear deformation + geom stiffness
+    dx = 1.0
+    options = frame3dd.Options(shear, geom, dx)
+    # ----------------------------------- 
+
+    # -----------------------------
+    # Build frame
+    # -----------------------------
+    frame = frame3dd.Frame(
+        nodes,
+        reactions,
+        elements,
+        options
+    )
+
+    # -----------------------------
+    # Loads
+    # -----------------------------
+    gy = 0.0
+    gx = gravity * np.sin(tilt)
+    gz = -gravity * np.cos(tilt)
+
+    load = frame3dd.StaticLoadCase(0,0,0)
+    # Hub loads at Node 1
+    # GB carrier mass load at Node 4
+    EL = np.array([1,4])
+    # - F
+    Fx_load = np.array([Fx, m_carrier*gx])
+    Fy_load = np.array([Fy, m_carrier*gy])
+    Fz_load = np.array([Fz, m_carrier*gz])
+    # - M
+    Mx_load = np.array([Mx, 0.0])
+    My_load = np.array([My, 0.0])
+    Mz_load = np.array([Mz, 0.0])
+
+    load.changePointLoads(
+        EL, Fx_load,Fy_load,Fz_load, Mx_load,My_load,Mz_load
+    )
+    frame.addLoadCase(load)
+
+    # -----------------------------
+    # Run analysis
+    # -----------------------------
+    # frame.write() # TODO
+    displacements, forces, reactions, internalForces, mass3dd, modal = frame.run()
+
+    return reactions
+
+#%%
+# Init outputs: loads on MBs
+F_mb1_myframe = np.zeros((4,numTS)) # x,y,z,rad
+F_mb2_myframe = np.zeros((4,numTS))
+# M_mb1_myframe = np.zeros((4,numTS)) # == 0
+M_mb2_myframe = np.zeros((4,numTS))
+# Loop over hub loads
+for iF in range(numTS):
+    # loads
+    iFx, iFy, iFz = Fx[0,iF], Fy[0,iF], Fz[0,iF]
+    iMx, iMy, iMz = Mx[0,iF], My[0,iF], Mz[0,iF]
+    # analyse
+    reactions = build_lss_pyframe3dd(
+        iFx,iFy,iFz, iMx,iMy,iMz,
+        m_carrier,delta,tilt_rad,L_h1,L_12,lss_diameter,lss_wall_thickness,
+        E_lss,G_lss,rho_lss,mb1_Reactions,mb2_Reactions
+    )
+    # reactions on mbs
+    k=0
+    # - mb1
+    F_mb1_myframe[:3,iF] = np.array([reactions.Fx[k,0], reactions.Fy[k, 0], reactions.Fz[k, 0]])
+    # M_mb1_frame[:,iF] = prob['M_mb1'][:,0] # == 0
+    # - mb2
+    F_mb2_myframe[:3,iF] = np.array([reactions.Fx[k, 1], reactions.Fy[k, 1], reactions.Fz[k, 1]])
+    M_mb2_frame[:3,iF] = np.array([reactions.Mxx[k, 0], reactions.Myy[k, 0], reactions.Mzz[k, 0]])
+# - radial forces
+F_mb1_myframe[3,:] = np.hypot(F_mb1_myframe[1,:], F_mb1_myframe[2,:])
+F_mb2_myframe[3,:] = np.hypot(F_mb2_myframe[1,:], F_mb2_myframe[2,:])
+# - M_norm
+M_mb2_myframe[3,:] = np.hypot(M_mb2_myframe[1,:], M_mb2_myframe[2,:])
 
 #%%
 # plot options
@@ -519,6 +682,7 @@ fig.tight_layout()
 plt.show()
 #%%
 # Error analysis (analy_MB_EBbeam & `pyFrame3DD`)
+# (https://towardsdatascience.com/time-series-forecast-error-metrics-you-should-know-cc88b8c67f27/)
 
 # NOTE: const diff
 def rmsError( vData, vRef ):
