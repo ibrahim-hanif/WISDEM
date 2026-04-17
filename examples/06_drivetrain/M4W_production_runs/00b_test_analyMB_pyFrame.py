@@ -247,7 +247,7 @@ I_lss = lssMB2section.Iyy # m^2
 EI = E_lss*I_lss
 # -- bearing torsional stiffness
 k_torsional = eval( var_dict['mb_fls.k_mb2'] ) * 0 # 3.e10 Nm/rad
-# k_torsional = 5.e1
+# k_torsional *= 2e-2 # realistic, from table (krathe)
 # lambda
 lam = (k_torsional*L_12)/(3*EI)
 
@@ -356,9 +356,14 @@ prob['mb1_face_width'] = eval( var_dict['mb1_face_width'] )
 prob['mb2_face_width'] = eval( var_dict['mb2_face_width'] )
 # --- CRB
 mb1_Reactions = prob['mb1_Reactions'] = eval( var_dict['mb1_Reactions'] )
+# ----- finite stiffness (springs) and not rigid
+# mb1_Reactions = prob['mb1_Reactions'] = 1e9 * np.array([3.53, 8.92, 1.25e1, 0.0, 1.21,8.62e-1])
 # --- TRB2
 mb2_Reactions = prob['mb2_Reactions'] = eval( var_dict['mb2_Reactions'] )
+# ----- non-moment reacting (SRB)
 mb2_Reactions = prob['mb2_Reactions'] = [1.0,1.0,1.0, 0.0,0.0,0.0]
+# ----- finite stiffness (springs) and not rigid
+# mb2_Reactions = prob['mb2_Reactions'] = 1e9 * np.array([3.39, 5.38, 8.78, 0.0, 5.92e-1, 3.62e-1])
 # - materials
 prob['lss_E'] = E_lss
 G_lss = prob['lss_G'] = eval( var_dict['lss_G'] )
@@ -407,7 +412,7 @@ from wisdem.commonse import gravity
 def build_lss_pyframe3dd(
         Fx,Fy,Fz, Mx,My,Mz, m_carrier, delta, tilt,
         L_h1,L_12, D_lss, t_lss,
-        E,G,rho, mb1_Reactions,mb2_Reactions
+        E,G,rho, mb1_Reactions,mb2_Reactions, RIGID=1
     ):
     """
     Inputs
@@ -468,7 +473,7 @@ def build_lss_pyframe3dd(
     # Boundary conditions
     # -----------------------------
     # DOF order: [Tx, Ty, Tz, Rx, Ry, Rz]; num = 6
-    FREE, RIGID = 0, 1 # 1 = fixed, 0 = free
+    FREE = 0 # 1 = fixed, 0 = free
     rnode = np.r_[i1, i2, itorq] #r = np.zeros((nnodes, 6))
     # TODO
     Rx = np.array([mb1_Reactions[0], mb2_Reactions[0], FREE])  # (v, def) RIGID, FREE, FREE: Upwind bearing restricts translational
@@ -545,7 +550,7 @@ for iF in range(numTS):
     reactions = build_lss_pyframe3dd(
         iFx,iFy,iFz, iMx,iMy,iMz,
         m_carrier,delta,tilt_rad,L_h1,L_12,lss_diameter,lss_wall_thickness,
-        E_lss,G_lss,rho_lss,mb1_Reactions,mb2_Reactions
+        E_lss,G_lss,rho_lss,mb1_Reactions,mb2_Reactions,RIGID=1
     )
     # reactions on mbs
     k=0
@@ -716,10 +721,10 @@ print(
 )
 
 # M_mb2_norm
-if k_torsional > 0.0:
+if mb2_Reactions[-1] > 0.0:
     err_Mmb2_rad = M_mb2_beam_norm - M_mb2_myframe[3,:]
     mape_Mmb2_rad = mapError( M_mb2_beam_norm, M_mb2_myframe[3,:] )
     print(
-        f"F_mb2_rad | Error: max= {np.max( err_Mmb2_rad )}; map= {mape_Mmb2_rad}"
+        f"M_mb2_rad | Error: max= {np.max( err_Mmb2_rad )}; map= {mape_Mmb2_rad}"
     )
 # %%
