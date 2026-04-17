@@ -517,9 +517,37 @@ ax6.set_xticks([])
 fig.tight_layout()
 
 plt.show()
+#%%
+# Error analysis (analy_MB_EBbeam & `pyFrame3DD`)
 
 # NOTE: const diff
-print(F_mb1_beam[3,0,:] - F_mb1_frame[3,:]) # - 95600
-print(F_mb2_beam[0,0,:] - F_mb2_frame[0,:]) # = 78546 (due to gravity loads each ele)
-print(F_mb2_beam[3,0,:] - F_mb2_frame[3,:]) # = -1.0 * 1e6
+def rmsError( vData, vRef ):
+    N = len(vRef)
+    return np.sqrt( np.sum((vData-vRef)**2)/N )
+
+def mapError( vData, vRef ):
+    "Mean Absolute Percentage Error"
+    N = len(vRef)
+    return np.sum( np.abs( (vData-vRef)*1e2 / vRef ) )/N
+
+# F_mb1_rad
+err_Fmb1_rad = F_mb1_beam[3,0,:] - F_mb1_frame[3,:] # - 95600
+mape_Fmb1_rad = mapError( F_mb1_beam[3,0,:], F_mb1_frame[3,:] )
+print(
+    f"F_mb1_rad | Error: max= {np.max( err_Fmb1_rad )}; map= {mape_Fmb1_rad}"
+)
+
+# F_mb2_ax
+err_Fmb2_ax = F_mb2_beam[0,0,:] - F_mb2_frame[0,:] # = 78546 (due to gravity loads each ele)
+mape_Fmb2_ax = mapError( F_mb2_beam[0,0,:], F_mb2_frame[0,:] )
+print(
+    f"F_mb2_ax | Error: max= {np.max( err_Fmb2_ax )}; map= {mape_Fmb2_ax}"
+)
+
+# F_mb2_rad
+err_Fmb2_rad = F_mb2_beam[3,0,:] - F_mb2_frame[3,:] # = -1.0 * 1e6
+mape_Fmb2_rad = mapError( F_mb2_beam[3,0,:], F_mb2_frame[3,:] )
+print(
+    f"F_mb2_rad | Error: max= {np.max( err_Fmb2_rad )}; map= {mape_Fmb2_rad}"
+)
 # %%
