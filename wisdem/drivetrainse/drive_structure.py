@@ -1941,7 +1941,7 @@ def solve_bearing_system(M,F, L_h1,L_12,delta, G,EI,k):
     # Left bearing reaction (closed-form solution) 
     RA = ( -M-F*x3 +G*delta)/( L_12*(1+lam) )
     # Force equilibrium
-    RB = G - F - RA
+    RB = - G - F - RA
     # Rotation at B from beam slope relation -> Bearing moment
     MB = lamL*RA # derived from first-principles    # eq.3
     return RA, RB, MB
