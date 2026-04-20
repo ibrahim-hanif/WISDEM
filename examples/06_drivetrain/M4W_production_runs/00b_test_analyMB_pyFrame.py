@@ -157,7 +157,7 @@ flag_loads_simple = False
 iWSrated = 4 # index @ rated wind speed (10-11 m/s)
 # iWSrated = [0,1,2] # prev
 startTS = 1000
-numTS = 10 # TODO
+numTS = 100 # TODO
 
 f = S_all['Fx'][startTS:startTS+numTS,iWSrated]
 Fx = np.reshape(f,(1,numTS))
@@ -247,7 +247,6 @@ I_lss = lssMB2section.Iyy # m^2
 EI = E_lss*I_lss
 # -- bearing torsional stiffness
 k_torsional = eval( var_dict['mb_fls.k_mb2'] ) * 0 # 3.e10 Nm/rad
-# k_torsional *= 2e-2 # realistic, from table (krathe)
 # lambda
 lam = (k_torsional*L_12)/(3*EI)
 
@@ -544,7 +543,7 @@ M_mb2_myframe = np.zeros((4,numTS))
 # Loop over hub loads
 for iF in range(numTS):
     # loads
-    iFx, iFy, iFz = Fx[0,iF], Fy[0,iF], Fz[0,iF]
+    iFx, iFy, iFz = Fx[0,iF], Fy[0,iF], -Fz[0,iF]
     iMx, iMy, iMz = Mx[0,iF], My[0,iF], Mz[0,iF]
     # analyse
     reactions = build_lss_pyframe3dd(
@@ -631,9 +630,9 @@ ax3.set_title(r"$F_{rad}^{mb2}$")
 ax3.set_xticks([])
 # ----- [3] = y
 ax = fig.add_subplot(gs[2,0])
-ax.plot( np.abs(F_mb2_myframe[1,:]),
+ax.plot( F_mb2_myframe[1,:],
          label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
-ax.plot( np.abs(F_mb2_beam[1,0,:]),
+ax.plot( F_mb2_beam[1,0,:],
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
 # ax3.legend()
 ax.set_title(r"$F_{y}^{mb2}$")
@@ -641,9 +640,9 @@ ax.set_title(r"$F_{y}^{mb2}$")
 ax.set_xticks([])
 # ----- [3] = z
 ax = fig.add_subplot(gs[2,1])
-ax.plot( np.abs(F_mb2_myframe[2,:]),
+ax.plot( F_mb2_myframe[2,:],
          label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
-ax.plot( np.abs(F_mb2_beam[2,0,:]),
+ax.plot( F_mb2_beam[2,0,:],
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
 # ax3.legend()
 ax.set_title(r"$F_{z}^{mb2}$")
