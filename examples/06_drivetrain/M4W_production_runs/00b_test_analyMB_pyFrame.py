@@ -171,7 +171,7 @@ if not flag_loads_simple:
         S_all['Fy'][startTS:startTS+numTS,4],
         (1,numTS)
         )
-    Fz = np.reshape(
+    Fz = -np.reshape(
         S_all['Fz'][startTS:startTS+numTS,4],
         (1,numTS)
         )
@@ -546,7 +546,7 @@ M_mb2_myframe = np.zeros((4,numTS))
 # Loop over hub loads
 for iF in range(numTS):
     # loads
-    iFx, iFy, iFz = Fx[0,iF], Fy[0,iF], -Fz[0,iF]
+    iFx, iFy, iFz = Fx[0,iF], Fy[0,iF], Fz[0,iF]
     iMx, iMy, iMz = Mx[0,iF], My[0,iF], Mz[0,iF]
     # analyse
     reactions = build_lss_pyframe3dd(
