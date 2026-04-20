@@ -35,10 +35,9 @@ import utilities_drivetrain as utilsDT
 
 #%%
 # paths / locations
-results_dir = "00_results"
+results_dir = "00b_results"
 script_dir = os.path.dirname(os.path.abspath(__file__))
 results_path = os.path.join(script_dir, results_dir)
-loc_save_data = os.path.join(results_path, "00")
 
 # 02 results
 results_02_dir = "02_results"
@@ -246,15 +245,19 @@ I_lss = lssMB2section.Iyy # m^2
 # bending stiffness EI
 EI = E_lss*I_lss
 # -- bearing torsional stiffness
-k_torsional = eval( var_dict['mb_fls.k_mb2'] ) * 0 # 3.e10 Nm/rad
+k_torsional = eval( var_dict['mb_fls.k_mb2'] ) - 6e8# 3.e10 - 6e8 # Nm/rad
+k_torsional *= 0
 # lambda
-lam = (k_torsional*L_12)/(3*EI)
+lam = (k_torsional*L_12)/(3*EI); print(f" -- lam = {lam}")
+lamL = lam*L_12; print(f" -- lamL = {lamL}")
+LonePlusLam = L_12*(1+lam); print(f" -- L_12(1+lam) = {LonePlusLam}")
 
 F_mb1_beam, F_mb2_beam, M_mb2_beam = ds.analytical_MBforces_EBbeam(
     Fx,Fy,Fz, Mx,My,Mz, m_carrier, delta, tilt_rad, L_h1, L_12,
     EI, k_torsional, return_M=True
 )
 M_mb2_beam_norm = np.hypot(M_mb2_beam[0,0,:], M_mb2_beam[1,0,:])
+
 #%%
 # compare with Hub_* (NOTE: below is 1 / 1e6)
 """
@@ -684,6 +687,138 @@ ax6.set_xticks([])
 fig.tight_layout()
 
 plt.show()
+
+#%%
+# PUBLICATION plot and compare loads from analy_ and Hub_]
+# F_mb1_beam.shape# = (4,1,numTS)
+fig = plt.figure(figsize=(16,16))
+gs = fig.add_gridspec(5, 2, hspace=0.35, wspace=0.25)
+# ---- grid = mb1, mb2
+#             [ ax,
+#               y,
+#               z,
+#               rad,
+#               M_norm ]
+# ==== axial ====
+# 0,0 = mb1
+ax = fig.add_subplot(gs[0,0])
+ax.set_title("MB1")
+ax.set_xticks([])
+ax.set_ylabel(r'$ F, ax $')
+ax1.legend()
+
+# 0,1 = mb2
+maxFrame = np.max(F_mb2_myframe[0,:])
+ax = fig.add_subplot(gs[0,1])
+ax.plot( F_mb2_myframe[0,:] / maxFrame,
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax.plot( F_mb2_beam[0,0,:] / maxFrame,
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+# ax.legend()
+ax.set_title("MB2")
+ax.set_xticks([])
+# ax.set_xlabel(r'$t$')
+
+# ==== y ====
+# 1,0 = mb1
+maxFrame = np.max(F_mb1_myframe[1,:])
+ax = fig.add_subplot(gs[1,0])
+ax.plot( F_mb1_myframe[1,:] / maxFrame,
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax.plot( F_mb1_beam[1,0,:] / maxFrame,
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+ax.set_ylabel(r"$ F, y $")
+ax.set_xticks([])
+
+# 1,1 = mb2
+maxFrame = np.max(F_mb2_myframe[1,:])
+ax = fig.add_subplot(gs[1,1])
+ax.plot( F_mb2_myframe[1,:] / maxFrame,
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax.plot( F_mb2_beam[1,0,:] / maxFrame,
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+# ax3.legend()
+# ax.set_title(r"$F_{y}^{mb2}$")
+# ax.set_xlabel(r"$t$")
+ax.set_xticks([])
+
+# ==== z ====
+# 2,0 = mb1
+maxFrame = np.max(F_mb1_myframe[2,:])
+ax = fig.add_subplot(gs[2,0])
+ax.plot( F_mb1_myframe[2,:] / maxFrame,
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax.plot( F_mb1_beam[2,0,:] / maxFrame,
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+# ax3.legend()
+ax.set_ylabel(r"$ F, z$")
+# ax.set_xlabel(r"$t$")
+ax.set_xticks([])
+
+# 2,1 = mb2
+maxFrame = np.max(F_mb2_myframe[2,:])
+ax = fig.add_subplot(gs[2,1])
+ax.plot( F_mb2_myframe[2,:] / maxFrame,
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax.plot( F_mb2_beam[2,0,:] / maxFrame,
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+# ax3.legend()
+# ax.set_title(r"$F_{z}^{mb2}$")
+# ax.set_xlabel(r"$t$")
+ax.set_xticks([])
+
+# ==== radial ====
+# 3,0 = mb1
+maxFrame = np.max(F_mb1_myframe[3,:])
+ax1 = fig.add_subplot(gs[3,0])
+ax1.plot( F_mb1_myframe[3,:] / maxFrame,
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax1.plot( F_mb1_beam[3,0,:] / maxFrame,
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+# ax1.legend()
+ax1.set_ylabel(r"$ F, rad$")
+ax1.set_xticks([])
+# ax1.set_xlabel(r'$t$')
+
+# 3,1 = mb2
+maxFrame = np.max(F_mb2_myframe[3,:])
+ax1 = fig.add_subplot(gs[3,1])
+ax1.plot( F_mb2_myframe[3,:] / maxFrame,
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax1.plot( F_mb2_beam[3,0,:] / maxFrame,
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+# ax1.legend()
+# ax1.set_ylabel(r"$ F, rad$")
+ax1.set_xticks([])
+
+# ==== M_norm ====
+# 4,0 = mb1
+ax = fig.add_subplot(gs[4,0])
+# ax.set_title("MB1")
+ax.set_xticks([])
+ax.set_ylabel(r'$ M, norm $')
+ax.set_xlabel(r"$t$")
+
+# 4,1 = mb2
+maxFrame = np.max(M_mb2_myframe[3,:])
+ax6 = fig.add_subplot(gs[4,1])
+ax6.plot( M_mb2_myframe[3,:] / maxFrame,
+         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+ax6.plot( M_mb2_beam_norm / maxFrame,
+         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+# ax4.legend()
+# ax6.set_title(r"$M_{norm}^{mb2}$")
+ax6.set_xlabel(r"$t$")
+ax6.set_xticks([])
+
+# ----------
+fig.tight_layout()
+
+plot_path = os.path.join(results_path, "mbReactions_nonMomentReacting.pdf")
+# plt.savefig(plot_path) # NOTE: saved, so don't change now 
+
+plt.show()
+
 #%%
 # Error analysis (analy_MB_EBbeam & `pyFrame3DD`)
 # (https://towardsdatascience.com/time-series-forecast-error-metrics-you-should-know-cc88b8c67f27/)
