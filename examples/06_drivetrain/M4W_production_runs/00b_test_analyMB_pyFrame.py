@@ -702,10 +702,12 @@ gs = fig.add_gridspec(5, 2, hspace=0.35, wspace=0.25)
 # ==== axial ====
 # 0,0 = mb1
 ax = fig.add_subplot(gs[0,0])
+ax.plot(0, 0, label="pyFrame3DD", color=clr_Frame, linewidth=lineWidth_Frame)
+ax.plot(0, 0, label="analytical EB-beam", color=clr_Beam, linestyle=lineStyle_Beam)
 ax.set_title("MB1")
 ax.set_xticks([])
 ax.set_ylabel(r'$ F, ax $')
-ax1.legend()
+ax.legend()
 
 # 0,1 = mb2
 maxFrame = np.max(F_mb2_myframe[0,:])
