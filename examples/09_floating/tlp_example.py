@@ -1,3 +1,4 @@
+#%%
 # TODO: Code commenting and RST parallel
 
 import numpy as np
@@ -5,7 +6,7 @@ import openmdao.api as om
 
 from wisdem.commonse import fileIO
 from wisdem.floatingse import FloatingSE
-
+#%%
 plot_flag = False  # True
 opt_flag = False
 
@@ -51,7 +52,7 @@ opt["mooring"]["line_anchor"] = ["custom"] * 3
 opt["mooring"]["line_material"] = ["custom"] * 3
 opt["materials"] = {}
 opt["materials"]["n_mat"] = 2
-
+#%%
 prob = om.Problem(reports=False)
 prob.model = FloatingSE(modeling_options=opt)
 prob.setup()
@@ -151,14 +152,15 @@ prob["transition_node"] = prob["member0:joint2"]
 prob["turbine_mass"] = 350e3
 prob["turbine_F"] = np.array([1284744.196, 0, -112400.5527])
 prob["turbine_M"] = np.array([3963732.762, 896380.8464, -346781.682])
-
+#%%
 # Use FD and run optimization
 prob.run_model()
-prob.model.list_outputs(units=True)
-
+prob.model.list_outputs(units=True);
+#%%
 # Visualize with mayavi, which can be difficult to install
 if plot_flag:
     import wisdem.floatingse.visualize as viz
 
     vizobj = viz.Visualize(prob)
     vizobj.draw_spar()
+#%%
