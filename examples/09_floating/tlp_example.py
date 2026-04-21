@@ -129,8 +129,8 @@ prob["anchor_cost"] = 1e5
 
 # Mooring constraints
 prob["max_surge_fraction"] = 0.1  # Max surge/sway offset [m]
-prob["survival_heel"] = 10.0  # Max heel (pitching) angle [deg]
-prob["operational_heel"] = 5.0  # Max heel (pitching) angle [deg]
+prob["survival_heel"] = 10.0  # Max heel (pitching) angle in parked condns [deg]
+prob["operational_heel"] = 5.0  # Max heel (pitching) angle in operational condns [deg]
 
 # Set environment to that used in OC3 testing campaign
 prob["rho_air"] = 1.226  # Density of air [kg/m^3]
@@ -149,6 +149,10 @@ prob["wind_reference_height"] = 119.0
 prob["transition_node"] = prob["member0:joint2"]
 
 # Properties of rotor-nacelle-assembly (RNA)
+#(v) = tower base loads
+# - coz `self.connect("towerse.tower.turbine_F", "floatingse.turbine_F")` in `glue_code.py`
+# - _F, _M applied at the "transition_node" above (cf. `floating_frame.py`)
+# - "mass properties are assumed to be relative to the tower top position" (cf. floatingSE docs)
 prob["turbine_mass"] = 350e3
 prob["turbine_F"] = np.array([1284744.196, 0, -112400.5527])
 prob["turbine_M"] = np.array([3963732.762, 896380.8464, -346781.682])
