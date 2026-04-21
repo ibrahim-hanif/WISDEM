@@ -244,8 +244,8 @@ lssMB2section = Tube(bear2_Dshaft,bear2_t)
 I_lss = lssMB2section.Iyy # m^2
 # bending stiffness EI
 EI = E_lss*I_lss
-# -- bearing torsional stiffness
-k_torsional = eval( var_dict['mb_fls.k_mb2'] ) - 6e8# 3.e10 - 6e8 # Nm/rad
+# -- bearing torsional stiffness (Nm/rad)
+k_torsional = eval( var_dict['mb_fls.k_mb2'] ) - 6e8 # 3.e10 - 6e8 = 2.94e10 
 k_torsional *= 0
 # lambda
 lam = (k_torsional*L_12)/(3*EI); print(f" -- lam = {lam}")
@@ -570,14 +570,19 @@ M_mb2_myframe[3,:] = np.hypot(M_mb2_myframe[1,:], M_mb2_myframe[2,:])
 
 #%%
 # plot options
-# main colors
+# --- main colors
 from my_util_tools import util_funcs
 loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
 clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
 clr_Frame = clrs_m4w['Dark_Blue']
 clr_Beam = clrs_m4w['Aqua']
+# --- line options
 lineWidth_Frame = 4.0
 lineStyle_Beam = 'dashed'
+# --- labels
+label_Frame = "pyFrame3DD"
+label_Beam = "analytical EB-beam"
+label_analyMB = "analytical"
 # -------------------------
 # options: Journal polish
 # plot rc params
@@ -602,9 +607,9 @@ gs = fig.add_gridspec(5, 2, hspace=0.35, wspace=0.25)
 # ----- [0] = rad
 ax1 = fig.add_subplot(gs[0,:])
 ax1.plot( np.abs(F_mb1_myframe[3,:]),
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         label=label_Frame, color=clr_Frame, linewidth=lineWidth_Frame )
 ax1.plot( np.abs(F_mb1_beam[3,0,:]),
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         label=label_Beam, color=clr_Beam, linestyle=lineStyle_Beam )
 ax1.legend()
 ax1.set_title(r"$F_{rad}^{mb1}$")
 ax1.set_xticks([])
@@ -614,9 +619,9 @@ ax1.set_xlabel(r'$t$')
 # ----- [1] = x
 ax2 = fig.add_subplot(gs[1,0])
 ax2.plot( np.abs(F_mb2_myframe[0,:]),
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         label=label_Frame, color=clr_Frame, linewidth=lineWidth_Frame )
 ax2.plot( np.abs(F_mb2_beam[0,0,:]),
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         label=label_Beam, color=clr_Beam, linestyle=lineStyle_Beam )
 # ax2.legend()
 ax2.set_title(r"$|F_{ax}^{mb2}|$")
 ax2.set_xticks([])
@@ -624,9 +629,9 @@ ax2.set_xticks([])
 # ----- [2] = rad
 ax3 = fig.add_subplot(gs[1,1])
 ax3.plot( np.abs(F_mb2_myframe[3,:]),
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         label=label_Frame, color=clr_Frame, linewidth=lineWidth_Frame )
 ax3.plot( np.abs(F_mb2_beam[3,0,:]),
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         label=label_Beam, color=clr_Beam, linestyle=lineStyle_Beam )
 # ax3.legend()
 ax3.set_title(r"$F_{rad}^{mb2}$")
 # ax3.set_xlabel(r"$t$")
@@ -634,9 +639,9 @@ ax3.set_xticks([])
 # ----- [3] = y
 ax = fig.add_subplot(gs[2,0])
 ax.plot( F_mb2_myframe[1,:],
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         label=label_Frame, color=clr_Frame, linewidth=lineWidth_Frame )
 ax.plot( F_mb2_beam[1,0,:],
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         label=label_Beam, color=clr_Beam, linestyle=lineStyle_Beam )
 # ax3.legend()
 ax.set_title(r"$F_{y}^{mb2}$")
 # ax.set_xlabel(r"$t$")
@@ -644,9 +649,9 @@ ax.set_xticks([])
 # ----- [3] = z
 ax = fig.add_subplot(gs[2,1])
 ax.plot( F_mb2_myframe[2,:],
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         label=label_Frame, color=clr_Frame, linewidth=lineWidth_Frame )
 ax.plot( F_mb2_beam[2,0,:],
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         label=label_Beam, color=clr_Beam, linestyle=lineStyle_Beam )
 # ax3.legend()
 ax.set_title(r"$F_{z}^{mb2}$")
 # ax.set_xlabel(r"$t$")
@@ -655,9 +660,9 @@ ax.set_xticks([])
 # ----- [3] = My
 ax4 = fig.add_subplot(gs[3,0])
 ax4.plot( np.abs(M_mb2_myframe[1,:]),
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         label=label_Frame, color=clr_Frame, linewidth=lineWidth_Frame )
 ax4.plot( np.abs(M_mb2_beam[0,0,:]),
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         label=label_Beam, color=clr_Beam, linestyle=lineStyle_Beam )
 # ax4.legend()
 ax4.set_title(r"$M_{y}^{mb2}$")
 # ax4.set_xlabel(r"$t$")
@@ -665,9 +670,9 @@ ax4.set_xticks([])
 # ----- [4] = Mz
 ax5 = fig.add_subplot(gs[3,1])
 ax5.plot( np.abs(M_mb2_myframe[2,:]),
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         label=label_Frame, color=clr_Frame, linewidth=lineWidth_Frame )
 ax5.plot( np.abs(M_mb2_beam[1,0,:]),
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         label=label_Beam, color=clr_Beam, linestyle=lineStyle_Beam )
 # ax4.legend()
 ax5.set_title(r"$M_{z}^{mb2}$")
 # ax5.set_xlabel(r"$t$")
@@ -675,9 +680,9 @@ ax5.set_xticks([])
 # ----- [5] = M_rad
 ax6 = fig.add_subplot(gs[4,:])
 ax6.plot( M_mb2_myframe[3,:],
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         label=label_Frame, color=clr_Frame, linewidth=lineWidth_Frame )
 ax6.plot( M_mb2_beam_norm,
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         label=label_Beam, color=clr_Beam, linestyle=lineStyle_Beam )
 # ax4.legend()
 ax6.set_title(r"$M_{norm}^{mb2}$")
 ax6.set_xlabel(r"$t$")
@@ -702,20 +707,21 @@ gs = fig.add_gridspec(5, 2, hspace=0.35, wspace=0.25)
 # ==== axial ====
 # 0,0 = mb1
 ax = fig.add_subplot(gs[0,0])
-ax.plot(0, 0, label="pyFrame3DD", color=clr_Frame, linewidth=lineWidth_Frame)
-ax.plot(0, 0, label="analytical EB-beam", color=clr_Beam, linestyle=lineStyle_Beam)
+ax.plot(0, 0, label=label_Frame, color=clr_Frame, linewidth=lineWidth_Frame)
+ax.plot(0, 0, label=label_analyMB, color=clr_Beam, linestyle=lineStyle_Beam)
 ax.set_title("MB1")
 ax.set_xticks([])
+ax.set_yticks([])
 ax.set_ylabel(r'$ F, ax $')
-ax.legend()
+ax.legend(loc="center")
 
 # 0,1 = mb2
 maxFrame = np.max(F_mb2_myframe[0,:])
 ax = fig.add_subplot(gs[0,1])
 ax.plot( F_mb2_myframe[0,:] / maxFrame,
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         color=clr_Frame, linewidth=lineWidth_Frame )
 ax.plot( F_mb2_beam[0,0,:] / maxFrame,
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         color=clr_Beam, linestyle=lineStyle_Beam )
 # ax.legend()
 ax.set_title("MB2")
 ax.set_xticks([])
@@ -726,9 +732,9 @@ ax.set_xticks([])
 maxFrame = np.max(F_mb1_myframe[1,:])
 ax = fig.add_subplot(gs[1,0])
 ax.plot( F_mb1_myframe[1,:] / maxFrame,
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         color=clr_Frame, linewidth=lineWidth_Frame )
 ax.plot( F_mb1_beam[1,0,:] / maxFrame,
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         color=clr_Beam, linestyle=lineStyle_Beam )
 ax.set_ylabel(r"$ F, y $")
 ax.set_xticks([])
 
@@ -736,9 +742,9 @@ ax.set_xticks([])
 maxFrame = np.max(F_mb2_myframe[1,:])
 ax = fig.add_subplot(gs[1,1])
 ax.plot( F_mb2_myframe[1,:] / maxFrame,
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         color=clr_Frame, linewidth=lineWidth_Frame )
 ax.plot( F_mb2_beam[1,0,:] / maxFrame,
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         color=clr_Beam, linestyle=lineStyle_Beam )
 # ax3.legend()
 # ax.set_title(r"$F_{y}^{mb2}$")
 # ax.set_xlabel(r"$t$")
@@ -749,9 +755,9 @@ ax.set_xticks([])
 maxFrame = np.max(F_mb1_myframe[2,:])
 ax = fig.add_subplot(gs[2,0])
 ax.plot( F_mb1_myframe[2,:] / maxFrame,
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         color=clr_Frame, linewidth=lineWidth_Frame )
 ax.plot( F_mb1_beam[2,0,:] / maxFrame,
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         color=clr_Beam, linestyle=lineStyle_Beam )
 # ax3.legend()
 ax.set_ylabel(r"$ F, z$")
 # ax.set_xlabel(r"$t$")
@@ -761,9 +767,9 @@ ax.set_xticks([])
 maxFrame = np.max(F_mb2_myframe[2,:])
 ax = fig.add_subplot(gs[2,1])
 ax.plot( F_mb2_myframe[2,:] / maxFrame,
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         color=clr_Frame, linewidth=lineWidth_Frame )
 ax.plot( F_mb2_beam[2,0,:] / maxFrame,
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         color=clr_Beam, linestyle=lineStyle_Beam )
 # ax3.legend()
 # ax.set_title(r"$F_{z}^{mb2}$")
 # ax.set_xlabel(r"$t$")
@@ -774,9 +780,9 @@ ax.set_xticks([])
 maxFrame = np.max(F_mb1_myframe[3,:])
 ax1 = fig.add_subplot(gs[3,0])
 ax1.plot( F_mb1_myframe[3,:] / maxFrame,
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         color=clr_Frame, linewidth=lineWidth_Frame )
 ax1.plot( F_mb1_beam[3,0,:] / maxFrame,
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         color=clr_Beam, linestyle=lineStyle_Beam )
 # ax1.legend()
 ax1.set_ylabel(r"$ F, rad$")
 ax1.set_xticks([])
@@ -786,9 +792,9 @@ ax1.set_xticks([])
 maxFrame = np.max(F_mb2_myframe[3,:])
 ax1 = fig.add_subplot(gs[3,1])
 ax1.plot( F_mb2_myframe[3,:] / maxFrame,
-         label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
+         color=clr_Frame, linewidth=lineWidth_Frame )
 ax1.plot( F_mb2_beam[3,0,:] / maxFrame,
-         label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
+         color=clr_Beam, linestyle=lineStyle_Beam )
 # ax1.legend()
 # ax1.set_ylabel(r"$ F, rad$")
 ax1.set_xticks([])
@@ -812,6 +818,7 @@ ax6.plot( M_mb2_beam_norm / maxFrame,
 # ax6.set_title(r"$M_{norm}^{mb2}$")
 ax6.set_xlabel(r"$t$")
 ax6.set_xticks([])
+ax.set_yticks([])
 
 # ----------
 fig.tight_layout()
