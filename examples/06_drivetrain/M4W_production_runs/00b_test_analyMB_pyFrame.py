@@ -1,9 +1,9 @@
 # %% [markdown]
 # _bismillahi ArRahman ArRaheem_
-# # `script` to **develop, test and deploy** 💪🏻
+# # `script` to validate analytical bearing loads with `pyFrame3DD`
 #
 # ### TODO:
-# 1. 
+# 1. `-Fz` works! why?
 
 # %% [markdown]
 # imports
@@ -114,7 +114,6 @@ opts["WISDEM"]["DriveSE"]["use_gb_torque_density"] = True # False =(GB  optim, i
 opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
 opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
 opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0  #IEC-1, 7.6.1.3, pg.55
-# used as: gamma = gamma_f * gamma_m * gamma_n (within TODO)
 # opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
 # opts["WISDEM"]["DriveSE"]["own_hub_loads"] = False
 
@@ -171,7 +170,7 @@ if not flag_loads_simple:
         S_all['Fy'][startTS:startTS+numTS,4],
         (1,numTS)
         )
-    Fz = -np.reshape(
+    Fz = -np.reshape(                          # TODO: works! why?
         S_all['Fz'][startTS:startTS+numTS,4],
         (1,numTS)
         )
@@ -477,7 +476,6 @@ def build_lss_pyframe3dd(
     # DOF order: [Tx, Ty, Tz, Rx, Ry, Rz]; num = 6
     FREE = 0 # 1 = fixed, 0 = free
     rnode = np.r_[i1, i2, itorq] #r = np.zeros((nnodes, 6))
-    # TODO
     Rx = np.array([mb1_Reactions[0], mb2_Reactions[0], FREE])  # (v, def) RIGID, FREE, FREE: Upwind bearing restricts translational
     Ry = np.array([mb1_Reactions[1], mb2_Reactions[1], FREE])  # (v, def) RIGID, FREE, FREE: Upwind bearing restricts translational
     Rz = np.array([mb1_Reactions[2], mb2_Reactions[2], FREE])  # (v, def) RIGID, FREE, FREE: Upwind bearing restricts translational
