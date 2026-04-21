@@ -706,28 +706,28 @@ gs = fig.add_gridspec(5, 2, hspace=0.35, wspace=0.25)
 # 0,0 = mb1
 ax = fig.add_subplot(gs[0,0])
 ax.plot(0, 0, label=label_Frame, color=clr_Frame, linewidth=lineWidth_Frame)
-ax.plot(0, 0, label=label_analyMB, color=clr_Beam, linestyle=lineStyle_Beam)
-ax.set_title("MB1")
+ax.plot(0, 0, label=label_Beam, color=clr_Beam, linestyle=lineStyle_Beam)
+ax.set_title("MB1 " + r"$(\times 10^6)$")
 ax.set_xticks([])
 ax.set_yticks([])
 ax.set_ylabel(r'$ F, ax $')
 ax.legend(loc="center")
 
 # 0,1 = mb2
-maxFrame = np.max(F_mb2_myframe[0,:])
+maxFrame = 1e6 #np.max(F_mb2_myframe[0,:])
 ax = fig.add_subplot(gs[0,1])
 ax.plot( F_mb2_myframe[0,:] / maxFrame,
          color=clr_Frame, linewidth=lineWidth_Frame )
 ax.plot( F_mb2_beam[0,0,:] / maxFrame,
          color=clr_Beam, linestyle=lineStyle_Beam )
 # ax.legend()
-ax.set_title("MB2")
+ax.set_title("MB2 "+ r"$(\times 10^6)$")
 ax.set_xticks([])
 # ax.set_xlabel(r'$t$')
 
 # ==== y ====
 # 1,0 = mb1
-maxFrame = np.max(F_mb1_myframe[1,:])
+# maxFrame = np.max(F_mb1_myframe[1,:])
 ax = fig.add_subplot(gs[1,0])
 ax.plot( F_mb1_myframe[1,:] / maxFrame,
          color=clr_Frame, linewidth=lineWidth_Frame )
@@ -737,7 +737,7 @@ ax.set_ylabel(r"$ F, y $")
 ax.set_xticks([])
 
 # 1,1 = mb2
-maxFrame = np.max(F_mb2_myframe[1,:])
+# maxFrame = np.max(F_mb2_myframe[1,:])
 ax = fig.add_subplot(gs[1,1])
 ax.plot( F_mb2_myframe[1,:] / maxFrame,
          color=clr_Frame, linewidth=lineWidth_Frame )
@@ -750,7 +750,7 @@ ax.set_xticks([])
 
 # ==== z ====
 # 2,0 = mb1
-maxFrame = np.max(F_mb1_myframe[2,:])
+# maxFrame = np.max(F_mb1_myframe[2,:])
 ax = fig.add_subplot(gs[2,0])
 ax.plot( F_mb1_myframe[2,:] / maxFrame,
          color=clr_Frame, linewidth=lineWidth_Frame )
@@ -762,7 +762,7 @@ ax.set_ylabel(r"$ F, z$")
 ax.set_xticks([])
 
 # 2,1 = mb2
-maxFrame = np.max(F_mb2_myframe[2,:])
+# maxFrame = np.max(F_mb2_myframe[2,:])
 ax = fig.add_subplot(gs[2,1])
 ax.plot( F_mb2_myframe[2,:] / maxFrame,
          color=clr_Frame, linewidth=lineWidth_Frame )
@@ -775,7 +775,7 @@ ax.set_xticks([])
 
 # ==== radial ====
 # 3,0 = mb1
-maxFrame = np.max(F_mb1_myframe[3,:])
+# maxFrame = np.max(F_mb1_myframe[3,:])
 ax1 = fig.add_subplot(gs[3,0])
 ax1.plot( F_mb1_myframe[3,:] / maxFrame,
          color=clr_Frame, linewidth=lineWidth_Frame )
@@ -787,7 +787,7 @@ ax1.set_xticks([])
 # ax1.set_xlabel(r'$t$')
 
 # 3,1 = mb2
-maxFrame = np.max(F_mb2_myframe[3,:])
+# maxFrame = np.max(F_mb2_myframe[3,:])
 ax1 = fig.add_subplot(gs[3,1])
 ax1.plot( F_mb2_myframe[3,:] / maxFrame,
          color=clr_Frame, linewidth=lineWidth_Frame )
@@ -806,16 +806,14 @@ ax.set_ylabel(r'$ M, norm $')
 ax.set_xlabel(r"$t$")
 
 # 4,1 = mb2
-maxFrame = np.max(M_mb2_myframe[3,:])
-ax6 = fig.add_subplot(gs[4,1])
-ax6.plot( M_mb2_myframe[3,:] / maxFrame,
+# maxFrame = np.max(M_mb2_myframe[3,:])
+ax = fig.add_subplot(gs[4,1])
+ax.plot( M_mb2_myframe[3,:] / maxFrame,
          label="Frame", color=clr_Frame, linewidth=lineWidth_Frame )
-ax6.plot( M_mb2_beam_norm / maxFrame,
+ax.plot( M_mb2_beam_norm / maxFrame,
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
-# ax4.legend()
-# ax6.set_title(r"$M_{norm}^{mb2}$")
-ax6.set_xlabel(r"$t$")
-ax6.set_xticks([])
+ax.set_xlabel(r"$t$")
+ax.set_xticks([])
 ax.set_yticks([])
 
 # ----------
