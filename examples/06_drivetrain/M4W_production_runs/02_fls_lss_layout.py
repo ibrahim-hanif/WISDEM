@@ -48,12 +48,14 @@ from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from
 from wisdem.commonse.fileIO import save_data, load_data
 from wisdem.commonse.cross_sections import Tube
 import utilities_drivetrain as utilsDT
-# %% [markdown]
+# %%
 # ### Define flags
+suffix = "_m4w"
+
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
-record_cases = False    #TODO: add in final setup (full problem)
-plot_cases = False      #NOTE: saved, not changing now (commented)
+record_cases = True    #TODO: add in final setup (full problem)
+plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
 flag_load_from_data = False
@@ -75,8 +77,8 @@ flag_opt_GFO = False    # GFO: gradient free optimizer
 
 # Parametric study
 flag_study_parametric = True
-param_for_study = "MB".lower() # "MB" (types) / "LDD" (MS' L_*)
-meth_Peq = "DEL".lower()        # Method: "LRD" or "DEL"
+param_for_study = "LDD".lower() # "MB" (types) / "LDD" (MS' L_*)
+meth_Peq = "LRD".lower()        # Method: "LRD" or "DEL"
 
 #%%[markdown]
 # ### Defining results directory and files
@@ -88,7 +90,8 @@ os.makedirs(results_path, exist_ok=True)
 loc_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
-loc_save_data = os.path.join(results_path, "02")
+loc_save_data = os.path.join(results_path, "02"+suffix)
+if flag_load_from_data: loc_load_saved_data = os.path.join(results_path, "02newULS")
 loc_xdsm = os.path.join(results_path, 'xdsm_02')
 
 loc_DOEcsv_MBtype = os.path.join(results_path, "DOE_MBtype.csv")
@@ -97,7 +100,7 @@ loc_DOEcsv_MBtype = os.path.join(results_path, "DOE_MBtype.csv")
 if record_cases:
     print(" ---- Recording cases using `SqliteRecorder` ---- ")
     loc_cases = os.path.join(results_path,
-        "cases_recorded_"+meth_Peq+".sql")
+        "cases_recorded_"+meth_Peq+suffix+".sql")
     if os.path.exists( loc_cases ):
         os.remove( loc_cases )
 
@@ -130,6 +133,7 @@ opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
 opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
 opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0  #IEC-1, 7.6.1.3, pg.55
 opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
+# opts["WISDEM"]["DriveSE"]["own_hub_loads"] = True
 # used as: gamma = gamma_f * gamma_m * gamma_n (within TODO)
 
 opts["WISDEM"]["RotorSE"] = {}
@@ -160,6 +164,7 @@ opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.1429
 # TODO: probabs check with wind site
 # %% [markdown]
 # ### Defining the model `problem class`:
+#%%
 # as an openMDAO group that uses DrivetrainSE classes as components
 class LSS_layout( om.Group ):
     """
@@ -581,7 +586,7 @@ if not flag_load_from_data:
     prob["bear2.bearing_type"] = "TRB2" # 2. fixed MB
     prob["bear1.mb_e"] = 0.4 # from 3.5-4.0 (TODO: find ref.)
     prob["bear2.mb_e"] = 0.4
-    prob["bear2.mb_k"] = 3.0*1e10
+    prob["bear2.mb_k"] = 3.0*1e10 - 6e8
     if doMBfls:
         prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 
@@ -599,7 +604,7 @@ if not flag_load_from_data:
     # prob["gear_configuration"] = "eee"
     # prob["planet_numbers"] = np.array([5, 3, 0]) #ref.1
     prob["gear_ratio"] = (375 / rated_rpm)
-    prob["gearbox_mass_user"] = 135.5*1e3 # 138.728645e3: incl housing (from DOE_GBgen_updated.csv)
+    prob["gearbox_mass_user"] = 138.73*1e3 # 138.728645e3: incl housing (from DOE_GBgen_updated.csv)
     # prob["gearbox_torque_density"] = 200.0 # (cf. line 210, gearbox.py)
 
     prob["L_hss"] = 1.5
@@ -676,7 +681,7 @@ if not flag_load_from_data:
     # ---
 else:
     print(" loading prob vars from saved csv")
-    prob = load_data( loc_save_data+".csv", prob )
+    prob = load_data( loc_load_saved_data+".csv", prob )
 
 #%%[markdown]
 # ### Final check before running
@@ -807,8 +812,8 @@ if record_cases and plot_cases:
     # -------------------------
     # Figure and layout
     # -------------------------
-    fig = plt.figure(figsize=(20, 12))
-    gs = fig.add_gridspec(3, 2, hspace=0.35, wspace=0.25)
+    fig = plt.figure(figsize=(30, 12))
+    gs = fig.add_gridspec(3, 2, hspace=0.25, wspace=0.15)
 
     # ========= Row 1 (span both columns): msa_mass =========
     ax1 = fig.add_subplot(gs[0, :])
@@ -849,7 +854,7 @@ if record_cases and plot_cases:
     ax3.plot(iters, 10.0 * lss_t[:, 1],
             marker='s', color = clrs_m4w['Red'],
             label=r'$t_{lss,2} \times 10$')
-    ax3.set_ylabel(r'Dimensions [m]')
+    ax3.set_ylabel(r'Cross-section [m]')
     # ax3.set_xlabel('Iteration')
     # ax3.set_xticks(iters)
     ax3.grid(True)
@@ -865,7 +870,7 @@ if record_cases and plot_cases:
             marker='s', linewidth=2, color = clrs_m4w['Aqua'],
             label=r'$L_{10}^{mb2}$')
     ax4.axhline(1.0, color='k', linestyle='--', linewidth=1)
-    ax4.set_ylabel(r'$ \mathrm{constr\_L}_{10} $ [-]')
+    ax4.set_ylabel(r'$ g\_L_{10} $ [-]')
     ax4.set_xlabel('Optimizer iterations')
     # ax4.set_xticks(iters)
     ax4.grid(True)
@@ -880,7 +885,7 @@ if record_cases and plot_cases:
     # save
     # -------------------------
     plot_path = os.path.join(results_path,
-            "vars_with_iter_"+meth_Peq+".png")
+            "vars_with_iter_"+meth_Peq+suffix+".png")
     # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 
     plt.show()
@@ -920,10 +925,10 @@ if flag_study_parametric and flag_opt_GBO:
         # steps_lss_wall_thickness = np.array([[0.1,0.3],[0.1,0.3]])
 
         steps_L = [
-            (1.25, 2.5),
-            (3.75, 2.5),
-            (1.25, 7.5),
-            (3.75, 7.5)
+            (1.25, 2.0),
+            (3.75, 2.0),
+            (1.25, 6.0),
+            (3.75, 6.0)
         ]
         print("- L values: ", steps_L);
         # length: total num of param varying steps
@@ -1247,7 +1252,7 @@ if (param_for_study.lower() == "ldd") and (
     # -------------------------
     # Save plot
     plot_path = os.path.join(results_path,
-        meth_Peq+"_multiStart_optim_path.png")
+        meth_Peq+"_multiStart_optim_path"+suffix+".png")
     # plt.savefig(plot_path) # NOTE: saved, so don't change now 
     
     plt.show()
@@ -1345,12 +1350,13 @@ if (param_for_study.lower() == "ldd") and (
     # -------------------------
     # rotate view (via camera angles)
     # def: (30,-60), print(ax.elev, ax.azim)
+    # lrd: (40,-40)
     if meth_Peq=="lrd": ax.view_init(elev=40, azim=-40)
     # plt.ion() # interactive
     # ------------------------
     # Save plot
     plot_path = os.path.join(results_path,
-        meth_Peq+"_multiStart3D_optim_path.png")
+        meth_Peq+"_multiStart3D_optim_path"+suffix+".png")
     # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 
     plt.show()
