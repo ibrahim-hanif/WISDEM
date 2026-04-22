@@ -2204,6 +2204,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # - 5. material properties
         self.add_input("lss_E", val=0.0, units="Pa")
         # ---- Outputs ----
+        # self.add_output("P_mb2_sum", val=0.0, units="N")# TODO: testing, then comment out
         self.add_output('L10h_mb1', val=0.0, desc='L10 life MB1', units='h')
         self.add_output('L10h_mb2', val=0.0, desc='L10 life MB2', units='h')
         self.add_output('constr_L10_mb1', val=0.0, desc='Safety factor MB1')
@@ -2270,10 +2271,14 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.P_mb1 = P_mb1
 
         # LRD bin-counting
+        # if ("nBins" in self.options["modeling_options"]):
+        #     nBins = self.options["modeling_options"]["nBins"]
+        #     print(f"nBins in mb_fls = {nBins}")
+        # else: nBins = 100
         # P_mb1_sum = compute_LRD_matrix_vectorized(P_mb1,
-        #         self.dt,self.omega,self.probabilities,p)
+        #         self.dt,self.omega,self.probabilities,p, nBins)
         # P_mb2_sum = compute_LRD_matrix_vectorized(P_mb2,
-        #         self.dt,self.omega,self.probabilities,p)
+        #         self.dt,self.omega,self.probabilities,p, nBins)
 
         # DEL calculation
         # print('ws: ', ws) # debugging
@@ -2281,6 +2286,8 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
             self.ws, self.dt, self.omega, self.probabilities, p)
         P_mb2_sum = del_bearing_computation(P_mb2,
             self.ws, self.dt, self.omega, self.probabilities, p)
+        
+        # outputs["P_mb2_sum"] = P_mb2_sum # TODO: testing, then comment out
 
         # L10 life calculation
         Cr1 = inputs['Cr_mb1']
