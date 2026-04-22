@@ -802,6 +802,7 @@ ax1.set_xticks([])
 ax = fig.add_subplot(gs[4,0])
 # ax.set_title("MB1")
 ax.set_xticks([])
+ax.set_yticks([])
 ax.set_ylabel(r'$ M, norm $')
 ax.set_xlabel(r"$t$")
 
@@ -814,7 +815,6 @@ ax.plot( M_mb2_beam_norm / maxFrame,
          label="EBbeam", color=clr_Beam, linestyle=lineStyle_Beam )
 ax.set_xlabel(r"$t$")
 ax.set_xticks([])
-ax.set_yticks([])
 
 # ----------
 fig.tight_layout()
