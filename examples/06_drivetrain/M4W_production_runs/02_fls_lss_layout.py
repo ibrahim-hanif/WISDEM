@@ -54,7 +54,7 @@ suffix = "_m4w"
 
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
-record_cases = True    #TODO: add in final setup (full problem)
+record_cases = False    #TODO: add in final setup (full problem)
 plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
@@ -77,8 +77,8 @@ flag_opt_GFO = False    # GFO: gradient free optimizer
 
 # Parametric study
 flag_study_parametric = True
-param_for_study = "LDD".lower() # "MB" (types) / "LDD" (MS' L_*)
-meth_Peq = "LRD".lower()        # Method: "LRD" or "DEL"
+param_for_study = "MB".lower() # "MB" (types) / "LDD" (MS' L_*)
+meth_Peq = "DEL".lower()        # Method: "LRD" or "DEL"
 
 #%%[markdown]
 # ### Defining results directory and files
@@ -91,10 +91,10 @@ loc_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "02"+suffix)
-if flag_load_from_data: loc_load_saved_data = os.path.join(results_path, "02newULS")
+if flag_load_from_data: loc_load_saved_data = os.path.join(results_path, "02"+suffix) # 02newULS
 loc_xdsm = os.path.join(results_path, 'xdsm_02')
 
-loc_DOEcsv_MBtype = os.path.join(results_path, "DOE_MBtype.csv")
+loc_DOEcsv_MBtype = os.path.join(results_path, "DOE_MBtype_test.csv")
 
 # Record results?
 if record_cases:
@@ -415,7 +415,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     prob.model.add_design_var("L_12", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
     # prob.model.add_design_var("delta", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
     prob.model.add_design_var("lss_diameter", lower=1.0, upper=5.0, ref=5.0, ref0=1.0)
-    prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=1.0, ref=1.0, ref0=4e-3) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
+    prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.5, ref=1.0, ref0=4e-3) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
 
     if flag_DOE: pass # DOE: no constraints
     
@@ -589,6 +589,7 @@ if not flag_load_from_data:
     prob["bear2.mb_k"] = 3.0*1e10 - 6e8
     if doMBfls:
         prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
+        prob["mb_fls.k_mb2"] = prob["bear2.mb_k"]
 
     # Layout / lss inputs
     prob["L_h1"] = 0.1 #(def: 0.5), 4.25; converg: 0.264
@@ -812,8 +813,8 @@ if record_cases and plot_cases:
     # -------------------------
     # Figure and layout
     # -------------------------
-    fig = plt.figure(figsize=(30, 12))
-    gs = fig.add_gridspec(3, 2, hspace=0.25, wspace=0.15)
+    fig = plt.figure(figsize=(24, 12))
+    gs = fig.add_gridspec(3, 2, hspace=0.25, wspace=0.5)
 
     # ========= Row 1 (span both columns): msa_mass =========
     ax1 = fig.add_subplot(gs[0, :])
@@ -859,7 +860,7 @@ if record_cases and plot_cases:
     # ax3.set_xticks(iters)
     ax3.grid(True)
     # ax3.legend(ncol=2)
-    ax3.legend(loc='center left',bbox_to_anchor=(1,0.5))
+    ax3.legend(loc='center left',bbox_to_anchor=(-0.5,0.5))
 
     # ========= Row 3 (span both columns): L10 constraints =========
     ax4 = fig.add_subplot(gs[2, :])
@@ -871,10 +872,10 @@ if record_cases and plot_cases:
             label=r'$L_{10}^{mb2}$')
     ax4.axhline(1.0, color='k', linestyle='--', linewidth=1)
     ax4.set_ylabel(r'$ g\_L_{10} $ [-]')
-    ax4.set_xlabel('Optimizer iterations')
+    ax4.set_xlabel('Optimizer function evaluations')
     # ax4.set_xticks(iters)
     ax4.grid(True)
-    ax4.legend(loc='center left',bbox_to_anchor=(1,0.5))
+    ax4.legend(loc='upper right')#,bbox_to_anchor=(1,0.5))
 
     # -------------------------
     # Final layout
@@ -1132,53 +1133,51 @@ if flag_study_parametric and (param_for_study.lower() == "mb"):
 
 # ==== 2. L_ vary: LRD (DEL gives same results :D AL)
 """
-{
-'status_driver_exit': ['SUCCESS', 'FAIL', 'SUCCESS', 'SUCCESS'],
- 'time': array([[44.93823862],
-        [61.28058243],
-        [52.68014336],
-        [61.6395607 ]]),
- 'L_h1': array([[1.04969468],
-        [0.17743924],
-        [0.77638446],
-        [3.21619962]]),
- 'L_12': array([[7.98922461],
-        [7.39648932],
-        [7.90763795],
-        [7.99996046]]),
- 'lss_diameter': array([[1.46587534, 3.9643857 ],
-        [1.46788412, 3.80722631],
-        [1.44021497, 3.91704652],
-        [1.72937712, 4.28607751]]),
- 'lss_wall_thickness': array([[0.05514977, 0.02289683],
-        [0.05971319, 0.02651526],
-        [0.05736821, 0.02339293],
-        [0.04092318, 0.02078982]]),
- 'constr_L10_mb1': array([[0.9999995 ],
-        [0.99992507],
-        [1.00000001],
-        [1.00000001]]),
- 'constr_L10_mb2': array([[1.00000012],
-        [1.00001071],
-        [0.99999925],
-        [1.00000126]]),
- 'mb1_mass': array([[ 9982.72824704],
-        [10165.33098495],
-        [ 9735.26554027],
-        [12915.44714381]]),
- 'mb2_mass': array([[67691.7503778 ],
-        [70015.77826691],
-        [68326.1214711 ],
-        [64084.07821684]]),
- 'lss_mass': array([[22491.74793949],
-        [20462.53848713],
-        [22002.6653499 ],
-        [25040.74443353]]),
- 'msa_mass': array([[100166.22656434],
-        [100643.64773899],
-        [100064.05236127],
-        [102040.26979418]])
-}
+{'status_driver_exit': ['FAIL', 'SUCCESS', 'FAIL', 'FAIL'],
+'time': array([[95.3631618 ],
+       [65.29973674],
+       [60.70263004],
+       [99.33194518]]),
+'L_h1': array([[0.31879292],
+       [0.30997894],
+       [0.31024201],
+       [0.30981228]]),
+'L_12': array([[1.74300093],
+       [1.69628264],
+       [1.68949044],
+       [1.70063225]]),
+'lss_diameter': array([[3.59648417, 3.20627955],
+       [3.45397717, 3.22357537],
+       [3.45866446, 3.22218196],
+       [3.45096928, 3.22462593]]),
+'lss_wall_thickness': array([[0.09980819, 0.08608805],
+       [0.08465953, 0.07958583],
+       [0.0843303 , 0.07961096],
+       [0.08486993, 0.07956174]]),
+'constr_L10_mb1': array([[1.02633169],
+       [0.99999998],
+       [0.99999768],
+       [0.99999986]]),
+'constr_L10_mb2': array([[1.00004017],
+       [0.9999995 ],
+       [0.99997727],
+       [0.99999612]]),
+'mb1_mass': array([[42342.11056611],
+       [39905.60500308],
+       [39977.35259577],
+       [39860.17980165]]),
+'mb2_mass': array([[53393.24743278],
+       [53307.40132529],
+       [53290.64287144],
+       [53322.51334515]]),
+'lss_mass': array([[19459.92737298],
+       [16537.21193405],
+       [16472.39365624],
+       [16578.32292644]]),
+'msa_mass': array([[115195.28537187],
+       [109750.21826241],
+       [109740.38912345],
+       [109761.01607323]])}
 """
 # %%
 # plot 2D optim path
