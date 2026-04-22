@@ -1370,13 +1370,13 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
         "TRB":
             dict(a=0.1499, b=0.0,    k=543.01, n=1.9043, c=1993.8, m=0.318,
                  max_ang=np.deg2rad(3/60), reactions=[1,1,1,0,1,1],
-                 k_torsional=3e10
+                 k_torsional=3e10-6e8
                  ),
 
         "TRB2":
             dict(a=0.1541, b=0.2087, k=1442.6, n=1.8932, c=6579.9, m=0.8592,
                  max_ang=np.deg2rad((0.06+0.02)/2), reactions=[1,1,1,0,1,1],
-                 k_torsional=3e10
+                 k_torsional=3e10-6e8
                  ),
     }
 
