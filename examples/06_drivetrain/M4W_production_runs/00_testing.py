@@ -43,13 +43,15 @@ loc_save_data = os.path.join(results_path, "00")
 # 02 results
 results_02_dir = "02_results"
 results_02_path = os.path.join(script_dir, results_02_dir)
-loc_saved_02_data = os.path.join(results_02_path, "02")
+loc_saved_02_data = os.path.join(results_02_path, "02_m4w")
 
 #%%
 # load and read from saved csv file
 flag_load_from_data = True
 
-if flag_load_from_data: df_02results = pd.read_csv( loc_saved_02_data+".csv")
+if flag_load_from_data:
+    df_02results = pd.read_csv( loc_saved_02_data+".csv")
+    var_dict = var_df2dict( df_02results )
 
 #%% Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -77,7 +79,7 @@ else: # define paths
 
 # %%
 # Define plotting options
-from my_util_tools import analyseWTLoads, util_funcs
+from my_util_tools import analyseWTLoads, util_funcs, funcs_errors
 loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
 clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
 
@@ -116,7 +118,7 @@ opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
 opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
 opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0  #IEC-1, 7.6.1.3, pg.55
 # used as: gamma = gamma_f * gamma_m * gamma_n (within TODO)
-# opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
+opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
 # opts["WISDEM"]["DriveSE"]["own_hub_loads"] = False
 
 opts["WISDEM"]["RotorSE"] = {}
@@ -508,4 +510,96 @@ print(sys.executable)
 import pkgutil
 print([m.name for m in pkgutil.iter_modules()])
 
+# %%[markdown]
+# ### LDD and DEL: plot P_ and compare
+#%%
+# method
+meth_Peq = "LRD".lower()        # Method: "LRD" or "DEL"
+flag_save_newBinPeq = True
+# read bins from csv file
+loc_csv_nBins = results_path+os.sep+"nBins_P_LDD.csv"
+df_nBins = pd.read_csv( loc_csv_nBins )
+NnBins = len(df_nBins)
+opt_drivese_copy = opt_drivese.copy()
+# outer loop for bins
+for i in range(NnBins):
+    # extract bin
+    nBins = df_nBins["nBins"][i]
+    opt_drivese_copy["nBins"] = nBins
+    # define problem
+    prob_ana = om.Problem(reports=False)
+    model_ana = prob_ana.model = om.Group()
+    model_ana.add_subsystem(
+        "mb_fls",
+        ds.Analytical_FLS_Bearing_Life(
+            modeling_options=opt_drivese_copy,
+            openfast_options=opt_openfast,
+            dlc_options=opt_DLC
+        ),
+        promotes=['*']
+    )
+    # setup
+    prob_ana.setup()
+    # inputs
+    # prob_ana.model.list_inputs();
+    # define input params
+    # - overall
+    prob_ana["rated_rpm"] = eval( var_dict['rated_rpm'] )
+    prob_ana["lifetime"] = eval( var_dict['lifetime'] )
+    prob_ana["tilt"] = eval( var_dict['tilt'] )
+    # - DT
+    prob_ana["L_h1"] = eval( var_dict['L_h1'] )
+    prob_ana["L_12"] = eval( var_dict['L_12'] )
+    prob_ana["Dshaft_mb2"] = eval( var_dict['Dshaft_mb2'] )
+    prob_ana["Tshaft_mb2"] = eval( var_dict['Tshaft_mb2'] )
+    prob_ana["s_lss"] = eval( var_dict['s_lss'] )
+    prob_ana["lss_E"] = eval( var_dict['lss_E'] )
+    # - mb_fls
+    prob_ana["k_mb2"] = eval( var_dict['mb_fls.k_mb2'] ) # - 6e8
+    prob_ana["Cr_mb2"] = eval( var_dict['mb_fls.Cr_mb2'] )
+    prob_ana["p_mb"] = eval( var_dict['mb_fls.p_mb'] )
+    prob_ana["e_mb"] = eval( var_dict['mb_fls.e_mb'] )
+    prob_ana["X1_mb"] = eval( var_dict['mb_fls.X1_mb'] )
+    prob_ana["Y1_mb"] = eval( var_dict['mb_fls.Y1_mb'] )
+    prob_ana["X2_mb"] = eval( var_dict['mb_fls.X2_mb'] )
+    prob_ana["Y2_mb"] = eval( var_dict['mb_fls.Y2_mb'] )
+    # - other DTs
+    prob_ana["carrier_mass"] = eval( var_dict['carrier_mass'] )
+    # run
+    prob_ana.run_model()
+    # outputs
+    P_LDD = prob_ana["P_mb2_sum"]
+    print(f"P_LDD [MN] = {P_LDD/1e6}")
+    # - store
+    if meth_Peq=="lrd": df_nBins.loc[i,"P_LDD"] = P_LDD
+    if meth_Peq=="del": df_nBins.loc[i,"P_DEL"] = P_LDD
+# save
+if flag_save_newBinPeq: df_nBins.to_csv(loc_csv_nBins,index=False)
+#%%
+# post-processing
+# - nBins
+lst_nBins = np.array(df_nBins["nBins"].tolist())
+# - DEL
+P_DEL = df_nBins.loc[0,"P_DEL"]
+lst_P_DEL = np.array(df_nBins["P_DEL"].tolist()) #/ P_DEL
+# - LDD
+lst_P_diff = np.array(df_nBins["P_LDD"].tolist()) - P_DEL
+
+# - opts
+
+# - plot
+fig,ax = plt.subplots(figsize=(11, 4))
+ax.plot(lst_nBins, lst_P_diff,
+        marker='o', color= clrs_m4w["Aqua"])
+ax.set_ylabel(r"$ P_{LDD}-P_{DEL} $")
+ax.set_xlabel('# Bins')
+ax.set_xticks(lst_nBins)
+ax.grid(True)
+# ax.legend()
+plt.tight_layout()
+# - save
+plot_path = os.path.join(results_path, "Pbins_convergence.png")
+# plt.savefig(plot_path) # NOTE: saved, so don't change now 
+# - plot
+plt.plot()
 # %%
