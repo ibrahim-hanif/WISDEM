@@ -46,8 +46,13 @@ def read_df_to_prob( this_case, prob ):
         # work on DVs
         # 1. float type
         if type(value) in [float, np.float64]: prob[key] = value
-        # 2. str type for vector DVs
-        elif type(value) == str: prob[key] = np.array(eval( value ))
+        # 2. str type for vector DVs or params
+        elif type(value) == str:
+            # DV
+            if value.startswith('[') and value.endswith(']'):
+                prob[key] = np.array(eval( value ))
+            # param
+            else: prob[key] = str(value)
     
     return prob
 # ==========
@@ -104,7 +109,7 @@ def write_dict_to_df(  df, row, outs_recorded ):
         val = val[row]
         # check type to write in df
         # 1. for status_driver_exit (string)
-        if type(val) == type(""):
+        if type(val) == np.str_:
             df.at[row,key] = np.str_( val )
         # 2. for time, dvs, obj
         elif type(val) == type( np.empty(1) ):
