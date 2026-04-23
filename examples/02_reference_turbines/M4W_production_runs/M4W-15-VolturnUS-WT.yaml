@@ -421,8 +421,8 @@ components: #(v) specifications for individual components (blades, tower, nacell
         drivetrain:
             uptilt: 0.10471975511965977 # 6 deg
             distance_tt_hub: 5.614
-            distance_hub_mb: 0.5575931674058667 #----result of 03_nacelle_optim+below----
-            distance_mb_mb: 5.011389495320043
+            distance_hub_mb: 0.49276103140273353 #----result of 03_nacelle_optim+below----
+            distance_mb_mb: 5.062471555893504
             overhang: 12.0313 # def: 12.0313 & iea15: 11.35
 
             gear_ratio: 49.6031746
@@ -431,18 +431,18 @@ components: #(v) specifications for individual components (blades, tower, nacell
             gearbox_length_user: 2.7636198183
             gearbox_radius_user: 2.312024
 
-            lss_diameter: [3.508486371738839, 3.3501710862921876]
-            lss_wall_thickness: [0.07525245291695476, 0.11632168455884717]
+            lss_diameter: [3.8200109021223523, 3.2432687437143484]
+            lss_wall_thickness: [0.08703699760684419, 0.07987555634552672]
             lss_material: steel_drive
 
-            hss_length: 1.1616408996473195
-            hss_diameter: [0.5161993076677188, 0.5000000000000002]
-            hss_wall_thickness: [0.10350654734272292, 0.004597425682038176]
+            hss_length: 1.102560612058607
+            hss_diameter: [0.5, 0.5]
+            hss_wall_thickness: [0.10124311401070424, 0.004]
             hss_material: steel_drive
 
-            bedplate_flange_width: 2.415372327102927
-            bedplate_flange_thickness: 0.0897599610835592
-            bedplate_web_thickness: 0.06265416462756287
+            bedplate_flange_width: 2.3427547391232055
+            bedplate_flange_thickness: 0.09282021508604103
+            bedplate_web_thickness: 0.06152041352861306
             bedplate_material: steel_drive
             # MB : DONE: add new inputs to main bearings and whole DT
             mb1Type: CRB
