@@ -134,12 +134,14 @@ def plot_tower_geo_comparison( m4w_yaml, iea15_yaml, only_tower=True,
 # Run & plot
 if __name__ == "__main__":
     mydir = os.path.dirname(os.path.realpath(__file__))
-    dir_m4w_run = mydir + os.sep + "M4W_01_semisubTower_only"
+    dirTowerEg = os.path.dirname(os.path.dirname(mydir))+(
+        os.sep+"examples"+os.sep+"05_tower_monopile")
+    dir_m4w_run = dirTowerEg + os.sep + "M4W_01_semisubTower_only"
     # Geometry YAML files
     # 1. base IEA 15-MW
     iea_yaml = dir_m4w_run +os.sep+ "iea15mw_tower_semisub_report.yaml"
     # 2. Made4Wind
-    m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_10m.yaml"
+    m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_m4w.yaml"
     plot_tower_geo_comparison( m4w_yaml, iea_yaml )
 # =======================================================================
 
@@ -331,7 +333,7 @@ def plot_loads_TT_comparison(m4w, iea,
 # 3. MAIN
 # ======================================================
 if __name__ == "__main__":
-    dir_m4w_runs_main = mydir +os.sep+ "M4W_production_runs"
+    dir_m4w_runs_main = dirTowerEg +os.sep+ "M4W_production_runs"
     # model yaml files
     file_m4w = dir_m4w_runs_main +os.sep+ "modeling_options_m4w_monopile_only.yaml"
     file_iea = dir_m4w_runs_main +os.sep+ "modeling_options_iea15_monopile_only_wisdemV3.yaml"
