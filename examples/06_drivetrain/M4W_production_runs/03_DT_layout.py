@@ -35,8 +35,7 @@ import numpy as np
 import openmdao.api as om
 import time
 import matplotlib.pyplot as plt
-# import scipy.io as sio # --- not used in here, but within imports
-# import pickle
+import pandas as pd
 
 # %%
 from wisdem.drivetrainse.drivetrain import DriveMaterials, DrivetrainSE_M4W
@@ -51,13 +50,13 @@ import wisdem.drivetrainse.drive_components as dc
 import wisdem.drivetrainse.drive_structure as ds
 
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict
-from wisdem.commonse.fileIO import save_data, load_data, get_variable_list
-import wisdem.commonse.fileIO as IO
+from wisdem.commonse.fileIO import save_data, load_data, get_variable_list, var_df2dict
 # import the utilities_drivetrain module as utilsDT
 import utilities_drivetrain as utilsDT
 
 # %% [markdown]
 # ### Define flags
+suffix = "_m4w"
 
 # pre-processing; Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -80,6 +79,7 @@ record_cases = False    #TODO: add in final setup (full problem)
 plot_cases = False      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
+load_from_saved_data = True
 
 # Parametric study
 flag_study_parametric = False
@@ -116,10 +116,15 @@ if record_cases:
 
 # - post-processing
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
-loc_save_data = os.path.join(results_path, "03newULS")
-load_from_saved_data = False
-if os.path.exists(loc_save_data+".csv"): load_from_saved_data = True
+loc_save_data = os.path.join(results_path, "03"+suffix) # "03"+suffix
 
+# - load from saved data
+# 02_ data
+# if load_from_saved_data: loc_saved_02_data = os.path.join(results_path, "02"+suffix) # 02newULS
+# 03_ data
+if os.path.exists(loc_save_data+".csv"): load_from_saved_data = True # TODO
+
+# - DOE
 loc_DOEcsv_GBgen = os.path.join(script_dir, "04_results", "DOE_GBgen_updated.csv")
 flag_load_from_DOEcsv = False
 
@@ -155,7 +160,7 @@ opts["WISDEM"]["DriveSE"]["use_gb_torque_density"] = True # False =(GB  optim, i
 opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
 opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
 opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0  #IEC-1, 7.6.1.3, pg.55
-opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
+# opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
 # used as: gamma = gamma_f * gamma_m * gamma_n (within TODO)
 
 opts["WISDEM"]["RotorSE"] = {}
@@ -284,7 +289,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     prob.model.add_constraint("constr_mb1_defl", upper=1.0)                 #DONE: add next
     prob.model.add_constraint("constr_mb2_defl", upper=1.0)                 #DONE: add next
     # --- bedplate # TODO: add later if needed (gen stator / max bedplate end defl)
-    # prob.model.add_constraint("constr_stator_deflection", upper=1.0)      #TODO: add next -> results saved in `03newULS_wConstrStatorDefl`: nacelle_mass=845 t.
+    # prob.model.add_constraint("constr_stator_deflection", upper=1.0)      #TODO: add next -> results saved in `03newULS_wConstrStatorDefl`: nacelle_mass=684 t.
     prob.model.add_constraint("constr_stator_angle", upper=1.0)
 
     # 3. length: target overhang, hub height and LSS wrt. MBs
@@ -462,11 +467,11 @@ if doMBfls:
     prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 
 # Layout / lss inputs
-prob["L_h1"] = 0.2 #(def: 2.0), 4.25
-prob["L_12"] = 2.0 #(def:1.2), 7.1
+prob["L_h1"] = 0.3 #(def: 2.0), 4.25
+prob["L_12"] = 1.24 #(def:1.2), 7.1
 prob["delta"] = 0.5
-prob["lss_diameter"] = np.array([3.2, 3.4]) #(def:1.0), 4.0
-prob["lss_wall_thickness"] = np.array([0.08, 0.09]) #(def:0.1), 0.3
+prob["lss_diameter"] = np.array([3.45, 3.21]) #(def:1.0), 4.0
+prob["lss_wall_thickness"] = np.array([0.19, 0.01]) #(def:0.1), 0.3
 
 # Gearbox inputs
 prob["gear_ratio"] = (375 / rated_rpm)
@@ -478,9 +483,9 @@ prob["gearbox_length_user"] = 2.512381653*1.1 # (from DOE_GBgen_updated.csv, +10
 prob["gearbox_radius_user"] = 2.10184*1.1 #(from DOE_GBgen_updated.csv, +10% margin)
 
 # HSS (DONE: consider as DV if needed)
-prob["L_hss"] = 0.153
-prob["hss_diameter"] = np.array([0.5, 0.636])
-prob["hss_wall_thickness"] = np.array([0.048, 0.004])
+prob["L_hss"] = 1.0
+prob["hss_diameter"] = np.array([0.5, 0.5])
+prob["hss_wall_thickness"] = np.array([0.1, 0.1])
 
 # === Generator inputs (DONE: add compn later)
 # - needed by Bedplate_IBeam_Frame in drive_structure.py, output of HSS_Frame
@@ -659,10 +664,14 @@ print(f"nacelle mass: {prob["nacelle_mass"]}")
 print(f"nacelle cm: {prob["nacelle_cm"]}")
 
 print("\n--- RNA properties ---")
-print(f"RNA mass: {prob["rna_mass"]}")
-print(f"RNA cm: {prob["rna_cm"]}")
-
-# list_driver_vars = prob.list_driver_vars()
+print(f"RNA mass: {prob["rna_mass"]}") # drivese.rna_mass
+print(f"RNA cm: {prob["rna_cm"]}") # drivese.rna_cm
+print(f"RNA MoI: {prob["rna_I_TT"]}") # drivese.rna_I_TT
+#
+print("\nTower-top / drivetrain bedplate base loads:")
+print(" - base_F: ", prob['base_F']) # drivese.base_F
+print(" - base_M: ", prob['base_M']) # drivese.base_M
+# -----------------------------------------------------------------------
 
 #%%[markdown]
 # Driver scaling report 
@@ -781,7 +790,7 @@ if plot_cases:
     # Figure
     # --------------------------------------------------
     # --- Figure setup ---
-    fig, ax = plt.subplots(figsize=(16, 16))
+    fig, ax = plt.subplots(figsize=(14, 14))
 
     x = np.array([0, 1])
     labels = ["IEA 15 MW", "MADE4WIND 15 MW"]
@@ -847,7 +856,7 @@ if plot_cases:
     # save
     # -------------------------
     plot_path = os.path.join(results_path,
-            "compare_mass_"+meth_Peq+".png")
+            "compare_mass"+suffix+".pdf")
     # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 
     plt.show()
