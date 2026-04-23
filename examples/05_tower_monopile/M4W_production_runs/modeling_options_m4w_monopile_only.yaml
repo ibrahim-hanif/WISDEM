@@ -33,7 +33,7 @@ WISDEM:
         gamma_m: 1.3     # Safety factor for material properties
         gamma_n: 1.0     # Safety factor for ...
         gamma_b: 1.1     # Safety factor for ...
-        gamma_fatigue: 1.755  # Safety factor for fatigue loads
+        # gamma_fatigue: 1.755  # Safety factor for fatigue loads (def: 1.0)
         buckling_method: dnvgl # Buckling code type [eurocode or dnvgl]
         buckling_length: 15    # Buckling parameter
         soil_springs: True
@@ -41,19 +41,19 @@ WISDEM:
         frame3dd:
             shear: True
             geom: True
-            tol: 1e-9
+            tol: 1e-7 #1e-9
     BOS:
         flag: False
     LCOE:
         flag: False
 
     Loading:
-        mass: 885058.299643112 # rna_
-        center_of_mass: [-6.779206767295831, -0.14270302877327856, 3.9323984753698316]
-        moment_of_inertia: [360526657.5344776, 277558397.3006753, 264234457.96796638, 632.0099351595854, 13134030.913781522, 226489.7083116818]
+        mass: 882823.4739634111 # rna_
+        center_of_mass: [-6.784293006712554, -0.14306427471052335, 3.94042173914421]
+        moment_of_inertia: [360563640.28994715, 276944261.8762369, 263598881.01702195, 643.3985892837518, 13069120.611585986, 226480.88427122353]
         loads: # base_
-            - force: [4787210.1751768775, 1369723.1636691983, 1635731.4154114164]
-              moment: [15551795.755125966, 141572021.25965953, 7600669.908459944]
+            - force: [4787211.290055305, 1369701.9808832766, 1656535.0685554557]
+              moment: [15550926.843365885, 141311429.7515388, 6958559.789100165]
               velocity: 11.0 # def.: 11.73732; cf. plot ms_loads_stats
 
 #(v) -------------- NEW! DONE: MB FLS options --------------
