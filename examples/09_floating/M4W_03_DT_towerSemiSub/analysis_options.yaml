@@ -1,0 +1,148 @@
+# Generic analysis options where nothing is run
+general:
+    folder_output: M4W_03_DT_towerSemiSub//outputs
+    fname_output: test
+
+design_variables:
+    drivetrain:
+        # ---- LSS ----
+        distance_hub_mb:
+            flag: True
+            lower_bound: 0.1
+            upper_bound: 5.0
+        distance_mb_mb:
+            flag: True
+            lower_bound: 0.1
+            upper_bound: 8.0
+        lss_diameter:
+            flag: True
+            lower_bound: 1.0
+            upper_bound: 5.0
+        lss_wall_thickness:
+            flag: True
+            lower_bound: 4e-3
+            upper_bound: 1.0
+        # ---- HSS ----
+        hss_length:                 # TODO: absent in analy_opts schema!
+            flag: True
+            lower_bound: 0.1
+            upper_bound: 5.0
+        hss_diameter:
+            flag: True
+            lower_bound: 0.5
+            upper_bound: 5.0
+        hss_wall_thickness:
+            flag: True
+            lower_bound: 4e-3
+            upper_bound: 0.2
+        # ---- bedplate ----
+        bedplate_web_thickness:
+            flag: True
+            lower_bound: 5e-3
+            upper_bound: 1.0
+        bedplate_flange_thickness:
+            flag: True
+            lower_bound: 5e-3
+            upper_bound: 1.0
+        bedplate_flange_width:
+            flag: True
+            lower_bound: 0.01
+            upper_bound: 3.0
+
+    tower:                          
+        outer_diameter:
+            flag: True
+            lower_bound: 6.5
+            upper_bound: 10.0
+        layer_thickness:            # ---- keep these fixed (15,100)mm
+            flag: True
+            lower_bound: 15e-3
+            upper_bound: 1e-1
+
+constraints:
+    drivetrain:
+        # ---- LSS ----
+        lss: # von mises
+            flag: True
+        mb1: # deflection
+            flag: True
+        mb2:
+            flag: True
+        shaft_deflection:
+            flag: True
+        shaft_angle:
+            flag: True
+        # ---- HSS ----
+        hss: # von mises
+            flag: True
+        # ---- bedplate ----
+        bedplate:
+            flag: True
+        stator_angle:
+            flag: True
+        stator_deflection:
+            flag: False # TODO last iff needed
+        # ---- overall nacelle ----
+        height:
+            flag: True
+        length:
+            flag: True
+
+    #(v) ---- NEW! MB FLS constraints ----
+    user: # DONE: checked with runWISDEM -> gc_PoseOptimization, line 1325
+        - name: "drivese.constr_Lh1_MB1fw"
+          lower_bound: [0.0]
+        #   ref: 1e1
+        - name: "drivese.constr_L12_MBsFW"
+          lower_bound: [0.0]
+        #   ref: 1e0
+        - name: "drivese.constr_L10_mb1" # ---- MB FLS only when mb_e > 0.0 in geometry yaml file ----
+          lower_bound: [1.0]
+        - name: "drivese.constr_L10_mb2"
+          lower_bound: [1.0]
+
+    tower:
+        height_constraint:
+            flag: False # TODO
+            lower_bound: 1.e-2
+            upper_bound: 1.e-2
+        stress:
+            flag: True
+        global_buckling:
+            flag: True
+        shell_buckling:
+            flag: True
+        d_to_t: # slenderness ratio controls the global buckling (critical)
+            flag: True #False
+            lower_bound: 120.0 # 90.0, 120
+            upper_bound: 1000.0 # 500.0, 1000
+        taper:
+            flag: True # TODO 1
+            lower_bound: 0.4
+        slope:
+            flag: True # TODO 1
+        thickness_slope:
+            flag: True # TODO 1
+        frequency:
+            flag: False # always for just tower
+        frequency_1:
+            flag: False #True TODO 2
+            # stiff-stiff (cf. semi-sub report) TODO for M4W
+            lower_bound: 0.45
+            # soft-stiff (cf. semi-sub report) TODO for M4W
+            # lower_bound: 0.15
+            # upper_bound: 0.2
+
+merit_figure_user: # TODO
+    name: "towerse.turbine_mass" # = rna_mass + tower_mass
+    ref: 1e7
+
+driver:
+    optimization:
+        flag: True
+        max_iter: 20         # Max number of iters (SLSQP); TODO: DT req 80
+        tol: 1e-4           # Convergence tolerance (SLSQP)
+        solver: SLSQP       # Optimization solver. Other options are 'SLSQP' - 'CONMIN'
+        step_size: 1.e-6    # Step size for finite differencing (def.: 1.e-3)
+        form: forward       # Finite differencing mode, forward or central (def.)
+        debug_print: True
