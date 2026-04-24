@@ -1,7 +1,7 @@
 # Generic analysis options where nothing is run
 general:
     folder_output: M4W_01_semisubTower_only//outputs
-    fname_output: test_wFreq
+    fname_output: test_m4w
 
 design_variables:
     tower:                          # TODO
@@ -49,7 +49,7 @@ constraints:
         frequency:
             flag: False # always for just tower
         frequency_1:
-            flag: True #True TODO 2
+            flag: False #True TODO 2
             # stiff-stiff (cf. semi-sub report) TODO for M4W
             lower_bound: 0.45
             # soft-stiff (cf. semi-sub report) TODO for M4W

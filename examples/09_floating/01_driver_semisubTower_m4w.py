@@ -18,13 +18,13 @@ import matplotlib.pyplot as plt
 from wisdem.commonse.utilities import load_all_mat_to_dict
 
 #%%
-wt_m4w = True # turbine to analyse: True = m4w / False = iea15mw
+wt_m4w = False # turbine to analyse: True = m4w / False = iea15mw
 loads_m4w = True
 
 flag_plot = True
 verbose = False
 
-flag_opt_GBO = False
+flag_opt_GBO = True
 flag_scaling_show_browser = False
 
 flag_override_tower_init = False
@@ -50,7 +50,7 @@ if wt_m4w:
 else:
       fname_wt_input = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
 
-fname_wt_input = dir_m4w_run + os.sep + "outputs\\test.yaml"
+fname_wt_input = dir_m4w_run + os.sep + "outputs\\test_m4w.yaml"
 
 # ---- modelling options
 fname_model_opts_m4w = dir_m4w_run+os.sep+ "modelOpts_m4w.yaml"
@@ -246,7 +246,7 @@ from wisdem.postprocessing.plot_tower_data import plot_tower_geo_comparison
 iea_report_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
 acciona_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_acciona.yaml"
 # 2. Made4Wind
-m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_10m.yaml"
+m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_m4w.yaml"
 # loc save img
 loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
             "geometry_tower_noFreqConstr_m4w&ieaReport.png"
