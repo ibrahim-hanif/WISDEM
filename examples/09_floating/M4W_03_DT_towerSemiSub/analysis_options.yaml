@@ -70,8 +70,10 @@ constraints:
             flag: True
         shaft_deflection:
             flag: True
+            upper_bound: 1e-4
         shaft_angle:
             flag: True
+            upper_bound: 1e-3
         # ---- HSS ----
         hss: # von mises
             flag: True
@@ -80,8 +82,10 @@ constraints:
             flag: True
         stator_angle:
             flag: True
+            upper_bound: 1e-1
         stator_deflection:
             flag: False # TODO last iff needed
+            upper_bound: 1e-2
         # ---- overall nacelle ----
         height:
             flag: True

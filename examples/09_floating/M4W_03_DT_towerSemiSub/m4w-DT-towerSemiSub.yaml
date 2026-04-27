@@ -494,6 +494,291 @@ components: #(v) specifications for individual components (blades, tower, nacell
                       grid: *grid #[0.0, 0.10038997644696708, 0.20077995289393416, 0.3011699293409012, 0.4015599057878683, 0.5019498822348353, 0.6023398586818024, 0.7027298351287694, 0.8031198115757365, 0.9035097880227035, 1.0]
                       values: [0.06822151656829921, 0.06596679746913257, 0.055704587920387766, 0.0536054096281683, 0.04412350275838797, 0.04635577782453775, 0.04397905805600269, 0.046153508490027334, 0.043442951790933125, 0.04210488633532667, 0.026883339444412076]
 
+
+    floating_platform: #(v) TODO: copied from iea15mw-volturnUS (floating_platform and mooring)
+        transition_piece_mass: 100.e+3
+        transition_piece_cost: 100.e+3
+        joints:
+            - name: main_keel
+              location: [0.0, 0.0, -20.0]
+
+            - name: main_freeboard
+              location: [0.0, 0.0, 15.0]
+              transition: True
+
+            - name: col1_keel
+              location: [51.75, 3.14159265, -20.0] #3.14159265 = 180deg
+              cylindrical: True
+
+            - name: col1_freeboard
+              location: [51.75, 3.14159265, 15.0] # 3.14159265 = 180deg
+              cylindrical: True
+
+            - name: col2_keel
+              location: [51.75, 1.0471976, -20.0] #1.0471975 = 60 deg
+              cylindrical: True
+
+            - name: col2_freeboard
+              location: [51.75, 1.0471975, 15.0]
+              cylindrical: True
+
+            - name: col3_keel
+              location: [51.75, -1.0471976, -20.0] #-1.0471975 = -60 deg
+              cylindrical: True
+
+            - name: col3_freeboard
+              location: [51.75, -1.0471976, 15.0] #-1.0471975 = -60 deg
+              cylindrical: True
+
+            - name: anchor1
+              location: [837.8, 3.14159265, -200.0]
+              cylindrical: True
+
+            - name: anchor2
+              location: [837.8, 1.0471976, -200.0]  # 1.0471975 = 60 deg
+              cylindrical: True
+
+            - name: anchor3
+              location: [837.8, -1.0471976, -200.0]  #-1.0471975 = -60 deg
+              cylindrical: True
+
+        members:
+            - name: main_column
+              joint1: main_keel
+              joint2: main_freeboard
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape:
+                shape: circular
+                outer_diameter:
+                    grid: [0.0, 1.0]
+                    values: [10.0, 10.0]
+              internal_structure:
+                layers:
+                    - name: main_twall
+                      material: steel
+                      thickness:
+                        grid: [0.0, 1.0]
+                        values: [0.05, 0.05]
+                bulkhead:
+                    material: steel
+                    thickness:
+                        grid: [0.0, 1.0]
+                        values: [0.05, 0.05]
+              axial_joints:
+                - name: main_upper_pontoon
+                  grid: 0.987
+
+                - name: main_lower_pontoon
+                  grid: 0.1
+
+            - name: column1
+              joint1: col1_keel
+              joint2: col1_freeboard
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: &col_out
+                shape: circular
+                outer_diameter:
+                    grid: [0.0, 1.0]
+                    values: [12.5, 12.5]
+              internal_structure: &col_int
+                layers:
+                    - name: col_twall
+                      material: steel
+                      thickness:
+                        grid: [0.0, 1.0]
+                        values: [0.05, 0.05]
+                bulkhead:
+                    material: steel
+                    thickness:
+                        grid: [0.0, 0.05, 0.2, 1.0]
+                        values: [0.05, 0.05, 0.05, 0.05]
+                ballasts:
+                    - variable_flag: False
+                      material: slurry
+                      volume: 169.333333
+                      grid: [0.0, 0.05]
+                    - variable_flag: True
+                      grid: [0.05, 0.2]
+              axial_joints:
+                - name: col1_upper_pontoon
+                  grid: 0.987
+
+                - name: col1_lower_pontoon
+                  grid: 0.1
+
+                - name: col1_fairlead
+                  grid: 0.1714
+
+            - name: column2
+              joint1: col2_keel
+              joint2: col2_freeboard
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *col_out
+              internal_structure: *col_int
+              axial_joints:
+                - name: col2_upper_pontoon
+                  grid: 0.987
+
+                - name: col2_lower_pontoon
+                  grid: 0.1
+
+                - name: col2_fairlead
+                  grid: 0.1714
+
+            - name: column3
+              joint1: col3_keel
+              joint2: col3_freeboard
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *col_out
+              internal_structure: *col_int
+              axial_joints:
+                - name: col3_upper_pontoon
+                  grid: 0.987
+
+                - name: col3_lower_pontoon
+                  grid: 0.1
+
+                - name: col3_fairlead
+                  grid: 0.1714
+
+
+            - name: Y_pontoon_upper1
+              joint1: main_upper_pontoon
+              joint2: col1_upper_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: &pontup_out
+                shape: circular
+                outer_diameter:
+                    grid: [0.0, 1.0]
+                    values: [0.91, 0.91]
+              internal_structure: &pontup_int
+                layers:
+                    - name: pontoon_upper_twall
+                      material: steel
+                      thickness:
+                        grid: [0.0, 1.0]
+                        values: [0.02, 0.02]
+
+            - name: Y_pontoon_upper2
+              joint1: main_upper_pontoon
+              joint2: col2_upper_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *pontup_out
+              internal_structure: *pontup_int
+
+            - name: Y_pontoon_upper3
+              joint1: main_upper_pontoon
+              joint2: col3_upper_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *pontup_out
+              internal_structure: *pontup_int
+
+            - name: Y_pontoon_lower1
+              joint1: main_lower_pontoon
+              joint2: col1_lower_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: &pontlow_out
+                shape: circular
+                outer_diameter:
+                    grid: [0.0, 1.0]
+                    values: [9.6148, 9.6148] #equates displacement not circle: [12.5, 12.5]
+                #shape: polygonal
+                #side_lengths: [12.5, 7.0, 12.5, 7.0] # rectangle dimensions
+                #angles: [1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 1.5707963267948966] # rectangle angles
+                #rotation: 0.0
+              internal_structure: &pontlow_int
+                  # Probably needs longitudinal stiffeners
+                layers:
+                    - name: pontoon_lower_twall
+                      material: steel
+                      thickness:
+                        grid: [0.0, 1.0]
+                        values: [0.04, 0.04]
+                ballasts:
+                    - variable_flag: True
+                      grid: [0.0, 1.0]
+
+            - name: Y_pontoon_lower2
+              joint1: main_lower_pontoon
+              joint2: col2_lower_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *pontlow_out
+              internal_structure: *pontlow_int
+
+            - name: Y_pontoon_lower3
+              joint1: main_lower_pontoon
+              joint2: col3_lower_pontoon
+              Ca: [1.0, 1.0]
+              Cd: [0.8, 0.8]
+              outer_shape: *pontlow_out
+              internal_structure: *pontlow_int
+    mooring:
+        nodes:
+            - name: line1_anchor
+              node_type: fixed
+              joint: anchor1
+              anchor_type: drag_embedment
+            - name: line2_anchor
+              node_type: fixed
+              joint: anchor2
+              anchor_type: drag_embedment
+            - name: line3_anchor
+              node_type: fixed
+              joint: anchor3
+              anchor_type: drag_embedment
+
+            - name: line1_vessel
+              node_type: vessel
+              joint: col1_fairlead
+              fairlead_type: rigid
+            - name: line2_vessel
+              node_type: vessel
+              joint: col2_fairlead
+              fairlead_type: rigid
+            - name: line3_vessel
+              joint: col3_fairlead
+              node_type: vessel
+              fairlead_type: rigid
+
+        lines:
+            - name: line1
+              node1: line1_anchor
+              node2: line1_vessel
+              line_type: main
+              unstretched_length: 850.0
+            - name: line2
+              node1: line2_anchor
+              node2: line2_vessel
+              line_type: main
+              unstretched_length: 850.0
+            - name: line3
+              node1: line3_anchor
+              node2: line3_vessel
+              line_type: main
+              unstretched_length: 850.0
+
+        line_types:
+            - name: main
+              diameter: 0.333 # volume-equivalent
+              type: chain
+              transverse_added_mass: 1.0
+              tangential_added_mass: 0.0
+              transverse_drag: 1.6
+              tangential_drag: 0.1
+
+        anchor_types:
+            - name: drag_embedment
+              type: drag_embedment
+
 airfoils: #(v) Database of airfoil coordinates, polars, and unsteady aero parameters.
    -  name: circular
       coordinates:
@@ -856,7 +1141,19 @@ materials: #(v) Database of matertial used in the turbine model. (TODO: iron-MS?
       S: 0.31e+006
       G: 1520000.0
       unit_cost: 9.0
-
+   -  name: slurry
+      description: fixed/permanent ballast
+      E: 1.0 # compliant
+      nu: 0.3  #Place holder, currently not used
+      G: 1.0  # compliant
+      Xt: 0  #Place holder, currently not used
+      Xc: 0  #Place holder, currently not used
+      S: 0  #Place holder, currently not used
+      rho: 5000.
+      alpha: 0.0
+      unit_cost: 1.0
+      orth: 0.0
+      
 control: #(v) control system
     supervisory:
         Vin: 3.0
@@ -887,16 +1184,16 @@ control: #(v) control system
 environment: #(v) TODO: air=utsira, ocean=default
     air_density: 1.225
     air_dyn_viscosity: 1.81e-5
-    weib_shape_parameter: 1.97
+    weib_shape_parameter: 2.0 # 2.0 / 1.97
     air_speed_sound: 340.
-    shear_exp: 0.08
+    shear_exp: 0.12 # 0.12 / 0.08
     water_density: 1025.0 # ---- ocean condns unchanged
     water_dyn_viscosity: 1.3351e-3
     soil_shear_modulus: 140.e+6
     soil_poisson: 0.4 # ----
     water_depth: 30.0
-    significant_wave_height: 1.1 #4.52 # ---- @ max wind speed
-    significant_wave_period: 7.203 #9.45 # ----
+    significant_wave_height: 4.52 # / 1.1 # ---- @ max wind speed
+    significant_wave_period: 9.45 # / 7.203 # ----
 
 # bos:
 #     plant_turbine_spacing: 7
@@ -919,30 +1216,30 @@ environment: #(v) TODO: air=utsira, ocean=default
 #     installation_plan_cost: 1e6
 
 costs: # TODO: coz merit func in analy_opts is lcoe
-    wake_loss_factor: 0.15
-    fixed_charge_rate: 0.056
-    bos_per_kW: 4053.
-    opex_per_kW: 137.
-    turbine_number: 40.
+#     wake_loss_factor: 0.15
+#     fixed_charge_rate: 0.056
+#     bos_per_kW: 4053.
+#     opex_per_kW: 137.
+#     turbine_number: 40.
     labor_rate: 58.8
     painting_rate: 30.0
-    blade_mass_cost_coeff: 14.6
-    hub_mass_cost_coeff: 3.9
-    pitch_system_mass_cost_coeff: 22.1
-    spinner_mass_cost_coeff: 11.1
-    lss_mass_cost_coeff: 11.9
-    bearing_mass_cost_coeff: 4.5
-    gearbox_mass_cost_coeff: 12.9
-    hss_mass_cost_coeff: 6.8
-    generator_mass_cost_coeff: 12.4
-    bedplate_mass_cost_coeff: 2.9
-    yaw_mass_cost_coeff: 8.3
-    converter_mass_cost_coeff: 18.8
-    transformer_mass_cost_coeff: 18.8
-    hvac_mass_cost_coeff: 124.0
-    cover_mass_cost_coeff: 5.7
-    elec_connec_machine_rating_cost_coeff: 41.85
-    platforms_mass_cost_coeff: 17.1
-    tower_mass_cost_coeff: 2.9
-    controls_machine_rating_cost_coeff: 21.15
-    crane_cost: 12.e+3
+#     blade_mass_cost_coeff: 14.6
+#     hub_mass_cost_coeff: 3.9
+#     pitch_system_mass_cost_coeff: 22.1
+#     spinner_mass_cost_coeff: 11.1
+#     lss_mass_cost_coeff: 11.9
+#     bearing_mass_cost_coeff: 4.5
+#     gearbox_mass_cost_coeff: 12.9
+#     hss_mass_cost_coeff: 6.8
+#     generator_mass_cost_coeff: 12.4
+#     bedplate_mass_cost_coeff: 2.9
+#     yaw_mass_cost_coeff: 8.3
+#     converter_mass_cost_coeff: 18.8
+#     transformer_mass_cost_coeff: 18.8
+#     hvac_mass_cost_coeff: 124.0
+#     cover_mass_cost_coeff: 5.7
+#     elec_connec_machine_rating_cost_coeff: 41.85
+#     platforms_mass_cost_coeff: 17.1
+#     tower_mass_cost_coeff: 2.9
+#     controls_machine_rating_cost_coeff: 21.15
+#     crane_cost: 12.e+3

@@ -99,7 +99,10 @@ freq_range_3P = 3* freq_range_1P
 print("1P (blade period) freq ranges:")
 print(" ", freq_range_1P, " Hz" )
 print("3P (blade passing) freq ranges:")
-print(" ", freq_range_3P, " Hz \n" )
+print(" ", freq_range_3P, " Hz" )
+freq_tower = wt_opt["floatingse.structural_frequencies"] # OR towerse.tower
+print("Tower fore-aft/side-side freq range:")
+print(" ", freq_tower[0:2], " Hz \n" )
 
 print("LSS desvars:")
 print(" ", wt_opt["drivese.L_h1"], wt_opt["drivese.L_12"], wt_opt["drivese.lss_diameter"], wt_opt["drivese.lss_wall_thickness"] )
@@ -265,8 +268,9 @@ from wisdem.postprocessing.plot_tower_data import plot_tower_geo_comparison
 # define yamls and run plot
 # Geometry YAML files
 # 1. base IEA 15-MW
-iea_report_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub_report.yaml"
+iea_report_yaml = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
 acciona_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub_acciona.yaml"
+m4w_IC_yaml = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
 # 2. Made4Wind
 m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test.yaml"
 # loc save img
@@ -274,6 +278,6 @@ loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
             "geometry_tower_noFreqConstr_m4w&ieaReport.png"
         )
 # plot
-plot_tower_geo_comparison( m4w_yaml, fname_wt_input )
+plot_tower_geo_comparison( m4w_yaml, iea_report_yaml )
 
 #%%

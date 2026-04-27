@@ -15,7 +15,7 @@ WISDEM:
         gamma_m: 1.3     # Safety factor for material properties
         gamma_n: 1.0     # Safety factor for consequence of failure
         use_gb_torque_density: True
-        own_hub_loads: True
+        own_hub_loads: True # User defined hub loads; override those from RotorSE
     TowerSE:             # Options of TowerSE module
         flag: True
         wind: PowerWind
@@ -30,8 +30,14 @@ WISDEM:
             shear: True
             geom: True
             tol: 1e-9
-    FixedBottomSE:             # Options of FixedBottomSE module
-        flag: False
+    FloatingSE:
+        flag: True
+        symmetric_moorings: True
+        gamma_f: 1.35    # Safety factor for fatigue loads
+        gamma_m: 1.3     # Safety factor for material properties
+        gamma_n: 1.0     # Safety factor for ...
+        gamma_b: 1.1     # Safety factor for ...
+        gamma_fatigue: 1.755  # Safety factor for fatigue loads
     BOS:
         flag: False
     LCOE:
