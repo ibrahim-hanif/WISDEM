@@ -23,10 +23,10 @@ wt_m4w = True # turbine to analyse: True = m4w / False = iea15mw
 flag_plot = True
 verbose = False
 
-flag_opt_GBO = True
+flag_opt_GBO = False
 flag_scaling_show_browser = False
 
-flag_override_hub_loads = False # TODO: not working; make a flag in model_opts which removes connections
+flag_override_monopile_t = False # TODO: not working; make a flag in model_opts which removes connections
 flag_override_tower_init = False
 
 #%%
@@ -41,8 +41,8 @@ dir_m4w_run = mydir + os.sep + "M4W_02_tower_monopile"
 
 # ---- wind turbine geometry (same init for both iea and m4w)
 # fname_wt_input = dir_m4w_run +os.sep + "iea15mw_tower_monopile.yaml"
-fname_wt_input = dir_m4w_run +os.sep + "test_tower01_IEAmonopile.yaml"
-# fname_wt_input = dir_m4w_run + os.sep + "outputs//test_10m.yaml"
+# fname_wt_input = dir_m4w_run +os.sep + "test_tower01_IEAmonopile.yaml"
+fname_wt_input = dir_m4w_run + os.sep + "outputs//test_10m.yaml"
 
 # ---- modelling options
 dir_m4w_runs_main = mydir +os.sep+ "M4W_production_runs"
@@ -61,20 +61,13 @@ else:
 
 ## File Management (outputs)
 loc_scaling_report = os.path.join(dir_m4w_run,
-      'outputs', 'tower_scaling_report.html')
+      'outputs', 'bowt_scaling_report.html')
 
 #%% Loads from hub: overwrite values TODO: rotorse overwrites it at run
-if flag_override_hub_loads:
-      dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
-      loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4w.mat")
-      S_all,_ = load_all_mat_to_dict(loc_all_loads_mat_file)
-
-      F_aero_hub =np.array( [S_all['Fx_max'], S_all['Fy_max'], S_all['Fz_max']] ).reshape((3, 1))
-      M_aero_hub =np.array( [S_all['Mx_max'], S_all['My_max'], S_all['Mz_max']] ).reshape((3, 1))
-      
-      # can't override coz (required) rotorse overwrites them in run
+if flag_override_monopile_t:
+      t_new = [0.08088377124640599]*30
       overrides = {
-           'drivese.F_aero_hub': F_aero_hub, 'drivese.M_aero_hub': M_aero_hub
+           'fixedse.t_full': t_new
       }
 
 elif flag_override_tower_init:
@@ -255,8 +248,7 @@ from plot_tower_data import plot_tower_geo_comparison
 # define yamls and run plot
 # Geometry YAML files
 # 1. base IEA 15-MW
-iea_report_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub_report.yaml"
-acciona_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub_acciona.yaml"
+iea_report_yaml = dir_m4w_run +os.sep + "iea15mw_tower_monopile.yaml"
 # 2. Made4Wind
 m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_10m.yaml"
 # loc save img
@@ -264,7 +256,7 @@ loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
             "geometry_tower_noFreqConstr_m4w&ieaReport.png"
         )
 # plot
-plot_tower_geo_comparison( m4w_yaml, iea_report_yaml )
+plot_tower_geo_comparison( m4w_yaml, iea_report_yaml, only_tower=False )
 
 #%%[markdown]
 # ### Monopile utilizations
