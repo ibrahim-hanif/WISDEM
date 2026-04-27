@@ -123,7 +123,7 @@ prob["spin_hole_incr"] = 1.2
 prob["spinner_gust_ws"] = 70.0
 prob["hub_diameter"] = 7.94
 # ---
-
+""
 # Drivetrain configuration and sizing inputs
 prob["bear1.bearing_type"] = "CARB"
 prob["bear2.bearing_type"] = "SRB"
@@ -174,7 +174,7 @@ if opt_flag:
     prob.run_driver()
 else:
     prob.run_model()
-save_data("drivetrain_example", prob)
+save_data("eg_drivetrain_direct", prob)
 # ---
 
 # Display all inputs and outputs
@@ -213,7 +213,7 @@ print("constr_access:", prob["constr_access"])
 print("constr_ecc:", prob["constr_ecc"])
 # ---
 
-# OUTPUT
+# OUTPUT (with iea15 vals: "")
 """
 Optimization terminated successfully    (Exit mode 0)
             Current function value: 0.4309821681486595
@@ -224,16 +224,16 @@ Optimization Complete
 -----------------------------------
 nacelle_mass: [430982.16814866]
 
-L_h1: [0.1]
-L_12: [2.33391289]
-L_lss: [2.43391289]
+L_h1: [0.1]                     ("1.0")
+L_12: [2.33391289]              ("1.2")
+L_lss: [2.43391289]             ("1.3")
 L_nose: [1.86608711]
 L_generator: [2.15]
 L_bedplate: [4.93189136]
 H_bedplate: [4.86782208]
 hub_diameter: [10.34485411]
-lss_diameter: [5.21771158 2.85819229]
-lss_wall_thickness: [0.07581998 0.08534841]
+lss_diameter: [5.21771158 2.85819229]       ("[6.0 6.0]")
+lss_wall_thickness: [0.07581998 0.08534841] ("[0.2 0.2]")
 nose_diameter: [4.56607162 2.18749548]
 nose_wall_thickness: [0.11463635 0.09374774]
 bedplate_wall_thickness: [0.20993092 0.2303988  0.2057964  0.17369912]

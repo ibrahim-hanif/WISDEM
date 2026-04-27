@@ -189,7 +189,7 @@ if opt_flag:
     prob.run_driver()
 else:
     prob.run_model()
-save_data("drivetrain_example", prob)
+save_data("eg_drivetrain_geared", prob)
 # ---
 
 # Display all inputs and outputs
