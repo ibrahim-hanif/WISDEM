@@ -15,6 +15,7 @@ from scipy.linalg import solve_banded
 # ----- (v) below
 import scipy.io as sio
 from scipy.stats import weibull_min
+import csv
 
 def mode_fit(x, c2, c3, c4, c5, c6):
     return c2 * x**2.0 + c3 * x**3.0 + c4 * x**4.0 + c5 * x**5.0 + c6 * x**6.0
@@ -1016,7 +1017,7 @@ def load_all_mat_to_dict( loc_all_loads_mat_file ):
         list of all keys in Snew
     """
     # load database
-    print(f' --- Loading: all mainshaft loads from {loc_all_loads_mat_file}')
+    # print(f' --- Loading: all mainshaft loads from {loc_all_loads_mat_file}') #debug
     try:
         S_all = sio.loadmat(loc_all_loads_mat_file)
     except Exception as e:
@@ -1047,7 +1048,7 @@ def load_all_mat_to_dict( loc_all_loads_mat_file ):
             # print( Snew[key].shape ) # for debugging
             else: Snew[ key ].shape = val
 
-    print(' --- Success: converted .mat all-loads to dict (returning).\n')
+    # print(' --- Success: converted .mat all-loads to dict (returning).\n') #debug
     return Snew, keys_all
 
 # ---------------
@@ -1291,7 +1292,7 @@ def compute_LRD_matrix_vectorized(
         P_eq_LRD = np.sum(Peq_j_raised_p * pdf_ws)**(1.0/p)
 
         return P_eq_LRD
-# --------------
+# ---------------
 
 # ---------------
 def scale_bounds_for_driver( lb, ub ):
