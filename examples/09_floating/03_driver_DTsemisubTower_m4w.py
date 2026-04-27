@@ -8,7 +8,8 @@
 # - objective: (1) `turbine_mass` minimization (`rna_mass + tower_mass`)
 #
 # ### TODO:
-#
+# 1. why m4w seper optim (DT, tower) has high HSS stress?
+# 2. try MPI parallel openMDAO optim (cf. other floating egs.)
 
 #%%
 import os
@@ -40,8 +41,8 @@ dir_m4w_run = mydir + os.sep + "M4W_03_DT_towerSemiSub"
 
 # ---- wind turbine geometry (same init for both iea and m4w)
 # fname_wt_input = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
-fname_wt_input = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
-# fname_wt_input = dir_m4w_run + os.sep + "outputs//test.yaml"
+# fname_wt_input = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
+fname_wt_input = dir_m4w_run + os.sep + "outputs//test.yaml"
 
 # ---- modelling options
 fname_model_opts_m4w = dir_m4w_run+os.sep+ "modeling_options_m4w_DTtower.yaml"
@@ -58,7 +59,7 @@ else:
 loc_scaling_report = os.path.join(dir_m4w_run,
       'outputs', 'scaling_report.html')
 
-#%% Overwrite values ? TODO
+#%% Overwrite values ?
 if flag_override_tower_init:
      overrides = {
           'towerse.tower_outer_diameter': np.ones((1,20))*15,
@@ -72,13 +73,7 @@ wt_opt, analysis_options, opt_options = run_wisdem(
     fname_wt_input, fname_modeling_options, fname_analysis_options,
     overridden_values=overrides
 )
-# TODO
-# 1. overwrite hub loads from saved (ULS) file?
-# 2. check iea report for tower util plots... not mentioned?
-# 3. ! ~ full DT optimization takes toooo LOOOONG !
-# - do full DT optim using 03_
-# - restrict to some DT DVs? take vals from 03_
-# - check gradients wrt. each DV -- bad scaling?
+
 # %%[markdown]
 # # _____ Post-processing _____
 
@@ -86,10 +81,10 @@ wt_opt, analysis_options, opt_options = run_wisdem(
 doMBfls = analysis_options["flags"]["mb_fls"]
 print("MB FLS: ", doMBfls)
 # Print the results
-print("\nF_aero_hub:")
-print(" ", wt_opt["drivese.F_aero_hub"]/1e6, " MN" )
-print("M_aero_hub:")
-print(" ", wt_opt["drivese.M_aero_hub"]/1e6, " MNm \n" )
+# print("\nF_aero_hub:") # NOTE: overwritten with hub loads .mat input
+# print(" ", wt_opt["drivese.F_aero_hub"]/1e6, " MN" )
+# print("M_aero_hub:")
+# print(" ", wt_opt["drivese.M_aero_hub"]/1e6, " MNm \n" )
 
 # ---- 1P and 3P freq ranges
 rpm_min = wt_opt['drivese.minimum_rpm'][0]
@@ -106,7 +101,7 @@ print(" ", freq_tower[0:2], " Hz \n" )
 
 print("LSS desvars:")
 print(" ", wt_opt["drivese.L_h1"], wt_opt["drivese.L_12"], wt_opt["drivese.lss_diameter"], wt_opt["drivese.lss_wall_thickness"] )
-# TODO: for flange mass, dohub (cf. var `flange_t2shell_t`)
+#
 print("HSS desvars:")
 print(" ", wt_opt["drivese.L_hss"], wt_opt["drivese.hss_diameter"], wt_opt["drivese.hss_wall_thickness"] )
 print("Bedplate desvars (w_f, t_f, t_w):")
@@ -124,6 +119,18 @@ print("- hss: ",
 print("- bedplate: ",
       np.max(wt_opt["drivese.constr_bedplate_vonmises"])
       )
+print("- MB1 defl: ", wt_opt["drivese.constr_mb1_defl"] )
+print("- MB2 defl: ", wt_opt["drivese.constr_mb2_defl"], "\n" )
+
+print("- tower GL buckling: ",
+      np.max( wt_opt["towerse.post.constr_global_buckling"] )
+      )
+print("- tower Sh buckling: ",
+      np.max( wt_opt["towerse.post.constr_shell_buckling"] )
+      )
+print("- tower stress von-Mises: ",
+      np.max( wt_opt["towerse.post.constr_stress"] )
+      )
 
 print("\nTower-top / drivetrain bedplate base loads:")
 print(" - base_F: ", wt_opt['drivese.base_F'])
@@ -138,7 +145,9 @@ print("\n--- RNA properties ---")
 print(f"RNA mass: {wt_opt["drivese.rna_mass"]}")
 print(f"RNA cm: {wt_opt["drivese.rna_cm"]}")
 #
-print("\n Tower mass: ", wt_opt['towerse.tower_mass'])
+print("\nTower mass: ", wt_opt['towerse.tower_mass'])
+#
+print("\nRNA+Tower mass: ", wt_opt['towerse.turbine_mass'])
 # -----------------------------------------------------------------------
 
 #%%
@@ -278,6 +287,6 @@ loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
             "geometry_tower_noFreqConstr_m4w&ieaReport.png"
         )
 # plot
-plot_tower_geo_comparison( m4w_yaml, iea_report_yaml )
+plot_tower_geo_comparison( m4w_yaml, m4w_IC_yaml )
 
 #%%
