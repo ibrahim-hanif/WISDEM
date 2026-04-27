@@ -76,8 +76,7 @@ WISDEM:
         n_layers: 1
         n_layers_tower: 1
     FixedBottomSE:
-        flag: true
-        soil_springs: true
+        flag: false
         type: monopile
         wind: PowerWind
         gamma_f: 1.35
@@ -89,17 +88,14 @@ WISDEM:
         buckling_method: dnvgl
         buckling_length: 10.0
         frame3dd: {shear: true, geom: true, modal_method: 1, tol: 1e-09}
+        soil_springs: false
         gravity_foundation: false
         n_refine: 3
         n_legs: 4
         n_bays: 3
         mud_brace: true
         save_truss_figures: false
-        n_height: 20
-        n_height_monopile: 20
-        n_layers: 1
-        n_layers_monopile: 1
-    BOS: {flag: true}
+    BOS: {flag: false}
     n_dlc: 1
     FloatingSE:
         flag: false
@@ -112,8 +108,16 @@ WISDEM:
         gamma_freq: 1.1
         gamma_fatigue: 1.0
         symmetric_moorings: true
-flags: {blade: true, hub: true, nacelle: true, tower: true, monopile: true, jacket: false, floating_platform: false, mooring: false, RNA: false, assembly: true, components: true, airfoils: true, materials: true, control: true, environment: true, bos: true, costs: true, generator: true, floating: false, offshore: true}
-user_elastic: {blade: false, hub: false, nacelle: false, tower: false, monopile: false, jacket: false, floating_platform: false, mooring: false, RNA: false, assembly: false, components: false, airfoils: false, materials: false, control: false, environment: false, bos: false, costs: false, generator: false, floating: false}
+OpenFAST:
+    simulation: {DT: 0.05}
+    openfast_dir: M:\\Vasudev_Gupta\\outputs_mainshaft_loads\\mainshaft_loads.mat
+DLC_driver:
+    DLCs:
+       -  DLC: '1.2'
+          wind_speed: [5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0, 21.0, 23.0, 25.0]
+          probabilities: [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.01457773, 0.00466888]
+flags: {blade: true, hub: true, nacelle: true, tower: true, monopile: false, jacket: false, floating_platform: false, mooring: false, RNA: false, assembly: true, components: true, airfoils: true, materials: true, control: true, environment: true, bos: false, costs: true, generator: true, mb_fls: false, floating: false, offshore: false}
+user_elastic: {blade: false, hub: false, nacelle: false, tower: false, monopile: false, jacket: false, floating_platform: false, mooring: false, RNA: false, assembly: false, components: false, airfoils: false, materials: false, control: false, environment: false, bos: false, costs: false, generator: false, mb_fls: false, floating: false}
 materials: {n_mat: 11}
 floating: {}
 mooring: {}
