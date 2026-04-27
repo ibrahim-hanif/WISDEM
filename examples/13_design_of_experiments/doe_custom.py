@@ -16,7 +16,7 @@ def driver():
     # File management
     mydir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # get path to examples dir
     fname_wt_input = os.path.join(mydir, "02_reference_turbines", "IEA-15-240-RWT.yaml")
-    fname_modeling_options = os.path.join(mydir, "02_reference_turbines", "modeling_options.yaml")
+    fname_modeling_options = os.path.join(mydir, "02_reference_turbines", "M4W_production_runs\\modeling_options.yaml") #(v) match m4w schema
     fname_analysis_options = os.path.join(mydir, "02_reference_turbines", "analysis_options.yaml")
 
     # Initial run
@@ -58,6 +58,15 @@ def driver():
     finish = time.time()
     print((finish-start)/60.0)
 
+    pool.close() #(v) ----
+    pool.join() # ----
+
 if __name__ == "__main__":
     driver()
+
+# (v) OUTPUT:
+# [78513062.77493505 78366371.75918205 78186538.06437165 78481210.19163585
+#  78347184.23707817 78180121.23972687 78360319.43708222 78239057.12652992
+#  78084766.52744995]
+# 4.701681959629059
     
