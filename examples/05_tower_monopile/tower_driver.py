@@ -1,3 +1,4 @@
+#%%
 #!/usr/bin/env python3
 import os
 
@@ -29,3 +30,5 @@ print("Tower base moments1 (Nm) =", wt_opt["towerse.tower.turbine_M"])
 print("stress1 =", wt_opt["towerse.post.constr_stress"])
 print("GL buckling =", wt_opt["towerse.post.constr_global_buckling"])
 print("Shell buckling =", wt_opt["towerse.post.constr_shell_buckling"])
+
+# %%

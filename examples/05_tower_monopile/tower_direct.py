@@ -110,6 +110,7 @@ prob["wohler_exp_mat"] = [10.0]
 prob["wohler_A_mat"] = [10.0]
 
 # extra mass from RNA
+# = (v) wrt. tower-top center; used for modal analysis only
 prob["rna_mass"] = np.array([285598.8])
 mIxx = 1.14930678e08
 mIyy = 2.20354030e07
@@ -140,8 +141,14 @@ if modeling_options["WISDEM"]["TowerSE"]["wind"] == "PowerWind":
 
 # two load cases.  TODO: use a case iterator
 
+#(v) Total reaction force at bedplate base in tower top c.s.
+# = (from `drivese/Bedplate_IBeam_Frame`: 'base_F' and 'base_M')
+# - case 1:
+# -- for 11.73732 m/s at "wind_reference_height" (90 m),
+# -- using PowerWind with "shearExp" (0.2)
+
 # --- loading case 1: max Thrust ---
-prob["env1.Uref"] = 11.73732
+prob["env1.Uref"] = 11.73732 #(v) connected to `rotorse.rp.gust.V_gust`
 Fx1 = 1284744.19620519
 Fy1 = 0.0
 Fz1 = -2914124.84400512
