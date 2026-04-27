@@ -57,18 +57,18 @@ mrkerList = ['.','o','x','+','*']
 # -------------------------
 # Journal polish: plot rc params
 params_plot_rc = {
-        "font.size": 20,
-        "axes.labelsize": 20,
-        "legend.fontsize": 20, # 16 for pdf of `var_with_iter` plot
-        "lines.linewidth": 2,
-        "lines.markersize": 6,
+        "font.size": 24,
+        "axes.labelsize": 24,
+        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+        "lines.linewidth": 3,
+        "lines.markersize": 8,
     }
 plt.rcParams.update( params_plot_rc )
-figsize=(16, 8)
+figsize=(14, 8)
 
 #%% # plt plot
 fig = plt.figure(figsize=figsize)
-gs = fig.add_gridspec(1, 2, hspace=0.35, wspace=0.25)
+gs = fig.add_gridspec(1, 2, hspace=0.5, wspace=0.25)
 # create axis ONCE before loop
 ax1 = fig.add_subplot(gs[0, 0])
 ax2 = fig.add_subplot(gs[0, 1])
@@ -111,7 +111,7 @@ ax2.legend(loc='upper left')
 # Final
 # plt.tight_layout()
 # Save
-plot_path = os.path.join(results_path, "mb_m&Cr.png")
+plot_path = os.path.join(results_path, "mb_m&Cr.pdf")
 # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 # Show
 plt.show()
