@@ -1,0 +1,5 @@
++ 02 (.csv etc) results used for torque26 paper; analy use old (wrong) hub loads and drive_struct impl
+
++ (21.4.26) 02_newULS.csv results used in 00b_ to validate analy_MB_EBbeam with pyframe3dd
+
++ (21.4.26) 02_m4w results: with correct m4w hub loads, drive_struct impl; towards WES'26 paper iA
