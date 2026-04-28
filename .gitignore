@@ -142,4 +142,10 @@ examples/19_rotor_drivetrain_tower/test*
 *pytest*_out/
 *temp1.yaml
 *temp2.yaml
-*test.csv
+*test.csvu
+
+# uqpylab env and others
+uqpylab-wisdem-env/
+venv/
+env/
+.venv/
