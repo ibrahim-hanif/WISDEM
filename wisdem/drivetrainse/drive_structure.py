@@ -1606,59 +1606,6 @@ class Bedplate_IBeam_Frame(om.ExplicitComponent):
 #%%[markdown]
 # Vasudev Gupta: adaptations
 # ============================================================
-#%%
-class FLS_Hub_Rotor_LSS_Frame (Hub_Rotor_LSS_Frame):
-    "inherits from `Hub_Rotor_LSS_Frame` class component for its _inputs and compute()"
-
-    def initialize(self):
-        super().initialize()
-        self.options.declare('batch_size', default=100, 
-                           desc='Number of time steps to process at once')
-
-    def setup( self ):
-        super().setup() # call the parent setup for its inputs'
-
-        mod_opt = self.options['modeling_options']
-        # n_ws = mod_opt.get('n_ws', 10) #TODO: check WEIS for its input names, if any
-        # n_t = mod_opt.get('n_time_steps', 72000)  # Reduced for memory
-
-class DrivetrainFLS(Hub_Rotor_LSS_Frame):
-    """
-    Extends Hub_Rotor_LSS_Frame to compute bearing loads for FLS using
-    time-series hub loads from OpenFAST.
-    """
-
-    import scipy.io as sio
-
-    def initialize(self):
-        super().initialize()
-        self.options.declare('hub_loads', types=dict,
-                             desc='Dictionary with time-series hub loads: F_aero_hub, M_aero_hub')
-
-    def setup(self):
-        # Call parent setup for geometry and material inputs
-        super().setup()
-        # Add output for aggregated bearing loads
-        self.add_output('bearing_loads', shape_by_conn=True) #TODO: shape_ correct?
-
-    def compute(self, inputs, outputs):
-        hub_loads = self.options['hub_loads']
-        bearing_load_series = []
-
-        # Loop through hub loads and call parent compute
-        for F_hub, M_hub in zip(hub_loads['F_aero_hub'], hub_loads['M_aero_hub']):
-            # Set loads for this time step
-            self.F_hub = F_hub
-            self.M_hub = M_hub
-
-            # Call parent compute to calculate F_mb
-            super().compute(inputs, outputs)
-
-            # Store bearing loads for fatigue analysis
-            bearing_load_series.append(outputs['F_mb'])
-
-        outputs['bearing_loads'] = bearing_load_series
-
 #%% =======================================================
 #   ============ analytical implementations ===============
 #   =======================================================
