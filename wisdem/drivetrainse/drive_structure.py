@@ -186,31 +186,8 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         self.options.declare("n_dlcs")
         self.options.declare("direct_drive", default=True)
         self.options.declare("modeling_options")
-        self.options.declare("openfast_options", default={}) #(v) opt_openfast = self.options["modeling_options"]["OpenFAST"]
 
     def setup(self):
-        #(v) ---- Read own hub loads; if flag True, will overwrite rotorSE loads
-        # - read options
-        opts_openfast = self.options['openfast_options']
-        opts_drivese = self.options['modeling_options']
-        # - sanity check
-        if 'own_hub_loads' in opts_drivese:
-            own_hub_loads = opts_drivese['own_hub_loads']
-        else: own_hub_loads = False
-        # - main retrieval
-        self.flag_own_hub_loads = own_hub_loads and len(opts_openfast)>0
-        # print(f" - own_hub_loads = {self.flag_own_hub_loads}") # DONE debug rmv
-        if self.flag_own_hub_loads:
-            dir_loads = opts_openfast['openfast_dir'] # directory of MS loads
-            loads_dict, _ = load_all_mat_to_dict(dir_loads)
-            # here coz runs only once per model build
-            self.Fx_aero_hub = loads_dict['Fx_max'] # F
-            self.Fy_aero_hub = loads_dict['Fy_max']
-            self.Fz_aero_hub = loads_dict['Fz_max']
-            self.Mx_aero_hub = loads_dict['Mx_max'] # M
-            self.My_aero_hub = loads_dict['My_max']
-            self.Mz_aero_hub = loads_dict['Mz_max']
-        # ----
         n_dlcs = self.options["n_dlcs"]
 
         self.add_discrete_input("upwind", True)
@@ -316,16 +293,6 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         I_blades_hub = I_blades[:3] + I_hub[:3]
         F_hub = inputs["F_aero_hub"]
         M_hub = inputs["M_aero_hub"]
-        #(v) ---- Read own hub loads; if flag True, will overwrite rotorSE loads
-        if self.flag_own_hub_loads:
-            F_hub = np.array(
-                    [self.Fx_aero_hub, self.Fy_aero_hub, self.Fz_aero_hub]
-                ).reshape((3, 1))
-            # print(" - ", F_hub) # DONE debug rmv
-            M_hub = np.array(
-                    [self.Mx_aero_hub, self.My_aero_hub, self.Mz_aero_hub]
-                ).reshape((3, 1))
-        # ----
 
         torq_defl_allow = float(inputs["shaft_deflection_allowable"][0])
         torq_angle_allow = float(inputs["shaft_angle_allowable"][0])
@@ -2104,10 +2071,17 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         
     def setup(self):
         # Extract options + sanity check.
+        opts_drivese = self.options['modeling_options']
+        opts_openfast = self.options['openfast_options']
+        opts_dlcs = self.options['dlc_options']
         # ---- DLC loads & operational ----
-        dir_loads = self.options['openfast_options']['openfast_dir'] # directory of MS loads
-        loads_dict, _ = load_all_mat_to_dict(dir_loads)
         # here coz runs only once per model build
+        loadClass = Load_Own_Hub_Loads(
+            openfast_options=opts_openfast,
+            dlc_options=opts_dlcs
+            )
+        loadClass.load_from_file()
+        loads_dict = loadClass.fls_dict
         # - a. loads
         self.Fx = loads_dict['Fx']
         # print(f"Fx[:2,:2]: {Fx[:2,:2]}, Fx shape: {Fx.shape}") # debugging: check mags wrt. units
@@ -2118,12 +2092,10 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.Mz = loads_dict['Mz']
         self.omega = loads_dict['rot_speed']
         # - b. openfast (Wind statistics)
-        ws = self.options['dlc_options']['wind_speed'] # shape=(1,10)
-        n_ws = len(ws)
-        self.ws = np.reshape( ws, (1,n_ws))
-        self.probabilities = np.reshape( self.options['dlc_options']['probabilities'], (1,n_ws))
+        self.ws = loads_dict['ws']
+        self.probabilities = loads_dict['probabilities']
         # - c. DLC
-        self.dt = self.options['openfast_options']['simulation']['DT'] # 0.05 (20 Hz)
+        self.dt = loads_dict['dt'] # 0.05 (20 Hz)
         # ----
         # ---- Inputs ----
         # - 1. LSS parameters (from Layout, Hub_Rotor_LSS_Frame)
@@ -2383,9 +2355,7 @@ class Analytical_FLS_Bearing_Life_Derivatives( Analytical_FLS_Bearing_Life ):
 # ---------------
 
 #%%
-# make a expl component for loading of main hub loads from own_hub_loads = opts_drivese['own_hub_loads'] as done in Hub_Rotor_LSS_Frame
-# using dir_loads = opts_openfast['openfast_dir'] # directory of MS loads & loads_dict, _ = load_all_mat_to_dict(dir_loads)
-
+# ---------------
 class Load_Own_Hub_Loads( om.ExplicitComponent ):
     """
     Component to load the main hub loads from own_hub_loads = opts_drivese['own_hub_loads'] as done in Hub_Rotor_LSS_Frame
@@ -2393,100 +2363,83 @@ class Load_Own_Hub_Loads( om.ExplicitComponent ):
 
     Internal Progress
     --------------
-    - TODO : implement as a openMDAO Explicit Component, with pCrunch?
+    - DONE : implement as a openMDAO Explicit Component
+    -- output _aero_hub, but save FLS in self (as used in Analy_)
     - TODO : check and verify: check if loads are correctly loaded and output (eg. print shapes, mags)
+    - TODO : use pCrunch ?
+    - TODO : add `n_dlcs` to _aero_hub loads' shape (cf. Hub_Rotor_LSS_Frame)
     """
-    
+
+    # ===== init with yaml option files =====
     def initialize(self):
-        self.options.declare("modeling_options") # opt_drivese = self.options["modeling_options"]["WISDEM"]["DriveSE"]
         self.options.declare("openfast_options") # opt_openfast = self.options["modeling_options"]["OpenFAST"]
-        
-    def setup(self):
+        self.options.declare("dlc_options")      # opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
+
+        # self.load_from_file() # load the loads from file when initializing the component, so that they can be used in compute and also stored in self for use in Analy_
+
+    # ===== loading from file, save and retrival functions =====
+    def load_from_file(self):
         #(v) ---- Read own hub loads; if flag True, will overwrite rotorSE loads
         # - read options
         opts_openfast = self.options['openfast_options']
-        opts_drivese = self.options['modeling_options']
-        # - sanity check # TODO : take outside of compn, so this always used if true
-        if 'own_hub_loads' in opts_drivese:
-            own_hub_loads = opts_drivese['own_hub_loads']
-        else: own_hub_loads = False
-        # - main retrieval
-        self.flag_own_hub_loads = own_hub_loads and len(opts_openfast)>0
-        # print(f" - own_hub_loads = {self.flag_own_hub_loads}") # DONE debug rmv
-        if self.flag_own_hub_loads:
-            dir_loads = opts_openfast['openfast_dir'] # directory of MS loads
-            loads_dict, _ = load_all_mat_to_dict(dir_loads)
-            # ULS loads : shape (1,1)
-            # - F
-            Fx_aero_hub = loads_dict['Fx_max']
-            Fy_aero_hub = loads_dict['Fy_max']
-            Fz_aero_hub = loads_dict['Fz_max']
-            self.F_hub = np.array(
-                    [Fx_aero_hub, Fy_aero_hub, Fz_aero_hub]
-                ).reshape((3, 1))
-            # print(" - ", F_hub) # DONE debug rmv
-            # - M
-            Mx_aero_hub = loads_dict['Mx_max']
-            My_aero_hub = loads_dict['My_max']
-            Mz_aero_hub = loads_dict['Mz_max']
-            self.M_hub = np.array(
-                    [Mx_aero_hub, My_aero_hub, Mz_aero_hub]
-                ).reshape((3, 1))
-            # print(" - ", M_hub) # DONE debug rmv
+        opts_dlcs = self.options['dlc_options']
+
+        # ---- Load loads ----
+        dir_loads = opts_openfast['openfast_dir'] # directory of MS loads
+        loaded_dict, _ = load_all_mat_to_dict(dir_loads)
+
+        # ---- ULS loads ----
+        uls_shape = self.uls_shape = (3,1)
+        # - F
+        self.F_uls = np.array([
+                loaded_dict['Fx_max'], loaded_dict['Fy_max'], loaded_dict['Fz_max']
+            ]).reshape( uls_shape )
+        # print(" - ", F_hub) # DONE debug rmv
+        # - M
+        self.M_uls = np.array([
+                loaded_dict['Mx_max'], loaded_dict['My_max'], loaded_dict['Mz_max']
+            ]).reshape( uls_shape )
+        # print(" - ", M_hub) # DONE debug rmv
+    
+        # ---- FLS loads : shape (72 000,10) ----
+        fls_dict = {}
+        # - a. loads
+        fls_dict['Fx'] = loaded_dict['Fx']
+        # print(f"Fx[:2,:2]: {Fx[:2,:2]}, Fx shape: {Fx.shape}") # debugging: check mags wrt. units
+        fls_dict['Fy'] = loaded_dict['Fy']
+        fls_dict['Fz'] = loaded_dict['Fz']
+        fls_dict['Mx'] = loaded_dict['Mx']
+        fls_dict['My'] = loaded_dict['My']
+        fls_dict['Mz'] = loaded_dict['Mz']
+        fls_dict['rot_speed'] = loaded_dict['rot_speed']
+        # - b. openfast (Wind statistics)
+        ws = loaded_dict['mean_wind_speed'] # shape=(1,10)
+        n_ws = ws.shape[1] # 10
+        fls_dict['ws'] = np.reshape( ws, (1,n_ws))
+        fls_dict['probabilities'] = np.reshape( opts_dlcs['probabilities'], (1,n_ws))
+        # - c. DLC
+        fls_dict['dt'] = round(
+            (loaded_dict['Time'][0,1] - loaded_dict['Time'][0,0]), ndigits=3)
+        # - store
         
-            # FLS loads : shape (72 000,10)
-            self.Fx_fls = loads_dict['Fx']
-            # print(f"Fx[:2,:2]: {Fx[:2,:2]}, Fx shape: {Fx.shape}") # debugging: check mags wrt. units
-            self.Fy_fls = loads_dict['Fy']
-            self.Fz_fls = loads_dict['Fz']
-            self.Mx_fls = loads_dict['Mx']
-            self.My_fls = loads_dict['My']
-            self.Mz_fls = loads_dict['Mz']
-            self.omega = loads_dict['rot_speed']
-            # - b. openfast (Wind statistics)
-            ws = self.options['dlc_options']['wind_speed'] # shape=(1,10)
-            n_ws = len(ws)
-            self.ws = np.reshape( ws, (1,n_ws))
-            self.probabilities = np.reshape( self.options['dlc_options']['probabilities'], (1,n_ws))
-            # - c. DLC
-            self.dt = self.options['openfast_options']['simulation']['DT'] # 0.05 (20 Hz)
+        self.fls_dict = fls_dict # save in self for use in compute_partials of Analy_ compn
+        # ----
 
+    def get_uls_loads(self):
+        return self.F_uls, self.M_uls
+    
+    def get_fls_loads_as_dict(self):
+        return self.fls_dict
 
-        n_ts, n_ws = self.Fx_fls.shape[0], self.Fx_fls.shape[1] # = 72e3, 10
-
+    # ===== openMDAO functions =====
+    def setup(self):
+        self.load_from_file()
         # Inputs: none (all from mat file)
-        
-        # Outputs:
-        # 1. ULS loads combined as F_aero and M_aero, to be used in Hub_Rotor_LSS_Frame
-        self.add_output('F_aero_hub', val=np.zeros((n_ts,n_ws)), units='N', desc='Hub load Fx')
-        self.add_output('M_aero_hub', val=np.zeros((n_ts,n_ws)), units='N*m', desc='Hub moment Mx')
-        # 2. FLS loads: to be used in Analytical_FLS_Bearing_Life
-        self.add_output('Fx_fls', val=np.zeros((n_ts,n_ws)), units='N', desc='Hub load Fx time series')
-        self.add_output('Fy_fls', val=np.zeros((n_ts,n_ws)), units='N', desc='Hub load Fy time series')
-        self.add_output('Fz_fls', val=np.zeros((n_ts,n_ws)), units='N', desc='Hub load Fz time series')
-        self.add_output('Mx_fls', val=np.zeros((n_ts,n_ws)), units='N*m', desc='Hub moment Mx time series')
-        self.add_output('My_fls', val=np.zeros((n_ts,n_ws)), units='N*m', desc='Hub moment My time series')
-        self.add_output('Mz_fls', val=np.zeros((n_ts,n_ws)), units='N*m', desc='Hub moment Mz time series')
-        self.add_output('omega', val=np.zeros((n_ts,n_ws)), units='rpm', desc='Rotational speed time series')
-        self.add_output('ws', val=np.zeros((1,n_ws)), units='m/s', desc='Wind speed bins')
-        self.add_output('probabilities', val=np.zeros((1,n_ws)), desc='Probabilities of each wind speed bin')
-        self.add_output('dt', val=0.0, units='s', desc='Time step of the load time series')
+        # Outputs: only ULS loads
+        self.add_output('F_aero_hub', val=np.zeros( self.uls_shape ), units='N')
+        self.add_output('M_aero_hub', val=np.zeros( self.uls_shape ), units='N*m')
 
-
-def compute(self, inputs, outputs):
-        # ULS
-        outputs['F_aero_hub'] = self.F_hub
-        outputs['M_aero_hub'] = self.M_hub
-        # FLS
-        # - loads
-        outputs['Fx_fls'] = self.Fx_fls
-        outputs['Fy_fls'] = self.Fy_fls
-        outputs['Fz_fls'] = self.Fz_fls
-        outputs['Mx_fls'] = self.Mx_fls
-        outputs['My_fls'] = self.My_fls
-        outputs['Mz_fls'] = self.Mz_fls
-        # - operation
-        outputs['omega'] = self.omega
-        outputs['ws'] = self.ws
-        outputs['probabilities'] = self.probabilities
-        outputs['dt'] = self.dt
+    def compute(self, inputs, outputs):
+        outputs['F_aero_hub'] = self.F_uls
+        outputs['M_aero_hub'] = self.M_uls
+# ---------------
