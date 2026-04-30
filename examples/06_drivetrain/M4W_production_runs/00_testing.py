@@ -249,7 +249,7 @@ ws = np.append(ws_full,25.0)
 # ws pdf computation
 coeff_weibull = (1.95, 11.6)
 pdf_ws = pdf_norm_int_using_cdf( ws, coeff_weibull )
-pdf_ws_full = pdf_norm_int_using_cdf( ws_full.append(25), coeff_weibull )
+pdf_ws_full = pdf_norm_int_using_cdf( ws, coeff_weibull )
 print(f"pdf_ws = {pdf_ws}; sum={np.sum(pdf_ws)}" )
 print(f"pdf_ws_full = {pdf_ws_full}; sum={np.sum(pdf_ws_full)}" )
 
@@ -512,6 +512,7 @@ print([m.name for m in pkgutil.iter_modules()])
 
 # %%[markdown]
 # ### LDD and DEL: plot P_ and compare
+# ================================================================
 #%%
 # method
 meth_Peq = "LRD".lower()        # Method: "LRD" or "DEL"
@@ -602,4 +603,33 @@ plot_path = os.path.join(results_path, "Pbins_convergence.png")
 # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 # - plot
 plt.plot()
+
+# %%[markdown]
+# ### test `Load_Own_Hub_Loads` component
+# ================================================================
+#%%
+opts["WISDEM"]["DriveSE"]["own_hub_loads"] = True
+
+loadsProb = om.Problem()
+loadsProb.model = om.Group()
+loadsProb.model.add_subsystem(
+        "loads", ds.Load_Own_Hub_Loads(
+            openfast_options=opts["OpenFAST"],
+            dlc_options=opts["DLC_driver"]["DLCs"][0]
+        ), promotes=["*"]
+    )
+loadsProb.setup()
+loadsProb.run_model()
 # %%
+loadsProb["F_aero_hub"]
+# %%
+loadsClass = ds.Load_Own_Hub_Loads(
+        openfast_options=opts["OpenFAST"],
+        dlc_options=opts["DLC_driver"]["DLCs"][0]    
+    )
+# %%
+# retrieve attributes directly from the instance
+loadsClass.load_from_file()
+loaded_dict = loadsClass.fls_dict
+
+#%%
