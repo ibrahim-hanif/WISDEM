@@ -58,7 +58,7 @@ record_cases = False    #TODO: add in final setup (full problem)
 plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
-flag_load_from_data = False
+flag_load_from_data = True
 
 # Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -71,7 +71,7 @@ loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
 # Optimization flags
-flag_opt_GBO = True     # GBO: gradient based optimizer
+flag_opt_GBO = False     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 
@@ -133,7 +133,7 @@ opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
 opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
 opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0  #IEC-1, 7.6.1.3, pg.55
 opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
-# opts["WISDEM"]["DriveSE"]["own_hub_loads"] = True
+opts["WISDEM"]["DriveSE"]["own_hub_loads"] = True
 # used as: gamma = gamma_f * gamma_m * gamma_n (within TODO)
 
 opts["WISDEM"]["RotorSE"] = {}
@@ -180,6 +180,11 @@ class LSS_layout( om.Group ):
         # DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
         opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
 
+        # 'own_hub_loads'
+        if ('own_hub_loads' in opt_drivese) and ('openfast_dir' in opt_openfast):
+            flag_own_hub_loads = opt_drivese['own_hub_loads']
+        else: flag_own_hub_loads = False
+
         n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
         direct = opt_drivese["direct"]
         if direct:
@@ -206,6 +211,15 @@ class LSS_layout( om.Group ):
                 promotes=["*"]
             )
         # - for 'layout' component: need = lss_rho, bedplate_rho, hss_rho 
+
+        if flag_own_hub_loads:
+            # F, M _aero_hub RotorSE override to Hub_* and HSS_*
+            self.add_subsystem(
+                "loads_hub", ds.Load_Own_Hub_Loads(
+                    openfast_options=opt_openfast,
+                    dlc_options=opt_DLC
+                    ), promotes=["*"]
+                )
 
         # Before the layout, need to do these first
         # 1. hub system (perf hub system optimization)
@@ -720,31 +734,24 @@ else:
 # # _____ Post-processing _____
 #%%
 # Print the results
+print("F_aero_hub:")
+print(" ", prob["F_aero_hub"] )
+print("M_aero_hub:")
+print(" ", prob["M_aero_hub"], "\n" )
+
 print("LSS desvars:")
-print(" ", prob["L_h1"], prob["L_12"], prob["lss_diameter"], prob["lss_wall_thickness"] )
+print(" ", prob["L_h1"], prob["L_12"], prob["lss_diameter"], prob["lss_wall_thickness"], "\n" )
 # [3.48132032] [1.] [4. 4.] [0.32635334 0.29289825]
 
-print("F_mb*:")
-print(" ", prob["F_mb1"], prob["F_mb2"] )
-print("M_mb*:")
-print(" ", prob["M_mb1"], prob["M_mb2"] )
-if doMBfls:
-    print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
 print("--- constr_ max ---")
 print("- lss: ",
       np.max(prob["constr_lss_vonmises"])
       )
+if doMBfls:
+    print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"], "\n" )
 #
 print("--- obj: masses ---")
 print(f"MSA mass: {prob["msa_mass"]}")
-# Hub_*
-# [[4803196.5959757 ] [1369699.99999982] [ -99247.94301496]]
-# [[-0.] [-0.] [-0.]]
-# - NOTE: "Upwind bearing restricts translational", meth has 'M_mb' also
-
-# Analytical_*
-# [[        0.        ] [ 11821817.6056338 ] [-24047488.73239437]]
-# [[  5399500.        ] [-13191517.6056338 ] [ 18473288.73239437]]
 
 # list_driver_vars = prob.list_driver_vars()
 # ==========================================================

@@ -66,7 +66,7 @@ load_fls_loads = False
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 
 # Optimization flags
-flag_opt_GBO = True     # GBO: gradient based optimizer
+flag_opt_GBO = False     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 flag_debug_print = True
@@ -160,6 +160,7 @@ opts["WISDEM"]["DriveSE"]["use_gb_torque_density"] = True # False =(GB  optim, i
 opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
 opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
 opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0  #IEC-1, 7.6.1.3, pg.55
+opts["WISDEM"]["DriveSE"]["own_hub_loads"] = True
 # opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
 # used as: gamma = gamma_f * gamma_m * gamma_n (within TODO)
 
@@ -633,6 +634,11 @@ else:
 
 # %%
 # Print the results
+print("F_aero_hub:")
+print(" ", prob["F_aero_hub"] )
+print("M_aero_hub:")
+print(" ", prob["M_aero_hub"], "\n" )
+
 print("LSS desvars:")
 print(" ", prob["L_h1"], prob["L_12"], prob["lss_diameter"], prob["lss_wall_thickness"] )
 # TODO: for flange mass, dohub (cf. var `flange_t2shell_t`)
