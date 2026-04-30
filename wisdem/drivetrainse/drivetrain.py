@@ -262,6 +262,8 @@ class DrivetrainSE(om.Group):
         if direct:
             self.connect("D_bearing1", "bear1.D_bearing")
             self.connect("D_bearing2", "bear2.D_bearing")
+        self.connect("D_shaft_mb1", "bear1.D_shaft") # (PR #718)
+        self.connect("D_shaft_mb2", "bear2.D_shaft")
 
         self.connect("bear1.mb_mass", "mb1_mass")
         self.connect("bear1.mb_I", "mb1_I")
@@ -371,9 +373,9 @@ class DrivetrainSE_M4W( om.Group ):
         # 0. Main Bearings
         self.add_subsystem("bear1", dc.MainBearing_withDerivatives())
         self.add_subsystem("bear2", dc.MainBearing_withDerivatives())
-        # -connecting = GearedLayout -to- bear(1,2) (NEW)
-        self.connect("Dshaft_mb1", "bear1.D_shaft") #DONE: impl later
-        self.connect("Dshaft_mb2", "bear2.D_shaft") #DONE: impl later
+        # -connecting = GearedLayout -to- bear(1,2) (NEW) (PR #718)
+        self.connect("D_shaft_mb1", "bear1.D_shaft") #DONE: impl later
+        self.connect("D_shaft_mb2", "bear2.D_shaft") #DONE: impl later
         # 1. brake system
         self.add_subsystem(
             "brake", dc.Brake(direct_drive=direct),

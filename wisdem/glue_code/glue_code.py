@@ -418,13 +418,6 @@ class WT_RNTA(om.Group):
             self.connect("nacelle.mb2Type", "drivese.bear2.bearing_type")
             self.connect("nacelle.lss_diameter", "drivese.lss_diameter")
             self.connect("nacelle.lss_wall_thickness", "drivese.lss_wall_thickness")
-            if modeling_options["WISDEM"]["DriveSE"]["direct"]:
-                self.connect("nacelle.nose_diameter", "drivese.bear1.D_shaft", src_indices=[0])
-                self.connect("nacelle.nose_diameter", "drivese.bear2.D_shaft", src_indices=[-1])
-            else: #(v) DONE: changing lss_dia again with mb* dia? pass and removed!
-                pass
-                # self.connect("nacelle.lss_diameter", "drivese.bear1.D_shaft", src_indices=[0])
-                # self.connect("nacelle.lss_diameter", "drivese.bear2.D_shaft", src_indices=[-1])
             self.connect("nacelle.uptower", "drivese.uptower")
             self.connect("nacelle.brake_mass_user", "drivese.brake_mass_user")
             self.connect("nacelle.bedplate_mass_user", "drivese.bedplate_mass_user")

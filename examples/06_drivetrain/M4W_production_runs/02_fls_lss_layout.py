@@ -231,9 +231,9 @@ class LSS_layout( om.Group ):
         # Main Bearings
         self.add_subsystem("bear1", dc.MainBearing_withDerivatives())
         self.add_subsystem("bear2", dc.MainBearing_withDerivatives())
-        # -connecting = GearedLayout -to- bear(1,2) (NEW)
-        self.connect("Dshaft_mb1", "bear1.D_shaft") #DONE: impl later
-        self.connect("Dshaft_mb2", "bear2.D_shaft") #DONE: impl later
+        # -connecting = GearedLayout -to- bear(1,2) (NEW) # (PR #718)
+        self.connect("D_shaft_mb1", "bear1.D_shaft") #DONE: impl later
+        self.connect("D_shaft_mb2", "bear2.D_shaft") #DONE: impl later
         
         # Hub_Rotor_LSS_Frame:
         self.add_subsystem(
