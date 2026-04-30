@@ -320,6 +320,11 @@ class DrivetrainSE_M4W( om.Group ):
         # DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
         opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
 
+        # 'own_hub_loads'
+        if ('own_hub_loads' in opt_drivese) and ('openfast_dir' in opt_openfast):
+            flag_own_hub_loads = opt_drivese['own_hub_loads']
+        else: flag_own_hub_loads = False
+
         n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
         direct = opt_drivese["direct"]
         if direct:
@@ -346,6 +351,15 @@ class DrivetrainSE_M4W( om.Group ):
                 promotes=["*"]
             )
         # - for 'layout' component: need = lss_rho, bedplate_rho, hss_rho 
+
+        if flag_own_hub_loads:
+            # F, M _aero_hub RotorSE override to Hub_* and HSS_*
+            self.add_subsystem(
+                "loads_hub", ds.Load_Own_Hub_Loads(
+                    openfast_options=opt_openfast,
+                    dlc_options=opt_DLC
+                    ), promotes=["*"]
+                )
 
         # Before the layout, need to do these first
         # 1. hub system (perf hub system optimization)
@@ -406,8 +420,9 @@ class DrivetrainSE_M4W( om.Group ):
         # Hub_Rotor_LSS_Frame:
         self.add_subsystem(
             "lss", ds.Hub_Rotor_LSS_Frame(
-                    n_dlcs=n_dlcs, modeling_options=opt_drivese,
-                    direct_drive=direct, openfast_options=opt_openfast
+                    n_dlcs=n_dlcs,
+                    modeling_options=opt_drivese,
+                    direct_drive=direct
                 ),
                 promotes=["*"]
             )
