@@ -3,43 +3,43 @@ General:
     verbosity: True  # When set to True, the code prints to screen many infos
 WISDEM:
     RotorSE:
-        flag: True
+        flag: True # TODO: change src to allow False with DT true
         spar_cap_ss: Spar_Cap_SS # Name in the yaml of the spar cap laminate on the suction side
         spar_cap_ps: Spar_Cap_PS # Name in the yaml of the spar cap laminate on the pressure side
         te_ss: TE_reinforcement_SS # Name in the yaml of the trailing edge reinforcement on the suction side
         te_ps: TE_reinforcement_PS # Name in the yaml of the trailing edge reinforcement on the pressure side
     DriveSE:
         flag: True
-        own_hub_loads: True
+        gamma_f: 1.35    # Safety factor for loads
+        gamma_m: 1.3     # Safety factor for material properties
+        gamma_n: 1.0     # Safety factor for consequence of failure
+        use_gb_torque_density: True
+        own_hub_loads: True # User defined hub loads; override those from RotorSE
     TowerSE:             # Options of TowerSE module
         flag: True
-        # wind: PowerWind
-        # gamma_f: 1.35    # Safety factor for fatigue loads
-        # gamma_m: 1.3     # Safety factor for material properties
-        # gamma_n: 1.0     # Safety factor for consequence of failure
-        # gamma_b: 1.1     # Safety factor for buckling
-        # gamma_fatigue: 1.755  # Safety factor for fatigue failure
-        # buckling_method: dnvgl # Buckling code type [eurocode or dnvgl]
-        # buckling_length: 15    # Buckling parameter
-        # frame3dd:
-        #     shear: True
-        #     geom: True
-        #     tol: 1e-9
-    FixedBottomSE:             # Options of FixedBottomSE module
-        flag: False
-        # wind: PowerWind  # Wind used
-        # gamma_f: 1.35    # Safety factor for fatigue loads
-        # gamma_m: 1.3     # Safety factor for material properties
-        # gamma_n: 1.0     # Safety factor for ...
-        # gamma_b: 1.1     # Safety factor for ...
-        # gamma_fatigue: 1.755  # Safety factor for fatigue loads
-        # buckling_method: dnvgl # Buckling code type [eurocode or dnvgl]
-        # buckling_length: 15    # Buckling parameter
-        # frame3dd:
-        #     shear: True
-        #     geom: True
-        #     tol: 1e-9
+        wind: PowerWind
+        gamma_f: 1.2    # Safety factor for loads
+        gamma_m: 1.3     # Safety factor for material properties
+        gamma_n: 1.0     # Safety factor for consequence of failure
+        gamma_b: 1.1     # Safety factor for buckling
+        # gamma_fatigue: 1.755  # Safety factor for fatigue failure (def: 1.0)
+        # buckling_method: dnvgl # Buckling code type [eurocode or dnvgl] (def: dnvgl)
+        buckling_length: 15    # Buckling parameter
+        frame3dd:
+            shear: True
+            geom: True
+            tol: 1e-9
+    FloatingSE:
+        flag: True
+        symmetric_moorings: True
+        gamma_f: 1.35    # Safety factor for fatigue loads
+        gamma_m: 1.3     # Safety factor for material properties
+        gamma_n: 1.0     # Safety factor for ...
+        gamma_b: 1.1     # Safety factor for ...
+        gamma_fatigue: 1.755  # Safety factor for fatigue loads
     BOS:
+        flag: False
+    LCOE:
         flag: False
 
 #(v) -------------- NEW! TODO: MB FLS options --------------

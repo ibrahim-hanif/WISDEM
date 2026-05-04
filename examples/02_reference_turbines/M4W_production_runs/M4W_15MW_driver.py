@@ -18,6 +18,7 @@
 
 #%%
 import os
+import openmdao.api as om
 from wisdem import run_wisdem
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,11 +28,11 @@ from wisdem.commonse.utilities import load_all_mat_to_dict
 wt_m4w = True # turbine to analyse: True = m4w / False = iea15mw
 flag_plot = True
 verbose = False
-flag_override_hub_loads = False # TODO: not working; make a flag in model_opts which removes connections
+flag_override_hub_loads = True # TODO: not working; make a flag in model_opts which removes connections
 
 #%%
 ## File management
-mydir = os.path.dirname(os.path.realpath(__file__))  # get path to this file
+mydir = os.path.dirname(os.path.abspath(__file__))  # get path to this file
 dir_02_ref_turbines = os.path.dirname(mydir)  # get path to 02_reference_turbines
 
 # ---- wind turbine geometry
@@ -47,10 +48,14 @@ fname_modeling_options = mydir + os.sep + "modeling_options.yaml"
 # ---- analysis/optimization options
 fname_analysis_options = mydir + os.sep + "analysis_options_NOopt.yaml"
 
+# others
+loc_n2 = os.path.join(mydir+os.sep+"outputs", "n2.html")
+
+
 #%% Loads from hub: overwrite values TODO: rotorse overwrites it at run
 if flag_override_hub_loads:
       dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
-      loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
+      loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
       S_all,_ = load_all_mat_to_dict(loc_all_loads_mat_file)
 
       F_aero_hub =np.array( [S_all['Fx_max'], S_all['Fy_max'], S_all['Fz_max']] ).reshape((3, 1))
@@ -129,6 +134,10 @@ print("\n--- RNA properties ---")
 print(f"RNA mass: {wt_opt["drivese.rna_mass"]}")
 print(f"RNA cm: {wt_opt["drivese.rna_cm"]}")
 # -----------------------------------------------------------------------
+
+try:
+      om.n2(wt_opt, outfile=loc_n2, show_browser=True);
+except: pass
 
 #%% plotting options
 # main colors
