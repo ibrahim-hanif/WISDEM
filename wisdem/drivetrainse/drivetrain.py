@@ -426,7 +426,7 @@ class DrivetrainSE_M4W( om.Group ):
                     openfast_options=opt_openfast,
                     dlc_options=opt_DLC
                     ),
-                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss","lss_E","Dshaft_mb2","Tshaft_mb2"],
+                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss","lss_E","D_shaft_mb2","Tshaft_mb2"], #(PR #718)
                 promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
             )
             # -connecting = bear(1,2) -to- Analy_*

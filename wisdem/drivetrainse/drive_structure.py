@@ -2101,7 +2101,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input('L_h1', val=0.0, desc='Rotor bearing distance', units='m')
         # - 2. bearing parameters (from MainBearing)
         self.add_input('Cr_mb1', val=1e7, units='N', desc='Dynamic load rating MB1')
-        self.add_input("Dshaft_mb2", val=0.0, units="m")
+        self.add_input("D_shaft_mb2", val=0.0, units="m")
         self.add_input("Tshaft_mb2", val=0.0, units="m")
         self.add_input('Cr_mb2', val=1e7, units='N', desc='Dynamic load rating MB2')
         self.add_input('k_mb2', val=0.0, units="N*m/rad", desc='Torsional stiffness of the moment-reacting bearing (eg. TRB2)')
@@ -2131,7 +2131,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
     def compute(self, inputs, outputs):
         # ---- Inputs ----
         # bearings
-        D_mb2 = float(inputs['Dshaft_mb2'][0])
+        D_mb2 = float(inputs['D_shaft_mb2'][0])
         T_mb2 = float(inputs['Tshaft_mb2'][0])
         k_mb2 = float(inputs['k_mb2'][0])
         # ISO 281 parameters (from MainBearing)
