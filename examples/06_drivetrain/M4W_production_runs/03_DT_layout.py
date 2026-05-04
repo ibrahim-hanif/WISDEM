@@ -66,7 +66,7 @@ load_fls_loads = False
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 
 # Optimization flags
-flag_opt_GBO = False     # GBO: gradient based optimizer
+flag_opt_GBO = True     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 flag_debug_print = True
@@ -76,10 +76,10 @@ make_xdsm = False       # html-show or detailed pdf
 record_cases = False    #TODO: add in final setup (full problem)
 
 # post-processing results
-plot_cases = False      #NOTE: saved, not changing now (commented)
+plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
-flag_save_new_data = False
-load_from_saved_data = True
+flag_save_new_data = True
+load_from_saved_data = False
 
 # Parametric study
 flag_study_parametric = False
@@ -118,11 +118,11 @@ if record_cases:
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "03"+suffix) # "03"+suffix
 
-# - load from saved data
+# - load from saved data TODO
 # 02_ data
 # if load_from_saved_data: loc_saved_02_data = os.path.join(results_path, "02"+suffix) # 02newULS
 # 03_ data
-if os.path.exists(loc_save_data+".csv"): load_from_saved_data = True # TODO
+# if os.path.exists(loc_save_data+".csv"): load_from_saved_data = True
 
 # - DOE
 loc_DOEcsv_GBgen = os.path.join(script_dir, "04_results", "DOE_GBgen_updated.csv")
@@ -208,7 +208,7 @@ if flag_opt_GBO:
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
     prob.driver.options["tol"] = 1e-4 # 1e-4; def: 1e-6
-    prob.driver.options["maxiter"] = 20 # needs 80 iters to converge
+    prob.driver.options["maxiter"] = maxIter # needs 80 iters to converge
     prob.driver.options["disp"] = True
     if flag_debug_print:
         prob.driver.options["debug_print"] = [
@@ -468,11 +468,11 @@ if doMBfls:
     prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 
 # Layout / lss inputs
-prob["L_h1"] = 0.3 #(def: 2.0), 4.25
-prob["L_12"] = 1.24 #(def:1.2), 7.1
+prob["L_h1"] = 0.31 #(def: 2.0), 4.25
+prob["L_12"] = 1.784 #(def:1.2), 7.1
 prob["delta"] = 0.5
-prob["lss_diameter"] = np.array([3.45, 3.21]) #(def:1.0), 4.0
-prob["lss_wall_thickness"] = np.array([0.19, 0.01]) #(def:0.1), 0.3
+prob["lss_diameter"] = np.array([3.205, 3.442]) #(def:1.0), 4.0
+prob["lss_wall_thickness"] = np.array([0.099, 0.071]) #(def:0.1), 0.3
 
 # Gearbox inputs
 prob["gear_ratio"] = (375 / rated_rpm)
@@ -484,9 +484,9 @@ prob["gearbox_length_user"] = 2.512381653*1.1 # (from DOE_GBgen_updated.csv, +10
 prob["gearbox_radius_user"] = 2.10184*1.1 #(from DOE_GBgen_updated.csv, +10% margin)
 
 # HSS (DONE: consider as DV if needed)
-prob["L_hss"] = 1.0
+prob["L_hss"] = 1.102560612058607
 prob["hss_diameter"] = np.array([0.5, 0.5])
-prob["hss_wall_thickness"] = np.array([0.1, 0.1])
+prob["hss_wall_thickness"] = np.array([0.10124311401070424, 0.004])
 
 # === Generator inputs (DONE: add compn later)
 # - needed by Bedplate_IBeam_Frame in drive_structure.py, output of HSS_Frame
@@ -557,9 +557,9 @@ prob["drive_height"] = 5.614 # (def: 5.614 for 15MW DD)
 
 # bedplate: Hub:_Rotor_LSS_Frame, Bedplate_IBeam_Frame inputs
 # --- below vals from ONLY bedplate optim (desvars, constr) for nacelle mass min
-prob["bedplate_flange_width"] = 0.5 #1.724
-prob["bedplate_flange_thickness"] = 0.02 #0.028
-prob["bedplate_web_thickness"] = 0.02 #0.029
+prob["bedplate_flange_width"] = 2.3427547391232055 # 0.5
+prob["bedplate_flange_thickness"] = 0.09282021508604103 # 0.02
+prob["bedplate_web_thickness"] = 0.06152041352861306 #0.029
 
 # `Hub_*` requires:
 prob["shaft_deflection_allowable"] = 1e-4 # within Hub_Rotor_LSS_Frame (below): Deflections and rotations at GB attachment
