@@ -54,11 +54,11 @@ suffix = "_m4w"
 
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
-record_cases = True    #TODO: add in final setup (full problem)
+record_cases = False    #TODO: add in final setup (full problem)
 plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
-flag_save_new_data = True
-flag_load_from_data = False
+flag_save_new_data = False
+flag_load_from_data = True
 
 # Loading `openFAST` hub loads from a saved file
 # TODO: dont even need to do this now, coz `Load_Own_Hub_Loads` component does it internally and outputs the needed loads for the DT component. So, can just set `own_hub_loads=True` in `modelling_options` and not worry about loading the loads here in the script. JazakumAllahu khayr.
@@ -981,8 +981,10 @@ if flag_study_parametric and flag_opt_GBO:
             prob = utilsDT.read_df_to_prob( this_case, prob )
             print("-------------------- v ------------------")
             # set L val: DONE above
-            # prob["L_h1"] = 0.5
-            # prob["L_12"] = 7.0
+            # prob["L_h1"] = 0.3
+            # prob["L_12"] = 2.0
+            # prob["lss_diameter"] = np.array([1.0,1.0])
+            # prob["lss_wall_thickness"] = np.array([0.1,0.1])
 
         # LDD param study
         elif param_for_study.lower() == "ldd":
@@ -1047,7 +1049,7 @@ if flag_study_parametric and (param_for_study.lower() == "mb"):
     casesOut = cases.copy()
     for i in range(len_steps):
         casesOut = utilsDT.write_dict_to_df(casesOut,i,outs_recorded)
-    # save to csv
+    # save to csv TODO
     # casesOut.to_csv(loc_DOEcsv_MBtype, index=False)
 
 #%% [markdown]
@@ -1127,51 +1129,51 @@ if flag_study_parametric and (param_for_study.lower() == "mb"):
 
 # ==== 2. L_ vary: LRD (DEL gives same results :D AL)
 """
-{'status_driver_exit': ['FAIL', 'SUCCESS', 'FAIL', 'FAIL'],
-'time': array([[95.3631618 ],
-       [65.29973674],
-       [60.70263004],
-       [99.33194518]]),
-'L_h1': array([[0.31879292],
-       [0.30997894],
-       [0.31024201],
-       [0.30981228]]),
-'L_12': array([[1.74300093],
-       [1.69628264],
-       [1.68949044],
-       [1.70063225]]),
-'lss_diameter': array([[3.59648417, 3.20627955],
-       [3.45397717, 3.22357537],
-       [3.45866446, 3.22218196],
-       [3.45096928, 3.22462593]]),
-'lss_wall_thickness': array([[0.09980819, 0.08608805],
-       [0.08465953, 0.07958583],
-       [0.0843303 , 0.07961096],
-       [0.08486993, 0.07956174]]),
-'constr_L10_mb1': array([[1.02633169],
-       [0.99999998],
-       [0.99999768],
-       [0.99999986]]),
-'constr_L10_mb2': array([[1.00004017],
-       [0.9999995 ],
-       [0.99997727],
-       [0.99999612]]),
-'mb1_mass': array([[42342.11056611],
-       [39905.60500308],
-       [39977.35259577],
-       [39860.17980165]]),
-'mb2_mass': array([[53393.24743278],
-       [53307.40132529],
-       [53290.64287144],
-       [53322.51334515]]),
-'lss_mass': array([[19459.92737298],
-       [16537.21193405],
-       [16472.39365624],
-       [16578.32292644]]),
-'msa_mass': array([[115195.28537187],
-       [109750.21826241],
-       [109740.38912345],
-       [109761.01607323]])}
+{'status_driver_exit': ['SUCCESS', 'FAIL', 'SUCCESS', 'SUCCESS'],
+'time': array([[34.74917579],
+       [43.42012644],
+       [41.60824251],
+       [37.51028037]]),
+'L_h1': array([[0.31087844],
+       [0.31044405],
+       [0.309868  ],
+       [0.31061516]]),
+'L_12': array([[1.77162334],
+       [1.78452852],
+       [1.80229615],
+       [1.77943262]]),
+'lss_diameter': array([[3.20507303, 3.44881147],
+       [3.20568761, 3.44223552],
+       [3.2091237 , 3.43317701],
+       [3.20526884, 3.44482088]]),
+'lss_wall_thickness': array([[0.09942882, 0.07069866],
+       [0.09965766, 0.07103956],
+       [0.0998066 , 0.07151408],
+       [0.09957602, 0.07091151]]),
+'constr_L10_mb1': array([[1.        ],
+       [1.00000502],
+       [1.        ],
+       [1.00000139]]),
+'constr_L10_mb2': array([[1.00000013],
+       [1.00000224],
+       [0.99999996],
+       [1.00000013]]),
+'mb1_mass': array([[40151.18711937],
+       [40032.49815337],
+       [39875.36336698],
+       [40078.7127055 ]]),
+'mb2_mass': array([[53313.34496564],
+       [53282.38653699],
+       [53305.4880352 ],
+       [53290.0760011 ]]),
+'lss_mass': array([[17514.1074221 ],
+       [17641.41587691],
+       [17808.89057528],
+       [17592.10442096]]),
+'msa_mass': array([[110978.63950711],
+       [110956.30056728],
+       [110989.74197747],
+       [110960.89312755]])}
 """
 # %%
 # plot 2D optim path
@@ -1343,8 +1345,8 @@ if (param_for_study.lower() == "ldd") and (
     # -------------------------
     # rotate view (via camera angles)
     # def: (30,-60), print(ax.elev, ax.azim)
-    # lrd: (40,-40)
-    if meth_Peq=="lrd": ax.view_init(elev=40, azim=-40)
+    # lrd: (40,-60)
+    if meth_Peq=="lrd": ax.view_init(elev=40, azim=-60)
     # plt.ion() # interactive
     # ------------------------
     # Save plot
