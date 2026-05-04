@@ -2190,7 +2190,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # LRD bin-counting
         # if ("nBins" in self.options["modeling_options"]):
         #     nBins = self.options["modeling_options"]["nBins"]
-        #     print(f"nBins in mb_fls = {nBins}")
+        #     # print(f"nBins in mb_fls = {nBins}") # debugging
         # else: nBins = 100
         # P_mb1_sum = compute_LRD_matrix_vectorized(P_mb1,
         #         self.dt,self.omega,self.probabilities,p, nBins)
