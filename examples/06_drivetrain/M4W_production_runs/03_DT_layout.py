@@ -350,9 +350,9 @@ prob.model.list_outputs();
 # - TODO: check windIO (02_ref WTs) data and change below
 prob.set_val("machine_rating", 15.0, units="MW")
 prob["rotor_diameter"] = 240.0 # TODO: ref.1 = 240, geo_schema = 241.35064632
-prob["rated_torque"] = 21.03*1e6 # [Nm] ref.2, tab.5-4
+prob["rated_torque"] = 19483628.137720454 # 21.03*1e6 [Nm] ref.2, tab.5-4
 prob["minimum_rpm"] = 5.0 # needed by RPM_Input
-rated_rpm = prob["rated_rpm"] = 7.56
+rated_rpm = prob["rated_rpm"] = 7.55846382468687 #7.56
 if doMBfls:
     prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
 
@@ -416,9 +416,9 @@ if True: #NOTE: True with `Hub_*`
     blade_mass = 65250 # from ref.2, tab. ES-2 (= made4wind specs also)
     n_blades = 3 
     # ---- updated using runWISDEM with orig def blades, hub
-    prob["blades_mass"] = 203480.8003090195 # n_blades * blade_mass
-    prob["blades_cm"] = 2.450999236350028 # 2.46175
-    prob["blades_I"] = [342920565.8181109, 171460282.90905544, 171460282.90905544, 0.0, 0.0, 0.0] # np.r_[3.48453857e+08, 1.74226928e+08, 1.74226928e+08, np.zeros(3)]
+    prob["blades_mass"] = 203480.8003090195 #n_blades * blade_mass
+    prob["blades_cm"] = 2.450999236350028
+    prob["blades_I"] = np.r_[342920565.8181109, 171460282.90905544, 171460282.90905544, 0.0, 0.0, 0.0]
 
     # if run HUB module within DrivetrainSE
     if dohub:
@@ -445,9 +445,9 @@ if True: #NOTE: True with `Hub_*`
         prob["spinner_gust_ws"] = 70.0
 
     else:
-        prob["hub_system_mass"] = 73097.29755948295 # 190e3 # from ref.2, tab. 5-1
-        prob["hub_system_cm"] = 3.3540366555461496 # 3.35947759
-        prob["hub_system_I"] = np.array([[1033618.0649506741, 648827.3159275538, 648827.3159275538],[0., 0., 0.]])
+        prob["hub_system_mass"] = 73159.79852195602 # 190e3; from ref.2, tab. 5-1
+        prob["hub_system_cm"] = 3.3540146237827924
+        prob["hub_system_I"] = np.array([[1034603.1363701161, 649319.8931695414, 649319.8931695414, 0.0, 0.0, 0.0]]) # TODO check
 
 # TODO: cm & I (hub_system_ & blades_) will change with DVs (L in lss)
 

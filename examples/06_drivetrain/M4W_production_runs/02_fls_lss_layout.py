@@ -54,11 +54,11 @@ suffix = "_m4w"
 
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
-record_cases = False    #TODO: add in final setup (full problem)
+record_cases = True    #TODO: add in final setup (full problem)
 plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
-flag_save_new_data = False
-flag_load_from_data = True
+flag_save_new_data = True
+flag_load_from_data = False
 
 # Loading `openFAST` hub loads from a saved file
 # TODO: dont even need to do this now, coz `Load_Own_Hub_Loads` component does it internally and outputs the needed loads for the DT component. So, can just set `own_hub_loads=True` in `modelling_options` and not worry about loading the loads here in the script. JazakumAllahu khayr.
@@ -72,7 +72,7 @@ loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
 # Optimization flags
-flag_opt_GBO = False     # GBO: gradient based optimizer
+flag_opt_GBO = True     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 
@@ -255,7 +255,7 @@ class LSS_layout( om.Group ):
                     openfast_options=opt_openfast,
                     dlc_options=opt_DLC
                     ),
-                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss","lss_E","Dshaft_mb2","Tshaft_mb2"],
+                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss","lss_E","D_shaft_mb2","Tshaft_mb2"],
                 promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
             )
             # -connecting = bear(1,2) -to- Analy_*
@@ -483,9 +483,9 @@ if not flag_load_from_data:
     # ==== 1. High-level Inputs ====
     prob.set_val("machine_rating", 15.0, units="MW")
     D_rotor = prob["rotor_diameter"] = 240.0
-    prob["rated_torque"] = 21.03*1e6 # [Nm] ref.2, tab.5-4
+    prob["rated_torque"] = 19483628.137720454 # 21.03*1e6 [Nm] ref.2, tab.5-4
     # prob["minimum_rpm"] = 5
-    rated_rpm = prob["rated_rpm"] = 7.56
+    rated_rpm = prob["rated_rpm"] = 7.55846382468687 #7.56
     prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
 
     prob["upwind"] = True
@@ -541,9 +541,9 @@ if not flag_load_from_data:
     if True: #NOTE: True with `Hub_*`
         blade_mass = 65250 # from ref.2, tab. ES-2 (= made4wind specs also)
         n_blades = 3
-        prob["blades_mass"] = n_blades * blade_mass
-        prob["blades_cm"] = 2.46175
-        prob["blades_I"] = np.r_[3.48453857e+08, 1.74226928e+08, 1.74226928e+08, np.zeros(3)]
+        prob["blades_mass"] = 203480.8003090195 #n_blades * blade_mass
+        prob["blades_cm"] = 2.450999236350028
+        prob["blades_I"] = np.r_[342920565.8181109, 171460282.90905544, 171460282.90905544, 0.0, 0.0, 0.0]
 
         # if run HUB module within DrivetrainSE
         if dohub:
@@ -571,9 +571,9 @@ if not flag_load_from_data:
 
         else:
             # run made4wind_geared.py with flag_opt_GBO = false and copy the following values from drivetrain_example.csv
-            prob["hub_system_mass"] = 190e3 # from ref.2, tab. 5-1
-            prob["hub_system_cm"] = 3.35947759
-            prob["hub_system_I"] = np.array([[865503.52531197, 567289.77714803, 567289.77714803],[0., 0., 0.]])
+            prob["hub_system_mass"] = 73159.79852195602 # 190e3; from ref.2, tab. 5-1
+            prob["hub_system_cm"] = 3.3540146237827924
+            prob["hub_system_I"] = np.array([[1034603.1363701161, 649319.8931695414, 649319.8931695414, 0.0, 0.0, 0.0]]) # TODO check
 
     # TODO: cm & I (hub_system_ & blades_) will change with DVs (L in lss)
 
@@ -786,7 +786,7 @@ if record_cases and plot_cases:
     res = results_dict
 
     msa_mass = res['msa_mass'].squeeze()
-    scale_m_msa = 1e3;
+    scale_m_msa = 1e5;
     msa_mass = msa_mass / scale_m_msa
 
     L_12 = res['L_12'].squeeze()
@@ -815,9 +815,9 @@ if record_cases and plot_cases:
     ax1.plot(iters, msa_mass,
             marker='o', linewidth=2, color= clrs_m4w["Dark_Blue"],
             label=r'$m_{msa}$')
-    ax1.set_ylabel(r'Mass [t]')
+    ax1.set_ylabel(r'Mass [$\cdot 10^2$ t]')
     # ax1.set_xlabel('Iteration')
-    # ax1.set_xticks(iters)
+    ax1.set_xticks(iters)
     ax1.grid(True)
     ax1.legend()
 
@@ -867,7 +867,7 @@ if record_cases and plot_cases:
     ax4.axhline(1.0, color='k', linestyle='--', linewidth=1)
     ax4.set_ylabel(r'$ g\_L_{10} $ [-]')
     ax4.set_xlabel('Optimizer function evaluations')
-    # ax4.set_xticks(iters)
+    ax4.set_xticks(iters)
     ax4.grid(True)
     ax4.legend(loc='upper right')#,bbox_to_anchor=(1,0.5))
 
