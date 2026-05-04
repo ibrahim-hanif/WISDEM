@@ -208,7 +208,7 @@ if flag_opt_GBO:
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
     prob.driver.options["tol"] = 1e-4 # 1e-4; def: 1e-6
-    prob.driver.options["maxiter"] = maxIter # needs 80 iters to converge
+    prob.driver.options["maxiter"] = 20 # needs 80 iters to converge
     prob.driver.options["disp"] = True
     if flag_debug_print:
         prob.driver.options["debug_print"] = [

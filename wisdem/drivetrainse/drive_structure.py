@@ -2076,12 +2076,8 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         opts_dlcs = self.options['dlc_options']
         # ---- DLC loads & operational ----
         # here coz runs only once per model build
-        loadClass = Load_Own_Hub_Loads(
-            openfast_options=opts_openfast,
-            dlc_options=opts_dlcs
-            )
-        loadClass.load_from_file()
-        loads_dict = loadClass.fls_dict
+        dir_loads = self.options['openfast_options']['openfast_dir'] # directory of MS loads
+        loads_dict, _ = load_all_mat_to_dict(dir_loads)
         # - a. loads
         self.Fx = loads_dict['Fx']
         # print(f"Fx[:2,:2]: {Fx[:2,:2]}, Fx shape: {Fx.shape}") # debugging: check mags wrt. units
@@ -2092,10 +2088,12 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.Mz = loads_dict['Mz']
         self.omega = loads_dict['rot_speed']
         # - b. openfast (Wind statistics)
-        self.ws = loads_dict['ws']
-        self.probabilities = loads_dict['probabilities']
+        ws = self.options['dlc_options']['wind_speed'] # shape=(1,10)
+        n_ws = len(ws)
+        self.ws = np.reshape( ws, (1,n_ws) )
+        self.probabilities = np.reshape( self.options['dlc_options']['probabilities'], (1,n_ws))
         # - c. DLC
-        self.dt = loads_dict['dt'] # 0.05 (20 Hz)
+        self.dt = self.options['openfast_options']['simulation']['DT'] # 0.05 (20 Hz)
         # ----
         # ---- Inputs ----
         # - 1. LSS parameters (from Layout, Hub_Rotor_LSS_Frame)

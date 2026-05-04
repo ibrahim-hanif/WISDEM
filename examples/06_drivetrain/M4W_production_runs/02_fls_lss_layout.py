@@ -61,6 +61,7 @@ flag_save_new_data = False
 flag_load_from_data = True
 
 # Loading `openFAST` hub loads from a saved file
+# TODO: dont even need to do this now, coz `Load_Own_Hub_Loads` component does it internally and outputs the needed loads for the DT component. So, can just set `own_hub_loads=True` in `modelling_options` and not worry about loading the loads here in the script. JazakumAllahu khayr.
 part_loads = True 
 load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
@@ -180,11 +181,6 @@ class LSS_layout( om.Group ):
         # DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
         opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
 
-        # 'own_hub_loads'
-        if ('own_hub_loads' in opt_drivese) and ('openfast_dir' in opt_openfast):
-            flag_own_hub_loads = opt_drivese['own_hub_loads']
-        else: flag_own_hub_loads = False
-
         n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
         direct = opt_drivese["direct"]
         if direct:
@@ -211,15 +207,6 @@ class LSS_layout( om.Group ):
                 promotes=["*"]
             )
         # - for 'layout' component: need = lss_rho, bedplate_rho, hss_rho 
-
-        if flag_own_hub_loads:
-            # F, M _aero_hub RotorSE override to Hub_* and HSS_*
-            self.add_subsystem(
-                "loads_hub", ds.Load_Own_Hub_Loads(
-                    openfast_options=opt_openfast,
-                    dlc_options=opt_DLC
-                    ), promotes=["*"]
-                )
 
         # Before the layout, need to do these first
         # 1. hub system (perf hub system optimization)
