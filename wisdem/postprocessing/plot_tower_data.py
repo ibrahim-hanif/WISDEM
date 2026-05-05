@@ -1,4 +1,10 @@
 #%%
+"""
+plot_tower_data.py
+
+Created by Vasudev Gupta on 2026-05-05. Dept. of Marine Technology, NTNU. All rights reserved.
+"""
+
 import yaml
 import numpy as np
 import matplotlib.pyplot as plt
