@@ -15,16 +15,16 @@ import os
 from wisdem import run_wisdem
 import numpy as np
 import matplotlib.pyplot as plt
-from wisdem.commonse.utilities import load_all_mat_to_dict
 
 #%%
-wt_m4w = False # turbine to analyse: True = m4w / False = iea15mw
+wt_m4w = False # init geo of tower: True = acciona / False = iea report
 loads_m4w = True
 
 flag_plot = True
+save_new_plot = False
 verbose = False
 
-flag_opt_GBO = True
+flag_opt_GBO = False
 flag_scaling_show_browser = False
 
 flag_override_tower_init = False
@@ -233,25 +233,33 @@ if flag_plot:
     plt.xlabel("utilization")
     plt.ylabel("height along tower (m)")
     plt.tight_layout()
+    if save_new_plot:
+        loc_save_img = dir_m4w_run + os.sep + "outputs" + os.sep + (
+            "utils_tower_m4w_noFreqConstr.pdf"
+        )
+        plt.savefig(loc_save_img, dpi=300, bbox_inches='tight')
     plt.show()
 
 #%%[markdown]
 # ### Tower geometry
 #%%
-from wisdem.postprocessing.plot_tower_data import plot_tower_geo_comparison
-#%%
-# define yamls and run plot
-# Geometry YAML files
-# 1. base IEA 15-MW
-iea_report_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
-acciona_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_acciona.yaml"
-# 2. Made4Wind
-m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_m4w.yaml"
-# loc save img
-loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
-            "geometry_tower_noFreqConstr_m4w&ieaReport.png"
-        )
-# plot
-plot_tower_geo_comparison( m4w_yaml, iea_report_yaml )
+if flag_plot:
+    from wisdem.postprocessing.plot_tower_data import plot_tower_geo_comparison
+    # define yamls and run plot
+    # Geometry YAML files
+    # 1. base IEA 15-MW
+    iea_report_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
+    acciona_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_acciona.yaml"
+    # 2. Made4Wind
+    m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_m4w.yaml"
+    # loc save img
+    if save_new_plot:
+        loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
+                    "geometry_tower_noFreqConstr_m4w&ieaReport.png"
+                )
+    else: loc_save_img = None
+    # plot
+    plot_tower_geo_comparison( m4w_yaml, iea_report_yaml,
+                              loc_save_img=loc_save_img )
 
 #%%
