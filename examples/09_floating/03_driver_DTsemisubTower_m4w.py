@@ -22,16 +22,18 @@ from wisdem.commonse.utilities import load_all_mat_to_dict
 wt_m4w = False # turbine to analyse: True = m4w / False = iea15mw
 
 flag_plot = True
+save_new_plot = False
 verbose = False
 
 flag_opt_GBO = False
 flag_scaling_show_browser = False
 
+flag_override_own_hub_loads = True # TODO
 flag_override_tower_init = False
 
 #%%
 ## File management (inputs)
-mydir = os.path.dirname(os.path.realpath(__file__))  # get path to this file
+mydir = os.path.dirname(os.path.abspath(__file__))  # get path to this file
 dir_examples = os.path.dirname(mydir)
 dir_02_ref_turbines = dir_examples +os.sep+ "02_reference_turbines" # get path to 02_reference_turbines
 dir_02_rwt_m4w = dir_02_ref_turbines +os.sep+"M4W_production_runs"
@@ -41,8 +43,8 @@ dir_m4w_run = mydir + os.sep + "M4W_03_DT_towerSemiSub"
 
 # ---- wind turbine geometry (same init for both iea and m4w)
 # fname_wt_input = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
-# fname_wt_input = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
-fname_wt_input = dir_m4w_run + os.sep + "outputs//test.yaml"
+fname_wt_input = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
+# fname_wt_input = dir_m4w_run + os.sep + "outputs//test.yaml"
 
 # ---- modelling options
 fname_model_opts_m4w = dir_m4w_run+os.sep+ "modeling_options_m4w_DTtower.yaml"
@@ -60,13 +62,26 @@ loc_scaling_report = os.path.join(dir_m4w_run,
       'outputs', 'scaling_report.html')
 
 #%% Overwrite values ?
-if flag_override_tower_init:
-     overrides = {
-          'towerse.tower_outer_diameter': np.ones((1,20))*15,
-          'towerse.tower_layer_thickness': np.ones((1,20))*100e-3
-          }
+overrides = {}
 
-else: overrides = None
+# load hub loads from .mat file (from m4w ULS)
+if flag_override_own_hub_loads:
+      # read from model_opts yaml
+      import wisdem.inputs as sch
+      dict_model_opts = sch.load_yaml( fname_model_opts_m4w )
+      loc_all_loads_mat_file = dict_model_opts['OpenFAST']['openfast_dir']
+      # load
+      S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
+      # reshape
+      F_aero_hub = np.array( [S_all['Fx_max'], S_all['Fy_max'], S_all['Fz_max']] ).reshape((3, 1))
+      M_aero_hub = np.array( [S_all['Mx_max'], S_all['My_max'], S_all['Mz_max']] ).reshape((3, 1))
+      # override
+      overrides['drivese.F_aero_hub'] = F_aero_hub
+      overrides['drivese.M_aero_hub'] = M_aero_hub
+
+elif flag_override_tower_init:
+      overrides['towerse.tower_outer_diameter'] = np.ones((1,20))*15
+      overrides['towerse.tower_layer_thickness'] = np.ones((1,20))*100e-3
 
 #%%
 wt_opt, analysis_options, opt_options = run_wisdem(
@@ -81,10 +96,10 @@ wt_opt, analysis_options, opt_options = run_wisdem(
 doMBfls = analysis_options["flags"]["mb_fls"]
 print("MB FLS: ", doMBfls)
 # Print the results
-# print("\nF_aero_hub:") # NOTE: overwritten with hub loads .mat input
-# print(" ", wt_opt["drivese.F_aero_hub"]/1e6, " MN" )
-# print("M_aero_hub:")
-# print(" ", wt_opt["drivese.M_aero_hub"]/1e6, " MNm \n" )
+print("\nF_aero_hub [M-N]:") # NOTE: overwritten with hub loads .mat input
+print(" ", wt_opt["drivese.F_aero_hub"]/1e6 )
+print("M_aero_hub [M-Nm]:")
+print(" ", wt_opt["drivese.M_aero_hub"]/1e6, "\n" )
 
 # ---- 1P and 3P freq ranges
 rpm_min = wt_opt['drivese.minimum_rpm'][0]
@@ -268,25 +283,34 @@ if flag_plot:
     plt.xlabel("utilization")
     plt.ylabel("height along tower (m)")
     plt.tight_layout()
+    if save_new_plot:
+        loc_save_img = dir_m4w_run + os.sep + "outputs" + os.sep + (
+            "utils_tower_m4w_noFreqConstr.pdf"
+        )
+        plt.savefig(loc_save_img, dpi=300, bbox_inches='tight')
     plt.show()
 
 #%%[markdown]
 # ### Tower geometry
 #%%
-from wisdem.postprocessing.plot_tower_data import plot_tower_geo_comparison
-# define yamls and run plot
-# Geometry YAML files
-# 1. base IEA 15-MW
-iea_report_yaml = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
-acciona_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub_acciona.yaml"
-m4w_IC_yaml = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
-# 2. Made4Wind
-m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test.yaml"
-# loc save img
-loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
-            "geometry_tower_noFreqConstr_m4w&ieaReport.png"
-        )
-# plot
-plot_tower_geo_comparison( m4w_yaml, m4w_IC_yaml )
+if flag_plot:
+      from wisdem.postprocessing.plot_tower_data import plot_tower_geo_comparison
+      # define yamls and run plot
+      # Geometry YAML files
+      # 1. base IEA 15-MW
+      iea_report_yaml = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
+      acciona_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub_acciona.yaml"
+      m4w_IC_yaml = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
+      # 2. Made4Wind
+      m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test.yaml"
+      # loc save img
+      if save_new_plot:
+            loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
+                  "geometry_tower_noFreqConstr_m4w&ieaReport.png"
+                  )
+      else: loc_save_img = None
+      # plot
+      plot_tower_geo_comparison( m4w_yaml, m4w_IC_yaml,
+                                loc_save_img=loc_save_img )
 
 #%%
