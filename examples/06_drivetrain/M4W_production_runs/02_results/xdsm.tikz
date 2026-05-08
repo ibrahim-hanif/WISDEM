@@ -25,7 +25,7 @@
 &
 &
 &
-\node [DataIO] (output_lss) {$\mathbf{f}_{uls}, \mathbf{m}_{uls}$};&
+\node [DataIO] (output_lss) {$F^{max}, M^{max}$};&
 \node [DataIO] (output_mb_fls) {$\mathbf{F}, \mathbf{M}$};&
 &
 \\

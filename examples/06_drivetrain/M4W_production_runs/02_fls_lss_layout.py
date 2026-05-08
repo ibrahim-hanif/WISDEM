@@ -1381,7 +1381,7 @@ if make_xdsm:
     # x.add_system("misc", FUNC, "Miscellanous")
     x.add_system("nac", FUNC, "System\_Adder")
     # inputs
-    x.add_input("lss", "\mathbf{f}_{uls}, \mathbf{m}_{uls}")
+    x.add_input("lss", "F^{max}, M^{max}")
     x.add_input("mb_fls", "\mathbf{F}, \mathbf{M}")
     # connect all components to the design variables "d"
     dvs = "\mathbf{d}"
