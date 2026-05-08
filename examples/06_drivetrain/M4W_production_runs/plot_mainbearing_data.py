@@ -1,9 +1,16 @@
+#%%[markdown]¨
+# # Plot bearing empirical data
+# - using `MainBearing_withDerivatives` WISDEM component
+# - mass plot w/o housing_factor multiplied is saved as `*_woHouseFac`.
+# -- while mass with factor is saved as '*' (no suffix)
+
 #%%
 # Imports
 import wisdem.drivetrainse.drive_components as dc
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import openmdao.api as om
 # main colors
 from my_util_tools import util_funcs
 loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
@@ -16,33 +23,50 @@ os.makedirs(results_path, exist_ok=True)
 
 #%%
 # MainBearing class from WISDEM
-mbClass = dc.MainBearing_withDerivatives()
-mbData = mbClass.BEARINGS
+# - define as openmdao problem group
+mbProb = om.Problem(reports=False)
+mbProb.model = om.Group()
+mbProb.model.add_subsystem(
+    "mb", dc.MainBearing_withDerivatives(),
+    promotes=['*']
+)
+# setup
+mbProb.setup()
+# - define inputs, which remain constant
+mbProb["mb_e"] = 0.4
 
-# Calculate bearing properties
-def def_mb_props( dict, D ):
-    # width
-    a = dict["a"]
-    b = dict["b"]
-    width = (a*D) + b
-    # mass
-    k = dict["k"]
-    n = dict["n"]
-    mass = k*(D**n)
-    # Cr
-    c = dict["c"]
-    m = dict["m"]
-    Cr = c*(D**m)
-    return width, mass, Cr
+# - define param vary
+nParams = 26 # test = 3; final = 51
+diaList = np.linspace(0.0,5.0,nParams); nDia = nParams
+mbList = ["CARB", "CRB", "SRB", "TRB", "TRB2"]; nMBs = len(mbList)
 
-#%% # Diameter: user defined
-dia = np.linspace(0.0,5.0,51)
+# TODO define dict to store
+mbData = {}
+myzeros = np.zeros(diaList.shape)
+N_to_kN = 1e-3
 
-mbList = ["CARB", "CRB", "SRB", "TRB", "TRB2"]
+#%%
 for mb in mbList:
-    thisMBdata = mbData[mb]
-    mbData[mb]['width'],mbData[mb]['mass'],mbData[mb]['Cr'] = def_mb_props(
-        thisMBdata, dia )
+    # init to zeros
+    mbData[mb] = {}
+    # mbData[mb]["mass"] = myzeros
+    # mbData[mb]["Cr"] = myzeros
+    # input mb type
+    mbProb["bearing_type"] = str(mb)
+    # input dia
+    mass = np.copy( myzeros )
+    Cr = np.copy( myzeros )
+
+    for iDia in range(len(diaList)):
+        mbProb["D_shaft"] = diaList[iDia]
+        # compute
+        mbProb.run_model()
+        # store values
+        mass[iDia] = mbProb["mb_mass"]
+        Cr[iDia] = mbProb["mb_Cr"] * N_to_kN # N to kN
+    
+    mbData[mb]["mass"] = mass
+    mbData[mb]["Cr"] = Cr
 
 # %% # Plotting options
 clrsList = [
@@ -64,49 +88,48 @@ params_plot_rc = {
         "lines.markersize": 8,
     }
 plt.rcParams.update( params_plot_rc )
-figsize=(14, 8)
+figsize=(8,16)
 
 #%% # plt plot
 fig = plt.figure(figsize=figsize)
-gs = fig.add_gridspec(1, 2, hspace=0.5, wspace=0.25)
+gs = fig.add_gridspec(2,1, hspace=0.2)#, wspace=0.25)
 # create axis ONCE before loop
-ax1 = fig.add_subplot(gs[0, 0])
-ax2 = fig.add_subplot(gs[0, 1])
+ax1 = fig.add_subplot(gs[0,0])
+ax2 = fig.add_subplot(gs[1,0])
 
 for mbType, clr, mrkr in zip(mbList, clrsList, mrkerList):
     thisMBdata = mbData[ mbType ]
     # Mass plot
-    mass = thisMBdata['mass'] / 1e3
+    thisMass = thisMBdata['mass'] / 1e3
     ax1.plot(
-        dia,
-        mass,
+        diaList,
+        thisMass,
         color= clr,
         marker=mrkr,
-        linewidth=2,
         zorder=1,
         label=mbType
         )
     # Cr plot
-    Cr = thisMBdata['Cr'] / 1e3
+    thisCr = thisMBdata['Cr'] / 1e3
     ax2.plot(
-        dia,
-        Cr,
+        diaList,
+        thisCr,
         color= clr,
         marker=mrkr,
-        linewidth=2,
         zorder=1,
         label=mbType
         )
 
 # 1 Axis Formatting
-ax1.set_xlabel(r'$D\ \mathrm{[m]}$')
-ax1.set_ylabel(r'$m\ \mathrm{[t]}$')
+# ax1.set_xlabel(r'$D\ \mathrm{[m]}$')
+ax1.set_title(r'$m\ \mathrm{[t]}$')
 ax1.grid(True)
 ax1.legend(loc='upper left')
 # 2 Axis Formatting
 ax2.set_xlabel(r'$D\ \mathrm{[m]}$')
-ax2.set_ylabel(r'$C\ \mathrm{[MN]}$')
+ax2.set_title(r'$C\ \mathrm{[MN]}$')
 ax2.grid(True)
+# ax2.set_xticks( np.arange(0,6) )
 ax2.legend(loc='upper left')
 # Final
 # plt.tight_layout()
