@@ -52,7 +52,7 @@
 &
 &
 \node [DataInter] (mat-lss) {$\begin{array}{c}lss\_E \\ lss\_G \\ lss\_Xy \\ lss\_rho\end{array}$};&
-&
+\node [DataInter] (mat-mb@fls) {$\begin{array}{c}lss\_E\end{array}$};&
 &
 &
 \\
@@ -75,10 +75,10 @@
 &
 &
 \node [Function] (layout) {$\text{\text{3: layout}}$};&
-\node [DataInter] (layout-bear1) {$\begin{array}{c}Dshaft\_mb1\end{array}$};&
-\node [DataInter] (layout-bear2) {$\begin{array}{c}Dshaft\_mb2\end{array}$};&
+\node [DataInter] (layout-bear1) {$\begin{array}{c}D\_shaft\_mb1\end{array}$};&
+\node [DataInter] (layout-bear2) {$\begin{array}{c}D\_shaft\_mb2\end{array}$};&
 \node [DataInter] (layout-lss) {$\begin{array}{c}s\_lss \\ s\_mb1 \\ s\_mb2 \\ s\_rotor\end{array}$};&
-\node [DataInter] (layout-mb@fls) {$\begin{array}{c}s\_lss\end{array}$};&
+\node [DataInter] (layout-mb@fls) {$\begin{array}{c}D\_shaft\_mb2 \\ Tshaft\_mb2 \\ s\_lss\end{array}$};&
 \node [DataInter] (layout-misc) {$\begin{array}{c}H\_bedplate \\ L\_bedplate\end{array}$};&
 \node [DataInter] (layout-nac) {$\begin{array}{c}bedplate\_I \\ bedplate\_cm \\ bedplate\_mass \\ constr\_height \\ hss\_I \\ hss\_cm \\ hss\_mass \\ lss\_I \\ lss\_cm \\ lss\_mass\end{array}$};&
 \\
@@ -104,7 +104,7 @@
 &
 \node [Function] (bear2) {$\text{\text{5: bear2}}$};&
 \node [DataInter] (bear2-lss) {$\begin{array}{c}face\_width \\ mb\_Reactions\end{array}$};&
-\node [DataInter] (bear2-mb@fls) {$\begin{array}{c}mb\_Cr \\ mb\_X1 \\ mb\_X2 \\ mb\_Y1 \\ mb\_Y2 \\ mb\_p\end{array}$};&
+\node [DataInter] (bear2-mb@fls) {$\begin{array}{c}mb\_Cr \\ mb\_X1 \\ mb\_X2 \\ mb\_Y1 \\ mb\_Y2 \\ mb\_k \\ mb\_p\end{array}$};&
 &
 \node [DataInter] (bear2-nac) {$\begin{array}{c}mb\_I \\ mb\_mass\end{array}$};&
 \\
@@ -219,12 +219,13 @@
 (gear) edge [DataLine] (gear-nac)
 (layout) edge [DataLine] (layout-bear1)
 (layout) edge [DataLine] (layout-bear2)
+(layout) edge [DataLine] (layout-mb@fls)
 (layout) edge [DataLine] (layout-misc)
 (layout) edge [DataLine] (layout-nac)
 (layout) edge [DataLine] (layout-lss)
-(layout) edge [DataLine] (layout-mb@fls)
 (mat) edge [DataLine] (mat-layout)
 (mat) edge [DataLine] (mat-lss)
+(mat) edge [DataLine] (mat-mb@fls)
 (misc) edge [DataLine] (misc-nac)
 (bear1) edge [DataLine] (left_output_bear1)
 (ScipyOptimizeDriver) edge [DataLine] (left_output_ScipyOptimizeDriver)
@@ -261,12 +262,13 @@
 (gear-nac) edge [DataLine] (nac)
 (layout-bear1) edge [DataLine] (bear1)
 (layout-bear2) edge [DataLine] (bear2)
+(layout-mb@fls) edge [DataLine] (mb@fls)
 (layout-misc) edge [DataLine] (misc)
 (layout-nac) edge [DataLine] (nac)
 (layout-lss) edge [DataLine] (lss)
-(layout-mb@fls) edge [DataLine] (mb@fls)
 (mat-layout) edge [DataLine] (layout)
 (mat-lss) edge [DataLine] (lss)
+(mat-mb@fls) edge [DataLine] (mb@fls)
 (misc-nac) edge [DataLine] (nac)
 (ScipyOptimizeDriver) edge [DataLine] (output_ScipyOptimizeDriver);
 \end{pgfonlayer}

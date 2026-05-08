@@ -1357,4 +1357,70 @@ if (param_for_study.lower() == "ldd") and (
     plt.show()
 # =============================================================
 
+#%%[markdown]
+# ### Create XDSM diagram using pyXDSM
+# 1. create of the problem defined above called 'prob'
+# 2. create like that shown in its docs: https://mdolab-pyxdsm.readthedocs-hosted.com/examples.html
+#%%
+if make_xdsm:
+    # reference docs code
+    from pyxdsm.XDSM import XDSM, OPT, SOLVER, FUNC, LEFT, RIGHT
+
+    # Change `use_sfmath` to False to use computer modern
+    x = XDSM(use_sfmath=True)
+
+    #           "alias", FUNC in-build, "display text"
+    x.add_system("opt", OPT, r"\text{Optimizer}")
+    x.add_system("mat", FUNC, "Materials")
+    x.add_system("gear", FUNC, "Gearbox")
+    x.add_system("layout", FUNC, "Layout")
+    x.add_system("bear1", FUNC, "MB1")
+    x.add_system("bear2", FUNC, "MB2")
+    x.add_system("lss", FUNC, "LSS")
+    x.add_system("mb_fls", FUNC, "FLS\_MBs")
+    # x.add_system("misc", FUNC, "Miscellanous")
+    x.add_system("nac", FUNC, "System\_Adder")
+    # inputs
+    x.add_input("lss", "\mathbf{f}_{uls}, \mathbf{m}_{uls}")
+    x.add_input("mb_fls", "\mathbf{F}, \mathbf{M}")
+    # connect all components to the design variables "d"
+    dvs = "\mathbf{d}"
+    x.connect("opt", "mat", dvs)
+    x.connect("opt", "gear", dvs)
+    x.connect("opt", "layout", dvs)
+    x.connect("opt", "bear1", dvs)
+    x.connect("opt", "bear2", dvs)
+    x.connect("opt", "lss", dvs)
+    x.connect("opt", "mb_fls", dvs)
+    # x.connect("opt", "misc", dvs) # TODO not connect, means rmv from prob?
+    x.connect("opt", "nac", dvs)
+    # connect between components
+    x.connect("mat", "lss", "properties")
+    x.connect("gear", "layout", "L_{gearbox}")
+    x.connect("layout", "bear1", "D_{mb1}")
+    x.connect("layout", "bear2", "D_{mb1}")
+    # x.connect("bear1", "bear2")
+    x.connect("bear1", "lss", "width, reactions")
+    x.connect("bear2", "lss", "width, reactions")
+    x.connect("bear1", "mb_fls", "Cr")
+    x.connect("bear1", "mb_fls", "Cr, X, Y")
+    x.connect("gear", "mb_fls", "m_{carrier}")
+    # -- to nac
+    x.connect("layout", "nac", "m_{lss}")
+    x.connect("bear1", "nac", "m_{mb1}")
+    x.connect("bear2", "nac", "m_{mb2}")
+    # constraints
+    constr = "\mathbf{g}"
+    x.connect("lss","opt", constr)
+    x.connect("mb_fls","opt", constr+"\_L_{10}")
+    # objective
+    x.connect("nac","opt", "m_{msa}")
+    # outputs
+    x.add_output("opt", dvs+"^*", side=LEFT)
+    x.add_output("lss", constr+"^*", side=LEFT)
+    x.add_output("mb_fls", constr+"\_L_{10}^*", side=LEFT)
+    x.add_output("nac", "f^*", side=LEFT)
+    # write
+    x.write(outdir=results_path,file_name="xdsm")
+
 #%%
