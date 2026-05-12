@@ -20,8 +20,8 @@
 %Row 0
 &
 &
-&
-&
+\node [DataIO] (output_mat) {$E,G,{rho}...$};&
+\node [DataIO] (output_gear) {$dimensions$};&
 &
 &
 &
@@ -32,14 +32,14 @@
 %Row 1
 \node [DataIO] (left_output_opt) {$\mathbf{d}^*$};&
 \node [Optimization] (opt) {$\text{Optimizer}$};&
-\node [DataInter] (opt-mat) {$\mathbf{d}$};&
-\node [DataInter] (opt-gear) {$\mathbf{d}$};&
+&
+&
 \node [DataInter] (opt-layout) {$\mathbf{d}$};&
 \node [DataInter] (opt-bear1) {$\mathbf{d}$};&
 \node [DataInter] (opt-bear2) {$\mathbf{d}$};&
 \node [DataInter] (opt-lss) {$\mathbf{d}$};&
 \node [DataInter] (opt-mb_fls) {$\mathbf{d}$};&
-\node [DataInter] (opt-nac) {$\mathbf{d}$};&
+&
 \\
 %Row 2
 &
@@ -72,9 +72,9 @@
 &
 \node [Function] (layout) {$Layout$};&
 \node [DataInter] (layout-bear1) {$D_{mb1}$};&
-\node [DataInter] (layout-bear2) {$D_{mb1}$};&
+\node [DataInter] (layout-bear2) {$D_{mb2}$};&
 &
-&
+\node [DataInter] (layout-mb_fls) {$D_{mb2},t_{mb2}$};&
 \node [DataInter] (layout-nac) {$m_{lss}$};&
 \\
 %Row 5
@@ -85,8 +85,8 @@
 &
 \node [Function] (bear1) {$MB1$};&
 &
-\node [DataInter] (bear1-lss) {$width, reactions$};&
-\node [DataInter] (bear1-mb_fls) {$Cr, X, Y$};&
+\node [DataInter] (bear1-lss) {$fw, \mathbf{r}$};&
+\node [DataInter] (bear1-mb_fls) {$C$};&
 \node [DataInter] (bear1-nac) {$m_{mb1}$};&
 \\
 %Row 6
@@ -97,8 +97,8 @@
 &
 &
 \node [Function] (bear2) {$MB2$};&
-\node [DataInter] (bear2-lss) {$width, reactions$};&
-&
+\node [DataInter] (bear2-lss) {$fw, \mathbf{r}$};&
+\node [DataInter] (bear2-mb_fls) {$C, X, Y, k, p$};&
 \node [DataInter] (bear2-nac) {$m_{mb2}$};&
 \\
 %Row 7
@@ -157,22 +157,20 @@
 \begin{pgfonlayer}{data}
 \path
 % Horizontal edges
-(opt) edge [DataLine] (opt-mat)
-(opt) edge [DataLine] (opt-gear)
 (opt) edge [DataLine] (opt-layout)
 (opt) edge [DataLine] (opt-bear1)
 (opt) edge [DataLine] (opt-bear2)
 (opt) edge [DataLine] (opt-lss)
 (opt) edge [DataLine] (opt-mb_fls)
-(opt) edge [DataLine] (opt-nac)
 (mat) edge [DataLine] (mat-lss)
 (gear) edge [DataLine] (gear-layout)
 (layout) edge [DataLine] (layout-bear1)
 (layout) edge [DataLine] (layout-bear2)
+(layout) edge [DataLine] (layout-mb_fls)
 (bear1) edge [DataLine] (bear1-lss)
 (bear2) edge [DataLine] (bear2-lss)
 (bear1) edge [DataLine] (bear1-mb_fls)
-(bear1) edge [DataLine] (bear1-mb_fls)
+(bear2) edge [DataLine] (bear2-mb_fls)
 (gear) edge [DataLine] (gear-mb_fls)
 (layout) edge [DataLine] (layout-nac)
 (bear1) edge [DataLine] (bear1-nac)
@@ -185,22 +183,20 @@
 (mb_fls) edge [DataLine] (left_output_mb_fls)
 (nac) edge [DataLine] (left_output_nac)
 % Vertical edges
-(opt-mat) edge [DataLine] (mat)
-(opt-gear) edge [DataLine] (gear)
 (opt-layout) edge [DataLine] (layout)
 (opt-bear1) edge [DataLine] (bear1)
 (opt-bear2) edge [DataLine] (bear2)
 (opt-lss) edge [DataLine] (lss)
 (opt-mb_fls) edge [DataLine] (mb_fls)
-(opt-nac) edge [DataLine] (nac)
 (mat-lss) edge [DataLine] (lss)
 (gear-layout) edge [DataLine] (layout)
 (layout-bear1) edge [DataLine] (bear1)
 (layout-bear2) edge [DataLine] (bear2)
+(layout-mb_fls) edge [DataLine] (mb_fls)
 (bear1-lss) edge [DataLine] (lss)
 (bear2-lss) edge [DataLine] (lss)
 (bear1-mb_fls) edge [DataLine] (mb_fls)
-(bear1-mb_fls) edge [DataLine] (mb_fls)
+(bear2-mb_fls) edge [DataLine] (mb_fls)
 (gear-mb_fls) edge [DataLine] (mb_fls)
 (layout-nac) edge [DataLine] (nac)
 (bear1-nac) edge [DataLine] (nac)
@@ -208,6 +204,8 @@
 (lss-opt) edge [DataLine] (opt)
 (mb_fls-opt) edge [DataLine] (opt)
 (nac-opt) edge [DataLine] (opt)
+(mat) edge [DataLine] (output_mat)
+(gear) edge [DataLine] (output_gear)
 (lss) edge [DataLine] (output_lss)
 (mb_fls) edge [DataLine] (output_mb_fls);
 \end{pgfonlayer}
