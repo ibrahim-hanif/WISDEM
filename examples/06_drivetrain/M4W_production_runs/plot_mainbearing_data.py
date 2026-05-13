@@ -88,14 +88,20 @@ params_plot_rc = {
         "lines.markersize": 8,
     }
 plt.rcParams.update( params_plot_rc )
-figsize=(8,16)
+# grid shape
+gridspec = (1,2) # TODO to vary plot: side-side (1,2) or top-down (2,1)
+figsize = tuple( [8*x for x in gridspec[::-1] ] )
+# - tall fig
+if gridspec[0] > gridspec[1]: gs_ax2 = [1,0]
+# - wide fig
+else: gs_ax2 = [0,1]
 
 #%% # plt plot
 fig = plt.figure(figsize=figsize)
-gs = fig.add_gridspec(2,1, hspace=0.2)#, wspace=0.25)
+gs = fig.add_gridspec(*gridspec, hspace=0.2)#, wspace=0.25)
 # create axis ONCE before loop
 ax1 = fig.add_subplot(gs[0,0])
-ax2 = fig.add_subplot(gs[1,0])
+ax2 = fig.add_subplot(gs[*gs_ax2])
 
 for mbType, clr, mrkr in zip(mbList, clrsList, mrkerList):
     thisMBdata = mbData[ mbType ]
