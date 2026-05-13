@@ -92,7 +92,10 @@ plt.rcParams.update( params_plot_rc )
 gridspec = (1,2) # TODO to vary plot: side-side (1,2) or top-down (2,1)
 figsize = tuple( [8*x for x in gridspec[::-1] ] )
 # - tall fig
-if gridspec[0] > gridspec[1]: gs_ax2 = [1,0]
+tall_fig = False
+if gridspec[0] > gridspec[1]:
+    gs_ax2 = [1,0]
+    tall_fig = True
 # - wide fig
 else: gs_ax2 = [0,1]
 
@@ -129,6 +132,7 @@ for mbType, clr, mrkr in zip(mbList, clrsList, mrkerList):
 # 1 Axis Formatting
 # ax1.set_xlabel(r'$D\ \mathrm{[m]}$')
 ax1.set_title(r'$m\ \mathrm{[t]}$')
+if not tall_fig: ax1.set_xlabel(r'$D\ \mathrm{[m]}$')
 ax1.grid(True)
 ax1.legend(loc='upper left')
 # 2 Axis Formatting
@@ -140,7 +144,7 @@ ax2.legend(loc='upper left')
 # Final
 # plt.tight_layout()
 # Save
-plot_path = os.path.join(results_path, "mb_m&Cr.pdf")
+plot_path = os.path.join(results_path, "mb_m&Cr_wide.pdf")
 # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 # Show
 plt.show()
