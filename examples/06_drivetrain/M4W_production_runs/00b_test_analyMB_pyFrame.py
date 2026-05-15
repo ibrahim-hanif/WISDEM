@@ -198,6 +198,14 @@ else:
     Mx, My, Mz = myForces, myForces, myForces
 
 #%%[markdown]
+# ### Define type of analysis
+#%%
+# TODO: uncomment the desired analysis type
+anaString = "MomentReactingFrame_nonAnalyBeam"; analysis = 1
+# anaString = "MomentReacting"; analysis = 2
+# anaString = "nonMomentReacting"; analysis = 3
+
+#%%[markdown]
 # ### Compare mb* loads (F,M) btw analy_*(s) (and Hub_* `pyFrame3DD`)
 # -----------------------------------------------------------------
 #%%
@@ -245,7 +253,7 @@ I_lss = lssMB2section.Iyy # m^2
 EI = E_lss*I_lss
 # -- bearing torsional stiffness (Nm/rad)
 k_torsional = eval( var_dict['mb_fls.k_mb2'] ) - 6e8 # 3.e10 - 6e8 = 2.94e10 
-k_torsional *= 0
+if analysis != 2: k_torsional *= 0
 # lambda
 lam = (k_torsional*L_12)/(3*EI); print(f" -- lam = {lam}")
 lamL = lam*L_12; print(f" -- lamL = {lamL}")
@@ -363,7 +371,8 @@ mb1_Reactions = prob['mb1_Reactions'] = eval( var_dict['mb1_Reactions'] )
 # --- TRB2
 mb2_Reactions = prob['mb2_Reactions'] = eval( var_dict['mb2_Reactions'] )
 # ----- non-moment reacting (SRB)
-mb2_Reactions = prob['mb2_Reactions'] = [1.0,1.0,1.0, 0.0,0.0,0.0]
+if analysis == 3:
+    mb2_Reactions = prob['mb2_Reactions'] = [1.0,1.0,1.0, 0.0,0.0,0.0]
 # ----- finite stiffness (springs) and not rigid
 # mb2_Reactions = prob['mb2_Reactions'] = 1e9 * np.array([3.39, 5.38, 8.78, 0.0, 5.92e-1, 3.62e-1])
 # - materials
@@ -573,14 +582,18 @@ M_mb2_myframe[3,:] = np.hypot(M_mb2_myframe[1,:], M_mb2_myframe[2,:])
 loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
 clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
 clr_Frame = clrs_m4w['Dark_Blue']
-clr_Beam = clrs_m4w['Red']
+if analysis == 1: clr_Beam = clrs_m4w['Aqua']
+else: clr_Beam = clrs_m4w['Red']
 # --- line options
 lineWidth_Frame = 3
 lineStyle_Frame = 'dashed'
 # --- labels
-label_Frame = "pyFrame3DD"
-label_Beam = "analytical EB-beam"
-label_analyMB = "analytical"
+label_analyMB = " analytical"
+label_Frame = " \nstructural solver"
+# ---- based on analysis: [ analyMB, pyFrame ]
+if analysis == 1: lstAnaType = ["non-MR", "MR"]
+elif analysis == 2: lstAnaType = ["MR"]*2
+elif analysis == 3: lstAnaType = ["MR "+r"$(k_{\theta}=0)$","non-MR"]
 # -------------------------
 # options: Journal polish
 # plot rc params
@@ -596,7 +609,7 @@ plt.rcParams.update( params_plot_rc )
 #%%
 # PUBLICATION plot and compare loads from analy_ and Hub_]
 # F_mb1_beam.shape# = (4,1,numTS)
-fig = plt.figure(figsize=(15,15))
+fig = plt.figure(figsize=(14,14))
 gs = fig.add_gridspec(5, 2, hspace=0.35, wspace=0.25)
 # ---- grid = mb1, mb2
 #             [ ax,
@@ -607,8 +620,8 @@ gs = fig.add_gridspec(5, 2, hspace=0.35, wspace=0.25)
 # ==== axial ====
 # 0,0 = mb1
 ax = fig.add_subplot(gs[0,0])
-ax.plot(0, 0, label=label_Beam, color=clr_Beam )
-ax.plot(0, 0, label=label_Frame, color=clr_Frame, linestyle=lineStyle_Frame, linewidth=lineWidth_Frame)
+ax.plot(0, 0, label=lstAnaType[0]+label_analyMB, color=clr_Beam )
+ax.plot(0, 0, label=lstAnaType[1]+label_Frame, color=clr_Frame, linestyle=lineStyle_Frame, linewidth=lineWidth_Frame)
 ax.set_title("MB1 " + r"$(\times 10^6)$")
 ax.set_xticks([])
 ax.set_yticks([])
@@ -721,7 +734,8 @@ ax.set_xticks([])
 # ----------
 fig.tight_layout()
 
-plot_path = os.path.join(results_path, "mbReactions_nonMomentReacting.pdf")
+plot_path = os.path.join(results_path,
+                         "mbReactions_"+anaString+".png")
 # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 
 plt.show()
