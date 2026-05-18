@@ -53,7 +53,7 @@ import utilities_drivetrain as utilsDT
 suffix = "_m4w"
 
 # post-processing results
-make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
+make_xdsm, xdsm_type = True, "html"       # html-show or detailed pdf
 record_cases = False    #TODO: add in final setup (full problem)
 plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
@@ -1381,7 +1381,7 @@ if make_xdsm:
     # x.add_system("misc", FUNC, "Miscellanous")
     x.add_system("nac", FUNC, "System\_Adder")
     # inputs
-    x.add_input("mat", "E,G,rho...")
+    x.add_input("mat", "properties")
     x.add_input("gear", "dimensions")
     x.add_input("lss", "F^{max}, M^{max}")
     x.add_input("mb_fls", "\mathbf{F}, \mathbf{M}")
@@ -1398,6 +1398,7 @@ if make_xdsm:
     # x.connect("opt", "nac", dvs)
     # connect between components
     x.connect("mat", "lss", "properties")
+    x.connect("mat", "mb_fls", "E")
     x.connect("gear", "layout", "L_{gearbox}")
     x.connect("layout", "bear1", "D_{mb1}")
     x.connect("layout", "bear2", "D_{mb2}")
@@ -1407,6 +1408,7 @@ if make_xdsm:
     x.connect("bear2", "lss", "fw, \mathbf{r}")
     x.connect("bear1", "mb_fls", "C")
     x.connect("bear2", "mb_fls", "C, X, Y, k, p")
+    x.connect("gear", "lss", "m_{carrier}")
     x.connect("gear", "mb_fls", "m_{carrier}")
     # -- to nac
     x.connect("layout", "nac", "m_{lss}")
@@ -1414,8 +1416,8 @@ if make_xdsm:
     x.connect("bear2", "nac", "m_{mb2}")
     # constraints
     constr = "\mathbf{g}"
-    x.connect("lss","opt", constr)
-    x.connect("mb_fls","opt", constr+"\_L_{10}")
+    x.connect("lss","opt", "g\_\sigma, g\_\sigma_{defl}, g\_\sigma_{ang}, g\_L_{h1,mb1}, g\_L_{12,mbs}")
+    x.connect("mb_fls","opt", "g\_L_{10}^{mb1}, g\_L_{10}^{mb2}")
     # objective
     x.connect("nac","opt", "m_{msa}")
     # outputs

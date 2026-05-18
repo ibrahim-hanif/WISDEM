@@ -20,7 +20,7 @@
 %Row 0
 &
 &
-\node [DataIO] (output_mat) {$E,G,{rho}...$};&
+\node [DataIO] (output_mat) {$properties$};&
 \node [DataIO] (output_gear) {$dimensions$};&
 &
 &
@@ -50,7 +50,7 @@
 &
 &
 \node [DataInter] (mat-lss) {$properties$};&
-&
+\node [DataInter] (mat-mb_fls) {$E$};&
 &
 \\
 %Row 3
@@ -61,7 +61,7 @@
 \node [DataInter] (gear-layout) {$L_{gearbox}$};&
 &
 &
-&
+\node [DataInter] (gear-lss) {$m_{carrier}$};&
 \node [DataInter] (gear-mb_fls) {$m_{carrier}$};&
 &
 \\
@@ -103,7 +103,7 @@
 \\
 %Row 7
 \node [DataIO] (left_output_lss) {$\mathbf{g}^*$};&
-\node [DataInter] (lss-opt) {$\mathbf{g}$};&
+\node [DataInter] (lss-opt) {$g\_\sigma, g\_\sigma_{defl}, g\_\sigma_{ang}, g\_L_{h1,mb1}, g\_L_{12,mbs}$};&
 &
 &
 &
@@ -115,7 +115,7 @@
 \\
 %Row 8
 \node [DataIO] (left_output_mb_fls) {$\mathbf{g}\_L_{10}^*$};&
-\node [DataInter] (mb_fls-opt) {$\mathbf{g}\_L_{10}$};&
+\node [DataInter] (mb_fls-opt) {$g\_L_{10}^{mb1}, g\_L_{10}^{mb2}$};&
 &
 &
 &
@@ -163,6 +163,7 @@
 (opt) edge [DataLine] (opt-lss)
 (opt) edge [DataLine] (opt-mb_fls)
 (mat) edge [DataLine] (mat-lss)
+(mat) edge [DataLine] (mat-mb_fls)
 (gear) edge [DataLine] (gear-layout)
 (layout) edge [DataLine] (layout-bear1)
 (layout) edge [DataLine] (layout-bear2)
@@ -171,6 +172,7 @@
 (bear2) edge [DataLine] (bear2-lss)
 (bear1) edge [DataLine] (bear1-mb_fls)
 (bear2) edge [DataLine] (bear2-mb_fls)
+(gear) edge [DataLine] (gear-lss)
 (gear) edge [DataLine] (gear-mb_fls)
 (layout) edge [DataLine] (layout-nac)
 (bear1) edge [DataLine] (bear1-nac)
@@ -189,6 +191,7 @@
 (opt-lss) edge [DataLine] (lss)
 (opt-mb_fls) edge [DataLine] (mb_fls)
 (mat-lss) edge [DataLine] (lss)
+(mat-mb_fls) edge [DataLine] (mb_fls)
 (gear-layout) edge [DataLine] (layout)
 (layout-bear1) edge [DataLine] (bear1)
 (layout-bear2) edge [DataLine] (bear2)
@@ -197,6 +200,7 @@
 (bear2-lss) edge [DataLine] (lss)
 (bear1-mb_fls) edge [DataLine] (mb_fls)
 (bear2-mb_fls) edge [DataLine] (mb_fls)
+(gear-lss) edge [DataLine] (lss)
 (gear-mb_fls) edge [DataLine] (mb_fls)
 (layout-nac) edge [DataLine] (nac)
 (bear1-nac) edge [DataLine] (nac)
