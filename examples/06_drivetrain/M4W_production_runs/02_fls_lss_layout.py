@@ -956,7 +956,10 @@ if flag_study_parametric and flag_opt_GBO:
         len_dv = int(val.size)
         outs_recorded[key] = np.zeros( (len_steps, len_dv) )
     # - constr
-    lst_constr_user = ["constr_L10_mb1", "constr_L10_mb2", "constr_lss_vonmises"]
+    lst_constr_user = [
+        "constr_L10_mb1", "constr_L10_mb2", "constr_lss_vonmises",
+        "constr_shaft_angle", "constr_shaft_deflection"
+        ]
     lst_constr = prob.driver.get_constraint_values()
     for key, val in lst_constr.items():
         if key in lst_constr_user:
@@ -987,7 +990,7 @@ if flag_study_parametric and flag_opt_GBO:
             # set L val: DONE above
             # prob["L_h1"] = 0.3
             # prob["L_12"] = 2.0
-            # prob["lss_diameter"] = np.array([1.0,1.0])
+            # prob["lss_diameter"] = np.array([2.0,2.0])
             # prob["lss_wall_thickness"] = np.array([0.1,0.1])
 
         # LDD param study
