@@ -53,7 +53,7 @@ import utilities_drivetrain as utilsDT
 suffix = "_m4w"
 
 # post-processing results
-make_xdsm, xdsm_type = True, "html"       # html-show or detailed pdf
+make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
 record_cases = False    #TODO: add in final setup (full problem)
 plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
@@ -956,9 +956,13 @@ if flag_study_parametric and flag_opt_GBO:
         len_dv = int(val.size)
         outs_recorded[key] = np.zeros( (len_steps, len_dv) )
     # - constr
-    lst_constr = ["constr_L10_mb1", "constr_L10_mb2"] 
-    for key in lst_constr:
-        outs_recorded[key] = np.zeros( (len_steps, 1) )
+    lst_constr_user = ["constr_L10_mb1", "constr_L10_mb2", "constr_lss_vonmises"]
+    lst_constr = prob.driver.get_constraint_values()
+    for key, val in lst_constr.items():
+        if key in lst_constr_user:
+            len_constr = int(val.size)
+            print(key, len_constr)
+            outs_recorded[key] = np.zeros( (len_steps, len_constr) )
     # - other masses to record
     lst_masses = ["mb1_mass", "mb2_mass", "lss_mass"]
     for key in lst_masses:
