@@ -1,3 +1,8 @@
+"""
+utilities_drivetrain.py
+
+written by Vasudev Gupta, IMT NTNU Norway, 2026-05-19
+"""
 import openmdao as om
 import numpy as np
 import pandas as pd
@@ -16,33 +21,31 @@ def read_df_to_prob( this_case, prob ):
     Internal Progress
     ______________
     1. DONE : implement
-    2. TODO : automate, based on outs_recorded keys
+    2. DONE : automate, based on outs_recorded keys
+    3. TODO : use `prob.driver.get_design_var_values()` to update from this_case df to prob
     """
-    # this_case = df.loc[ row ]
-    
-    # update problem variables TODO: make this automated
-    # prob["gear_ratio"] = this_case['gear_ratio']
-    # prob["gearbox_mass_user"] = this_case['gearbox_mass_user']
-    # prob["generator_mass_user"] = this_case['generator_mass_user']
 
-    # prob['L_h1'] = this_case['L_h1']
-    # prob['L_12'] = this_case['L_12']
-    # prob['lss_diameter'] = np.array(eval(this_case['lss_diameter']))
-    # prob['lss_wall_thickness'] = np.array(eval(this_case['lss_wall_thickness']))
+    # iter over this_case
 
-    # prob['L_hss'] = this_case['L_hss']
-    # prob['hss_diameter'] = np.array(eval(this_case['hss_diameter']))
-    # prob['hss_wall_thickness'] = np.array(eval(this_case['hss_wall_thickness']))
+    # TODO use prob.driver.get_design_var_values() to update from this_case df to prob
+    # lst_dvs = prob.driver.get_design_var_values()
+    # for key, val in lst_dvs.items():
+    #     # work on DVs
+    #     # 1. float type
+    #     if type(val) in [float, np.float64]: prob[key] = this_case[key]
+    #     # 2. str type for vector DVs or params
+    #     elif type(val) == str:
+    #         # DV
+    #         if this_case[key].startswith('[') and this_case[key].endswith(']'):
+    #             prob[key] = np.array(eval( this_case[key] ))
+    #         # param
+    #         else: prob[key] = str(this_case[key])
 
-    # prob['bedplate_web_thickness'] = this_case['bedplate_web_thickness']
-    # prob['bedplate_flange_thickness'] = this_case['bedplate_flange_thickness']
-    # prob['bedplate_flange_width'] = this_case['bedplate_flange_width']
-    # TODO: est. L,R of GB and gen (asked)
-
-    # iter over this_case 
     for key, value in this_case.items():
         # skip non-DV keys
-        if key in ["status_driver_exit","time"]: continue
+        if (
+            key in ["status_driver_exit","time"]) or (
+                key.startswith("constr_")): continue
         # work on DVs
         # 1. float type
         if type(value) in [float, np.float64]: prob[key] = value
@@ -93,7 +96,7 @@ def fill_case_dict_from_prob( i_case, prob, outs_recorded, tcomp ):
             outs_recorded[key][i_case] = tcomp
             continue
         # optim vars
-        outs_recorded[key][i_case,:] = prob[key]
+        outs_recorded[key][i_case,:] = prob[key].flatten()
 
     return outs_recorded
 # ==========
@@ -115,7 +118,7 @@ def write_dict_to_df(  df, row, outs_recorded ):
         elif type(val) == type( np.empty(1) ):
             if len(val) == 1: # for time, dvs
                 df.at[row,key] = val
-            elif len(val) == 2:
+            elif len(val) > 1: # for vector DVs, constrs
                 df.at[row,key] = np.array2string(val, separator=',')
         
     return df
