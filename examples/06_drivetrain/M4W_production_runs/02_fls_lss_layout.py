@@ -595,7 +595,7 @@ if not flag_load_from_data:
     # Layout / lss inputs
     prob["L_h1"] = 0.1 #(def: 0.5), 4.25; converg: 0.264
     prob["L_12"] = 2.0 #(def: 2.0), 7.1; converg: 6.936
-    prob["lss_diameter"] = np.array([2.0, 2.0]) #(def:2.0), 4.0; converg: np.array([2.907, 1.679])
+    prob["lss_diameter"] = np.array([3.0, 3.0]) #(def:2.0), 4.0; converg: np.array([2.907, 1.679])
     prob["lss_wall_thickness"] = np.array([0.1, 0.1]) #(def:0.1), 0.3; converg: np.array([0.006, 0.123])
 
     flange_MS_length = 0.3*(D_rotor/100)**2 - 0.1*(D_rotor/100) + 0.4
