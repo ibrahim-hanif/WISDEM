@@ -691,7 +691,7 @@ print("\n=== Final input check ===\n")
 prob.model.list_inputs();
 om.n2(prob, outfile=loc_n2, show_browser=True);
 
-# %% [markdown]
+#%%
 # ### Run: Optimization / DOE / Analysis
 # `_driver` (optimization) / `_model` (analysis)
 
@@ -898,12 +898,10 @@ if flag_study_parametric and flag_opt_GBO:
     if param_for_study.lower() == "mb":
         cases = pd.read_csv( loc_DOEcsv_MBtype )
         
-        steps_MBtype = [
-            ("CRB","TRB2"),
-            ("CARB","TRB2"),
-            ("CRB","SRB"),
-            ("CARB","SRB")
-            ]
+        # list of tuple of bearing types from cases df
+        steps_MBtype = list(zip(
+            cases["bear1.bearing_type"], cases["bear2.bearing_type"]
+            ))
         print(" - MB types: ", steps_MBtype);
         # length: total num of param varying steps
         len_steps = len(cases)
@@ -964,7 +962,7 @@ if flag_study_parametric and flag_opt_GBO:
     for key, val in lst_constr.items():
         if key in lst_constr_user:
             len_constr = int(val.size)
-            print(key, len_constr)
+            # print(key, len_constr) # debugging
             outs_recorded[key] = np.zeros( (len_steps, len_constr) )
     # - other masses to record
     lst_masses = ["mb1_mass", "mb2_mass", "lss_mass"]
@@ -983,7 +981,7 @@ if flag_study_parametric and flag_opt_GBO:
         if param_for_study.lower() == "mb":
             # set MB type
             set_MBs = steps_MBtype[i]
-            print(f"=== type of bearing: {set_MBs} ===")
+            print(f"=== type of bearings: {set_MBs} ===")
             this_case = cases.loc[i]
             prob = utilsDT.read_df_to_prob( this_case, prob )
             print("-------------------- v ------------------")
