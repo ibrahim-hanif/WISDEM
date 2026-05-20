@@ -593,7 +593,7 @@ class GearedLayout(Layout):
         outputs["hss_cm"] = cm_hss
         outputs["hss_I"] = I_hss
         outputs["s_hss"] = s_hss
-
+        # ---- (v: TODO check direction consistency of s_ and D_, t_ for LSS)
         m_lss, cm_lss, I_lss, Ds_lss, ts_lss = rod_prop(s_lss, D_lss, t_lss, lss_rho) #(v) LSS
         outputs["lss_mass"] = m_lss
         outputs["lss_cm"] = cm_lss
