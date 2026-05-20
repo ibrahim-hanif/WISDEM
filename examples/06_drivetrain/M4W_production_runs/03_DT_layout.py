@@ -620,7 +620,7 @@ if (flag_opt_GBO or flag_DOE): # and not flag_study_parametric:
     # ---- time it ;)
     t1 = time.time()
     status_optim = prob.driver.get_exit_status()
-    print(" - ",status_optim,": WISDEM run completed in,", t1-t0, "seconds")
+    print(" - ",status_optim,": WISDEM run completed in,", (t1-t0)/60, "minutes")
 
 elif flag_opt_GFO:
     # Run the GFO
