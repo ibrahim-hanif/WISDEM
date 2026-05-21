@@ -143,6 +143,10 @@ def write_yaml_of_drivetrain_properties( prob, loc_save_RNAprops4tower ):
     props_geo = rna_props["geometry_options"] = {}
     # ---- drivetrain
     props_DT = props_geo["drivetrain"] = {}
+
+    props_DT["uptilt"] = np.deg2rad(prob["tilt"])[0]
+    props_DT["distance_tt_hub"] = prob["drive_height"][0]
+
     props_DT["distance_hub_mb"] = prob["L_h1"][0]
     props_DT["distance_mb_mb"] = prob["L_12"][0]
     props_DT["overhang"] = prob["overhang"][0]

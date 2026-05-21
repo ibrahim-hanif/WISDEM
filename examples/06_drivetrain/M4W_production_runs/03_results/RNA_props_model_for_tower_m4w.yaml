@@ -1,5 +1,7 @@
 geometry_options:
     drivetrain:
+        uptilt: 0.10471975511965978
+        distance_tt_hub: 5.614
         distance_hub_mb: 0.3621372276834023
         distance_mb_mb: 5.192940883253409
         overhang: 12.0313
