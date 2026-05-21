@@ -419,44 +419,36 @@ components: #(v) specifications for individual components (blades, tower, nacell
         spinner_material: glass_uni
     nacelle: #(v) TODO: update if needed
         drivetrain:
-            uptilt: 0.10471975511965977 # 6 deg
+            uptilt: 0.10471975511965978
             distance_tt_hub: 5.614
-            distance_hub_mb: 0.7184620213382338 #----result of 03_nacelle_optim+below----
-            distance_mb_mb: 5.768591435998086
-            overhang: 12.0313 # def: 12.0313 & iea15: 11.35
-
-            gear_ratio: 49.6031746
+            distance_hub_mb: 0.3621372276834023
+            distance_mb_mb: 5.192940883253409
+            overhang: 12.0313
+            gear_ratio: 49.61325590726571
             gearbox_mass_user: 138728.6451
-            gearbox_efficiency: 0.992 # 1.0; D5.1, R2
+            gearbox_efficiency: 0.992
             gearbox_length_user: 2.7636198183
-            gearbox_radius_user: 2.312024
-
-            lss_diameter: [3.365553111311581, 4.657697418795918]
-            lss_wall_thickness: [0.11453352732170431, 0.03568347533110619]
+            gearbox_radius_user: 2.3120240000000005
+            lss_diameter: [3.7963420208099907, 2.7526856627049927]
+            lss_wall_thickness: [0.05485168842502003, 0.19312666299496742]
             lss_material: steel_drive
-
-            hss_length: 0.13341164397308636
-            hss_diameter: [0.5, 0.5]
-            hss_wall_thickness: [0.09527745774192861, 0.004]
+            hss_length: 2.3672417387162223
+            hss_diameter: [1.5604806309694106, 1.1716969766377088]
+            hss_wall_thickness: [0.004000000143349083, 0.0041482008194753395]
             hss_material: steel_drive
-
-            bedplate_flange_width: 2.378025555300192
-            bedplate_flange_thickness: 0.09687856273060264
-            bedplate_web_thickness: 0.07466965811151846
+            bedplate_flange_width: 1.6900784365536679
+            bedplate_flange_thickness: 0.14591328329023917
+            bedplate_web_thickness: 0.08205271248357443
             bedplate_material: steel_drive
-            # MB : DONE: add new inputs to main bearings and whole DT
             mb1Type: CRB
             mb2Type: TRB2
-            mb1_e: 0.4 # 0.0 (ULS); 0.4 (perform FLS)
+            mb1_e: 0.4
             mb2_e: 0.4
-
-            uptower: True
-
-            converter_mass_user: 5625 #[kg] IND Bidane's email
-
-        generator: # simple generator (cf. indar D5.4)
+            uptower: true
+            converter_mass_user: 5625.0
+        generator:
             generator_mass_user: 34800.0
-            generator_length: 1.550736
+            generator_length: 1.5507360000000001
             generator_radius_user: 1.4
             generator_rpm_efficiency_user:
                 grid: [0.0, 1.0]
