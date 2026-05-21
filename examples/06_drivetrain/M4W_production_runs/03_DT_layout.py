@@ -66,7 +66,7 @@ load_fls_loads = False
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 
 # Optimization flags
-flag_opt_GBO = True     # GBO: gradient based optimizer
+flag_opt_GBO = False     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 flag_debug_print = True
@@ -80,6 +80,7 @@ plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
 load_from_saved_data = True
+flag_save_RNAprops4tower = True
 
 # Parametric study
 flag_study_parametric = False
@@ -117,6 +118,10 @@ if record_cases:
 # - post-processing
 loc_scaling_report = os.path.join(results_path, 'scaling_report.html')
 loc_save_data = os.path.join(results_path, "03"+suffix) # "03"+suffix
+if flag_save_RNAprops4tower:
+    loc_save_RNAprops4tower = os.path.join(
+        results_path, "RNA_props_model_for_tower"+suffix+".yaml")
+
 
 # - load from saved data TODO
 # 02_ data
@@ -680,11 +685,12 @@ print(" - base_F: ", prob['base_F']) # drivese.base_F
 print(" - base_M: ", prob['base_M']) # drivese.base_M
 # -----------------------------------------------------------------------
 
-#%%[markdown]
+#%%
 # Driver scaling report 
-prob.driver.scaling_report(
-    outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
-);
+if flag_opt_GBO:
+    prob.driver.scaling_report(
+        outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
+    );
 #%%
 ### Recorded cases
 if record_cases:
@@ -868,7 +874,12 @@ if plot_cases:
 
     plt.show()
 
-#%%[markdown]
+#%%
+# Save rna properties into `yaml` file for next tower optimization
+if flag_save_RNAprops4tower:
+    utilsDT.write_yaml_of_drivetrain_properties( prob, loc_save_RNAprops4tower )
+
+ #%%[markdown]
 # ===============================================================
 # ### Convergence/parametric study setup
 # 1. vary chosen GRs (and rspt. GB and gen weights)

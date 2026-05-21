@@ -1,0 +1,43 @@
+geometry_options:
+    drivetrain:
+        distance_hub_mb: 0.3621372276834023
+        distance_mb_mb: 5.192940883253409
+        overhang: 12.0313
+        gear_ratio: 49.61325590726571
+        gearbox_mass_user: 138728.6451
+        gearbox_efficiency: 0.992
+        gearbox_length_user: 2.7636198183
+        gearbox_radius_user: 2.3120240000000005
+        lss_diameter: [3.7963420208099907, 2.7526856627049927]
+        lss_wall_thickness: [0.05485168842502003, 0.19312666299496742]
+        lss_material: steel_drive
+        hss_length: 2.3672417387162223
+        hss_diameter: [1.5604806309694106, 1.1716969766377088]
+        hss_wall_thickness: [0.004000000143349083, 0.0041482008194753395]
+        hss_material: steel_drive
+        bedplate_flange_width: 1.6900784365536679
+        bedplate_flange_thickness: 0.14591328329023917
+        bedplate_web_thickness: 0.08205271248357443
+        bedplate_material: steel_drive
+        mb1Type: CRB
+        mb2Type: TRB2
+        mb1_e: 0.4
+        mb2_e: 0.4
+        uptower: true
+        converter_mass_user: 5625.0
+    generator:
+        generator_mass_user: 34800.0
+        generator_length: 1.5507360000000001
+        generator_radius_user: 1.4
+        generator_rpm_efficiency_user:
+            grid: [0.0, 1.0]
+            values: [0.9805, 0.9805]
+modeling_options:
+    Loading:
+        mass: 930499.7182304717
+        center_of_mass: [-6.7879529741332565, -0.13573405507331612, 3.775449481479317]
+        moment_of_inertia: [360403348.95247865, 290075968.18688405, 277033859.39320356, 503.11850099550793, 14752205.946577286, 226645.50965191465]
+        loads:
+           -  force: [4787211.038093101, 1369691.0923608593, 1250608.865351364]
+              moment: [15560127.612668518, 143087347.0969987, 3481862.259332855]
+              velocity: 11.0
