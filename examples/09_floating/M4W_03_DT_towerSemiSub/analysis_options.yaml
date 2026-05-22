@@ -1,7 +1,7 @@
 # Generic analysis options where nothing is run
 general:
     folder_output: M4W_03_DT_towerSemiSub//outputs
-    fname_output: test
+    fname_output: test_m4w
 
 design_variables:
     drivetrain:
@@ -107,7 +107,7 @@ constraints:
 
     tower:
         height_constraint:
-            flag: False # TODO
+            flag: False # TODO? 1.not in latest iea15 wisdem float-tower optim, 2.output in csv=5.614=H_drive
             lower_bound: 1.e-2
             upper_bound: 1.e-2
         stress:
@@ -131,11 +131,10 @@ constraints:
             flag: False # always for just tower
         frequency_1:
             flag: False #True TODO 2
-            # stiff-stiff (cf. semi-sub report) TODO for M4W
+            # stiff-stiff (cf. iea15mw semi sub report); tower freqs (tab 8):
+            # - fore aft: 0.496
+            # - side side: 0.483
             lower_bound: 0.45
-            # soft-stiff (cf. semi-sub report) TODO for M4W
-            # lower_bound: 0.15
-            # upper_bound: 0.2
 
 merit_figure_user: # TODO
     name: "towerse.turbine_mass" # = rna_mass + tower_mass

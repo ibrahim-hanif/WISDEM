@@ -43,8 +43,8 @@ dir_m4w_run = mydir + os.sep + "M4W_03_DT_towerSemiSub"
 
 # ---- wind turbine geometry (same init for both iea and m4w)
 # fname_wt_input = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
-fname_wt_input = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
-# fname_wt_input = dir_m4w_run + os.sep + "outputs//test.yaml"
+# fname_wt_input = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
+fname_wt_input = dir_m4w_run + os.sep + "outputs//test_m4w.yaml"
 
 # ---- modelling options
 fname_model_opts_m4w = dir_m4w_run+os.sep+ "modeling_options_m4w_DTtower.yaml"
@@ -157,11 +157,15 @@ print(f"nacelle mass: {wt_opt["drivese.nacelle_mass"]}")
 print(f"nacelle cm: {wt_opt["drivese.nacelle_cm"]}")
 
 print("\n--- RNA properties ---")
+print(f"Nacelle mass: {wt_opt["drivese.nacelle_mass"]}")
 print(f"RNA mass: {wt_opt["drivese.rna_mass"]}")
 print(f"RNA cm: {wt_opt["drivese.rna_cm"]}")
 #
 print("\nTower mass: ", wt_opt['towerse.tower_mass'])
 #
+print("\nNacelle+Tower mass: ",
+      wt_opt['drivese.nacelle_mass'] + wt_opt['towerse.tower_mass']
+      )
 print("\nRNA+Tower mass: ", wt_opt['towerse.turbine_mass'])
 # -----------------------------------------------------------------------
 
