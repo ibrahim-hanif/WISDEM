@@ -114,6 +114,7 @@ freq_tower = wt_opt["floatingse.structural_frequencies"] # OR towerse.tower
 print("Tower fore-aft/side-side freq range:")
 print(" ", freq_tower[0:2], " Hz \n" )
 
+# ---- drivetrain variables
 print("LSS desvars:")
 print(" ", wt_opt["drivese.L_h1"], wt_opt["drivese.L_12"], wt_opt["drivese.lss_diameter"], wt_opt["drivese.lss_wall_thickness"] )
 #
@@ -303,14 +304,17 @@ if flag_plot:
       # Geometry YAML files
       # 1. base IEA 15-MW
       iea_report_yaml = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
+      # ---- iea_report_yaml "ieaReport" plot name
       acciona_yaml = dir_m4w_run +os.sep + "iea15mw_tower_semisub_acciona.yaml"
+      # 2. tower-optim M4W 15-MW
       m4w_IC_yaml = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
-      # 2. Made4Wind
-      m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test.yaml"
+      # ---- m4w_IC_yaml "onlyTower" plot name
+      # 3. DT-tower-optim M4W 15-MW (final run)
+      m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_m4w.yaml"
       # loc save img
       if save_new_plot:
             loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
-                  "geometry_tower_noFreqConstr_m4w&ieaReport.png"
+                  "geometry_tower_noFreqConstr_m4w&onlyTower.png"
                   )
       else: loc_save_img = None
       # plot
