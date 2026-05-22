@@ -76,11 +76,14 @@ make_xdsm = False       # html-show or detailed pdf
 record_cases = False    #TODO: add in final setup (full problem)
 
 # post-processing results
-plot_cases = True      #NOTE: saved, not changing now (commented)
+plot_cases = True
+save_new_plot = False #NOTE: saved, not changing now (commented)
+
 flag_scaling_show_browser = False
+
 flag_save_new_data = False
 load_from_saved_data = True
-flag_save_RNAprops4tower = True
+flag_save_RNAprops4tower = False
 
 # Parametric study
 flag_study_parametric = False
@@ -657,20 +660,18 @@ print("F_mb*:")
 print(" ", prob["F_mb1"], prob["F_mb2"] )
 print("M_mb*:")
 print(" ", prob["M_mb1"], prob["M_mb2"] )
+
 if doMBfls:
-    print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
+    print("\nconstr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
 print("--- constr_ max ---")
-print("- lss: ",
-      np.max(prob["constr_lss_vonmises"])
-      )
-print("- hss: ",
-      np.max(prob["constr_hss_vonmises"])
-      )
-print("- bedplate: ",
-      np.max(prob["constr_bedplate_vonmises"])
-      )
+print("- lss: ", np.max(prob["constr_lss_vonmises"]) )
+print("- hss: ", np.max(prob["constr_hss_vonmises"]) )
+print("- bedplate: ", np.max(prob["constr_bedplate_vonmises"]) )
+print("- defl mb1: ", np.max(prob["constr_mb1_defl"]) )
+print("- defl mb2: ", np.max(prob["constr_mb2_defl"]) )
+
 #
-print("--- obj: masses ---")
+print("\n--- obj: masses ---")
 print(f"MSA mass: {prob["msa_mass"]}")
 print(f"nacelle mass: {prob["nacelle_mass"]}")
 print(f"nacelle cm: {prob["nacelle_cm"]}")
@@ -705,182 +706,25 @@ if flag_save_new_data: save_data(loc_save_data, prob)
 # ===============================================================
 #%%[markdown]
 # # Plot recorded results
-#%%
-# main colors
-from my_util_tools import util_funcs
-loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
-clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
-# -------------------------
-# options: Journal polish
-# plot rc params
-params_plot_rc = {
-        "font.size": 24,
-        "axes.labelsize": 24,
-        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
-        "lines.linewidth": 2,
-        "lines.markersize": 6,
-    }
-plt.rcParams.update( params_plot_rc )
-
-fontsize = 18
-
 #%%[markdown]
 # ### Drivetrain mass comparison (IEA and M4W)
 #%%
 if plot_cases:
-    # --------------------------------------------------
-    # Data (example values, replace with your real ones)
-    # --------------------------------------------------
-    components = [
-        "Main shaft",
-        "Turret nose",
-        "Main bearings",
-        "Gearbox",
-        "High-speed shaft",
-        "Brake",
-        "Generator",
-        "Converter",
-        "Transformer",
-        "Misc. components",
-        "Bedplate",
-        "Yaw system",
-    ]
-    len_compns = len(components)
-
-    # Masses in tonnes [t]
-    mass_IEA = {
-        "Main shaft":       15.734,
-        "Turret nose":      11.394,
-        "Main bearings":    7.894, # 2.230 + 5.664
-        "Gearbox":          0.0,
-        "High-speed shaft": 0.0,
-        "Brake":            25.6560,        # wisdem empirical
-        "Generator":        371.592,
-        "Converter":        30.0, # (wisdem empirical=11.98385 ; M4W data_collect indar=30.0)
-        "Transformer":      25.0, # (wisdem empirical=30.6350 ; M4W data_collect indar=25.0)
-        "Misc. components": 50.0,
-        "Bedplate":         70.329,
-        "Yaw system":       100.0,
-    }
-
-    mass_M4W = {
-        "Main shaft":       prob["lss_mass"][0] / 1e3,
-        "Turret nose":      0.0,
-        "Main bearings":    2.0*prob["mean_bearing_mass"][0] / 1e3,
-        "Gearbox":          prob["gearbox_mass"][0] / 1e3,
-        "High-speed shaft": prob["hss_mass"][0] / 1e3,
-        "Brake":            prob["brake_mass"][0] / 1e3,
-        "Generator":        prob["generator_mass"][0] / 1e3,
-        "Converter":        prob["converter_mass"][0] / 1e3,
-        "Transformer":      prob["transformer_mass"][0] / 1e3,
-        "Misc. components": (prob["hvac_mass"][0]+prob["platform_mass"][0]+prob["cover_mass"][0]) / 1e3,
-        "Bedplate":         prob["bedplate_mass"][0] / 1e3,
-        "Yaw system":       prob["yaw_mass"][0] / 1e3,
-    }
-
-    total_IEA = sum(mass_IEA.values())
-    total_M4W = sum(mass_M4W.values())
-
-    # --------------------------------------------------
-    # Styling (colors + hatching)
-    # --------------------------------------------------
-    # Consistent hatching / coloring
-    hatches = ['/', '\\', 'x', '-', '+', 'o', 'O', '.', '*', '//', 'xx', '++']
-    # Colors:
-    # ---- tab10
-    tab10 = plt.cm.tab10.colors
-    colors = list(tab10) + list(tab10[:2])  # extend to 12 components
-    # ----- Made4Wind
-    colors = []
-    for key,val in clrs_m4w.items():
-        colors.append(val)
-    colors = np.flip(colors)
-    if len_compns > len(colors):
-        # mul = np.ceil( len_compns/len(colors), 0)
-        colors *= 2
-
-    # --------------------------------------------------
-    # Figure
-    # --------------------------------------------------
-    # --- Figure setup ---
-    fig, ax = plt.subplots(figsize=(14, 14))
-
-    x = np.array([0, 1])
-    labels = ["IEA 15 MW", "MADE4WIND 15 MW"]
-    bar_width = 0.45
-
-    # --- Stacking ---
-    bottom_IEA = 0.0
-    bottom_M4W = 0.0
-    tops_IEA, tops_M4W = [], []
-
-    for i, comp in enumerate(components):
-        ax.bar(
-            x[0], mass_IEA[comp], bottom=bottom_IEA,
-            width=bar_width, color=colors[i],
-            hatch=hatches[i], edgecolor="black",
-            label=comp,
-        )
-
-        ax.bar(
-            x[1], mass_M4W[comp], bottom=bottom_M4W,
-            width=bar_width, color=colors[i],
-            hatch=hatches[i], edgecolor="black",
-        )
-
-        tops_IEA.append(bottom_IEA + mass_IEA[comp])
-        tops_M4W.append(bottom_M4W + mass_M4W[comp])
-
-        bottom_IEA += mass_IEA[comp]
-        bottom_M4W += mass_M4W[comp]
-
-    # --- Dotted connectors (top of each component) ---
-    for y_iea, y_m4w in zip(tops_IEA, tops_M4W):
-        ax.plot(
-            [x[0] + bar_width / 2, x[1] - bar_width / 2],
-            [y_iea, y_m4w],
-            linestyle=":", color="black", linewidth=1.2
-        )
-
-    # --- Total mass labels ---
-    total_IEA = sum(mass_IEA.values())
-    total_M4W = sum(mass_M4W.values())
-    offset = 8.0
-
-    ax.text(x[0], total_IEA + offset, rf"${total_IEA:.0f}\,\mathrm{{t}}$",
-            ha="center", va="bottom", fontsize=fontsize, fontweight="bold")
-    ax.text(x[1], total_M4W + offset, rf"${total_M4W:.0f}\,\mathrm{{t}}$",
-            ha="center", va="bottom", fontsize=fontsize, fontweight="bold")
-
-    # --- Formatting ---
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.set_ylabel(r"Mass [t]")
-    ax.set_title("Comparison of nacelle mass distribution")
-    ax.legend(
-        loc="center",
-        fontsize=fontsize, frameon=True
-    )
-    ax.grid(axis="y", alpha=0.3)
-
-    plt.tight_layout()
-
-    # -------------------------
-    # save
-    # -------------------------
-    plot_path = os.path.join(results_path,
-            "compare_mass"+suffix+".pdf")
-    # plt.savefig(plot_path) # NOTE: saved, so don't change now 
-
-    plt.show()
+    # save plot loc
+    loc_save_img = None
+    if save_new_plot:
+        loc_save_img = os.path.join( results_path,
+                        "compare_mass"+suffix+".png" )
+    # plot via func
+    utilsDT.plot_drivetrain_mass_comparison(prob, loc_save_img)
 
 #%%
 # Save rna properties into `yaml` file for next tower optimization
 if flag_save_RNAprops4tower:
     utilsDT.write_yaml_of_drivetrain_properties( prob, loc_save_RNAprops4tower )
+# ===============================================================
 
  #%%[markdown]
-# ===============================================================
 # ### Convergence/parametric study setup
 # 1. vary chosen GRs (and rspt. GB and gen weights)
 #
