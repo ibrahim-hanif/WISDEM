@@ -6,6 +6,11 @@ written by Vasudev Gupta, IMT NTNU Norway, 2026-05-19
 import openmdao as om
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import os
+from my_util_tools.util_funcs import loc_clr_scheme_m4w, read_color_scheme
+
+clrs_m4w = read_color_scheme( loc_clr_scheme_m4w )
 
 # ==========
 def read_df_to_prob( this_case, prob ):
@@ -215,4 +220,182 @@ def write_yaml_of_drivetrain_properties( prob, loc_save_RNAprops4tower ):
     rna_loads[0]["moment"] = prob["base_M"][:,0].tolist()   # convert to list for yaml
 
     write_yaml(rna_props, loc_save_RNAprops4tower)
+# ==========
+
+# ==========
+def plot_drivetrain_mass_comparison( prob, loc_save_img=None ):
+    """
+    plot drivetrain or nacelle mass breakdown comparison between
+    IEA 15 MW report and M4W results
+
+    Inputs
+    ______
+    prob : OpenMDAO problem
+        to extract M4W masses for comparison
+    
+    Outputs
+    _______
+    plot : 
+        a stacked bar plot comparing the mass breakdown
+
+    Internal Progress
+    _______
+    1. DONE : copy from 03_ and test
+    2. TODO : automate beyond only-DT to complete WT optim (use drivese.* as full namespace of variables)
+    """
+    # --------------------------------------------------
+    # Data (example values, replace with your real ones)
+    # --------------------------------------------------
+    components = [
+        "Main shaft",
+        "Turret nose",
+        "Main bearings",
+        "Gearbox",
+        "High-speed shaft",
+        "Brake",
+        "Generator",
+        "Converter",
+        "Transformer",
+        "Misc. components",
+        "Bedplate",
+        "Yaw system",
+    ]
+    len_compns = len(components)
+
+    # Masses in tonnes [t]
+    mass_IEA = {
+        "Main shaft":       15.734,
+        "Turret nose":      11.394,
+        "Main bearings":    7.894, # 2.230 + 5.664
+        "Gearbox":          0.0,
+        "High-speed shaft": 0.0,
+        "Brake":            25.6560,        # wisdem empirical
+        "Generator":        371.592,
+        "Converter":        30.0, # (wisdem empirical=11.98385 ; M4W data_collect indar=30.0)
+        "Transformer":      25.0, # (wisdem empirical=30.6350 ; M4W data_collect indar=25.0)
+        "Misc. components": 50.0,
+        "Bedplate":         70.329,
+        "Yaw system":       100.0,
+    }
+
+    mass_M4W = {
+        "Main shaft":       prob["lss_mass"][0] / 1e3,
+        "Turret nose":      0.0,
+        "Main bearings":    2.0*prob["mean_bearing_mass"][0] / 1e3,
+        "Gearbox":          prob["gearbox_mass"][0] / 1e3,
+        "High-speed shaft": prob["hss_mass"][0] / 1e3,
+        "Brake":            prob["brake_mass"][0] / 1e3,
+        "Generator":        prob["generator_mass"][0] / 1e3,
+        "Converter":        prob["converter_mass"][0] / 1e3,
+        "Transformer":      prob["transformer_mass"][0] / 1e3,
+        "Misc. components": (prob["hvac_mass"][0]+prob["platform_mass"][0]+prob["cover_mass"][0]) / 1e3,
+        "Bedplate":         prob["bedplate_mass"][0] / 1e3,
+        "Yaw system":       prob["yaw_mass"][0] / 1e3,
+    }
+
+    total_IEA = sum(mass_IEA.values())
+    total_M4W = sum(mass_M4W.values())
+
+    # --------------------------------------------------
+    # Styling (colors + hatching)
+    # --------------------------------------------------
+    # Consistent hatching / coloring
+    hatches = ['/', '\\', 'x', '-', '+', 'o', 'O', '.', '*', '//', 'xx', '++']
+    # Colors:
+    # ---- tab10
+    tab10 = plt.cm.tab10.colors
+    colors = list(tab10) + list(tab10[:2])  # extend to 12 components
+    # ----- Made4Wind
+    colors = []
+    for key,val in clrs_m4w.items():
+        colors.append(val)
+    colors = np.flip(colors)
+    if len_compns > len(colors):
+        # mul = np.ceil( len_compns/len(colors), 0)
+        colors *= 2
+    
+    # -------------------------
+    # options: Journal polish
+    # plot rc params
+    params_plot_rc = {
+            "font.size": 24,
+            "axes.labelsize": 24,
+            "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+            "lines.linewidth": 2,
+            "lines.markersize": 6,
+        }
+    plt.rcParams.update( params_plot_rc )
+
+    fontsize = 18
+
+    # --------------------------------------------------
+    # Figure
+    # --------------------------------------------------
+    # --- Figure setup ---
+    fig, ax = plt.subplots(figsize=(14, 14))
+
+    x = np.array([0, 1])
+    labels = ["IEA 15 MW", "MADE4WIND 15 MW"]
+    bar_width = 0.45
+
+    # --- Stacking ---
+    bottom_IEA = 0.0
+    bottom_M4W = 0.0
+    tops_IEA, tops_M4W = [], []
+
+    for i, comp in enumerate(components):
+        ax.bar(
+            x[0], mass_IEA[comp], bottom=bottom_IEA,
+            width=bar_width, color=colors[i],
+            hatch=hatches[i], edgecolor="black",
+            label=comp,
+        )
+
+        ax.bar(
+            x[1], mass_M4W[comp], bottom=bottom_M4W,
+            width=bar_width, color=colors[i],
+            hatch=hatches[i], edgecolor="black",
+        )
+
+        tops_IEA.append(bottom_IEA + mass_IEA[comp])
+        tops_M4W.append(bottom_M4W + mass_M4W[comp])
+
+        bottom_IEA += mass_IEA[comp]
+        bottom_M4W += mass_M4W[comp]
+
+    # --- Dotted connectors (top of each component) ---
+    for y_iea, y_m4w in zip(tops_IEA, tops_M4W):
+        ax.plot(
+            [x[0] + bar_width / 2, x[1] - bar_width / 2],
+            [y_iea, y_m4w],
+            linestyle=":", color="black", linewidth=1.2
+        )
+
+    # --- Total mass labels ---
+    total_IEA = sum(mass_IEA.values())
+    total_M4W = sum(mass_M4W.values())
+    offset = 8.0
+
+    ax.text(x[0], total_IEA + offset, rf"${total_IEA:.0f}\,\mathrm{{t}}$",
+            ha="center", va="bottom", fontsize=fontsize, fontweight="bold")
+    ax.text(x[1], total_M4W + offset, rf"${total_M4W:.0f}\,\mathrm{{t}}$",
+            ha="center", va="bottom", fontsize=fontsize, fontweight="bold")
+
+    # --- Formatting ---
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel(r"Mass [t]")
+    ax.set_title("Comparison of nacelle mass distribution")
+    ax.legend(
+        loc="center",
+        fontsize=fontsize, frameon=True
+    )
+    ax.grid(axis="y", alpha=0.3)
+
+    plt.tight_layout()
+    # -------------------------
+    # save
+    # -------------------------
+    if loc_save_img: plt.savefig( loc_save_img  )
+    plt.show()
 # ==========
