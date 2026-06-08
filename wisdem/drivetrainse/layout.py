@@ -588,13 +588,13 @@ class GearedLayout(Layout):
 
         # ------- hss, lss, and bearing properties ----------------
         # Compute center of mass based on area
-        m_hss, cm_hss, I_hss, _,_ = rod_prop(s_hss, D_hss, t_hss, hss_rho) #(v) HSS
+        m_hss, cm_hss, I_hss, _, _ = rod_prop(s_hss, np.flip(D_hss), np.flip(t_hss), hss_rho) #(v) HSS
         outputs["hss_mass"] = m_hss
         outputs["hss_cm"] = cm_hss
         outputs["hss_I"] = I_hss
         outputs["s_hss"] = s_hss
-        # ---- (v: TODO check direction consistency of s_ and D_, t_ for LSS)
-        m_lss, cm_lss, I_lss, Ds_lss, ts_lss = rod_prop(s_lss, D_lss, t_lss, lss_rho) #(v) LSS
+        # consistent ordering of D, t arrays with s-coordinate (PR #720)
+        m_lss, cm_lss, I_lss, Ds_lss, ts_lss = rod_prop(s_lss, np.flip(D_lss), np.flip(t_lss), lss_rho) #(v) LSS
         outputs["lss_mass"] = m_lss
         outputs["lss_cm"] = cm_lss
         outputs["lss_I"] = I_lss
