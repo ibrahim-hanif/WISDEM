@@ -633,3 +633,7 @@ loadsClass.load_from_file()
 loaded_dict = loadsClass.fls_dict
 
 #%%
+# check working on the git repo package installed called drive4wind
+import Drive4Wind
+print(Drive4Wind.__version__)
+# %%
