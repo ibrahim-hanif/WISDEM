@@ -3,13 +3,20 @@ channels:
   - defaults
 
 dependencies:
+# NOTE: uncomment the OS-dependent lines below as needed #(v) from latest wisdem git repo
+  - gfortran  # [win]
+  - gcc       # [win]
+  # - gfortran  # [osx]  # only if not installed via homebrew or macports
+  # - petsc4py  # [unix]
+  # - mpi4py  # [unix] # only needed if local system has mpi built and is used
   - coveralls
   - cython
+  - jsonmerge
   - jsonschema
   - make
   - matplotlib
   - meson
-  - moorpy
+  - moorpy #==1.2.1 #(v) from latest wisdem git repo
   - ninja
   - nlopt
   - numpy
@@ -22,6 +29,7 @@ dependencies:
   - pyoptsparse
   - pytest
   - pytest-cov
+  # - python=3.12.5 #(v) last working version
   - python-benedict
   - pyyaml
   - ruamel.yaml
@@ -32,15 +40,15 @@ dependencies:
   - statsmodels>=0.14.5
   - swig
   - pip:
-    - orbit-nrel>=1.2.1
+    - orbit-nrel>=1.2.1 # >=1.2.5 #(v) from latest wisdem git repo
     - dearpygui
     # - uqpylab # rbdo studies
 # Needs to be done outside of environment file:
-#  - m2w64-toolchain # [win]
-#  - libpython # [win]
+    # - m2w64-toolchain # [win]
+    # - libpython # [win]
 #  - compilers # [not win]
 #  - petsc4py # [not win]
 #  - mpi4py (only needed if local system has mpi built and is used)
 # ---- (v) TODO
-# git+(link to uploaded util funcs used in wisdem)
+    # - git+(link to uploaded util funcs used in wisdem)
 # ----
