@@ -69,6 +69,9 @@ else:
 ## File Management (outputs)
 loc_scaling_report = os.path.join(dir_m4w_run,
       'outputs', 'scaling_report.html')
+loc_n2 = os.path.join(dir_m4w_run, 'outputs', 'n2.html')
+# OR in runWISDEM, before setup()
+# om.n2(wt_opt, outfile=os.path.join(folder_output, 'n2.html'), show_browser=True); #(v) debugging
 
 #%% overwrite values TODO
 if flag_override_tower_init:
