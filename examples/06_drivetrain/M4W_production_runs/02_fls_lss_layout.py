@@ -1433,4 +1433,249 @@ if make_xdsm:
     # write
     x.write(outdir=results_path,file_name="xdsm")
 
+#%%[markdown]
+# ## CONCLUSION PLOTS FOR PUBLICATION
 #%%
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+#%%
+# ---------------------------
+# LOAD DATA
+# ---------------------------
+df = pd.read_csv( loc_DOEcsv_MBtype )
+df["config"] = df["bear1.bearing_type"] + "-" + df["bear2.bearing_type"]
+
+# Convert to tonnes
+for col in ["mb1_mass", "mb2_mass", "lss_mass", "msa_mass"]:
+    df[col] = df[col] / 1000.0
+
+configs = df["config"]
+#%%
+# ---------------------------
+# FIGURE 1: MASS DISTRIBUTION
+# ---------------------------
+fig, axs = plt.subplots(1, 2, figsize=(16, 8))
+
+# --- (0,0) absolute stacked ---
+axs[0].bar(configs, df["mb1_mass"],
+            label="MB1", color=clrs_m4w["Aqua"])
+axs[0].bar(configs, df["mb2_mass"], bottom=df["mb1_mass"],
+            label="MB2", color=clrs_m4w["Green"])
+axs[0].bar(configs, df["lss_mass"], bottom=df["mb1_mass"] + df["mb2_mass"],
+            label="LSS", color=clrs_m4w["Light_Red"])
+axs[0].set_ylabel("Mass [t]")
+axs[0].set_title("Mass distribution (absolute)")
+axs[0].legend(loc="upper left")
+axs[0].set_xticklabels(configs, rotation=30)
+
+# --- (0,1) normalized stacked ---
+total = df["msa_mass"]
+
+mb1_norm = df["mb1_mass"] / total
+mb2_norm = df["mb2_mass"] / total
+lss_norm = df["lss_mass"] / total
+
+axs[1].bar(configs, mb1_norm,
+            label="MB1", color=clrs_m4w["Aqua"])
+axs[1].bar(configs, mb2_norm, bottom=mb1_norm,
+            label="MB2", color=clrs_m4w["Green"])
+axs[1].bar(configs, lss_norm, bottom=mb1_norm + mb2_norm,
+            label="LSS", color=clrs_m4w["Light_Red"])
+
+axs[1].set_ylabel("Mass fraction [-]")
+axs[1].set_title("Mass distribution (normalized)")
+axs[1].set_ylim(0, 1)
+axs[1].set_xticklabels(configs, rotation=30)
+plt.tight_layout()
+# Save plot
+plot_path = os.path.join(results_path,
+    meth_Peq+"_msa_mass_distribution"+suffix+".pdf")
+# plt.savefig(plot_path) # NOTE: saved, so don't change now 
+plt.show()
+
+#%%
+# ---------------------------
+# FIGURE 2: CONSTRAINT UTILIZATION HEATMAP
+# ---------------------------
+
+constraint_cols = [
+    "constr_lss_vonmises",
+    "constr_shaft_angle",
+    "constr_shaft_deflection",
+    "constr_L10_mb1",
+    "constr_L10_mb2"
+]
+
+# take MAX of vector constraints
+def max_if_array(x):
+    if isinstance(x, str) and "[" in x:
+        return max(np.fromstring(x.strip("[]"), sep=","))
+    return x
+
+heatmap = pd.DataFrame({
+    c: df[c].apply(max_if_array) for c in constraint_cols
+}).T
+
+fig2, ax2 = plt.subplots(figsize=(14, 12))
+
+from matplotlib.colors import LinearSegmentedColormap, Normalize
+
+# ---------------------------
+# Custom colormap (physics-based)
+# ---------------------------
+cmap = LinearSegmentedColormap.from_list(
+    "m4w_util",
+    [
+        (0.0,  clrs_m4w["Light_Turquoise"]),  # low (safe)
+        (0.4,  clrs_m4w["Aqua"]),
+        (0.7,  clrs_m4w["Green"]),
+        (0.9,  clrs_m4w["Light_Red"]),
+        (1.0,  clrs_m4w["Red"]),              # ✅ ACTIVE constraint
+        # (1.2,  clrs_m4w["Dark_Red"])          # optional >1
+    ],
+    N=256
+)
+
+# Normalize so that 1.0 maps exactly to "Red"
+norm = Normalize(vmin=0.0, vmax=1.2)
+
+im = ax2.imshow(heatmap, cmap=cmap, norm=norm, aspect="auto")
+
+
+ax2.set_xticks(range(len(configs)))
+ax2.set_xticklabels(configs, rotation=30)
+
+ax2.set_yticks(range(len(constraint_cols)))
+ax2.set_yticklabels([
+    r"$ {\sigma}_{lss} $",
+    r"$ {\delta}_{ang} $",
+    r"$ {\delta}_{defl} $",
+    r"$ {L_{10}^{mb1}} $",
+    r"$ {L_{10}^{mb2}} $"
+])
+
+cbar = plt.colorbar(im)
+cbar.set_label("Constraint utilization (-)")
+cbar.set_ticks([0, 0.5, 0.9, 1.0, 1.2])
+cbar.set_ticklabels(["0", "0.5", "0.9", "1.0", ">1"])
+
+for i in range(heatmap.shape[0]):
+    for j in range(heatmap.shape[1]):
+        if abs(heatmap.iloc[i, j] - 1.0) < 0.02:
+            ax2.text(j, i, "●", ha='center', va='center', color='black')
+
+plt.title("Constraint "+r"$(g)$"+" utilization heatmap")
+plt.tight_layout()
+# Save plot
+plot_path = os.path.join(results_path,
+    meth_Peq+"_heatmap_constr_util"+suffix+".pdf")
+# plt.savefig(plot_path) # NOTE: saved, so don't change now 
+plt.show()
+
+#%%
+# ---------------------------
+# FIGURE 3: DESIGN VARIABLES COMPARISON
+# ---------------------------
+fig, axs = plt.subplots(2, 2, figsize=(14, 10))
+
+# Color mapping for each configuration
+colors = {
+    "CRB-TRB2": clrs_m4w["Aqua"],
+    "CARB-TRB2": clrs_m4w["Teal"],
+    "CRB-SRB": clrs_m4w["Green"],
+    "CARB-SRB": clrs_m4w["Light_Red"],
+}
+
+configs = df["config"]
+
+# helper: mean if array
+def mean_if_array(x):
+    if isinstance(x, str) and "[" in x:
+        arr = np.fromstring(x.strip("[]"), sep=",")
+        return np.mean(arr)
+    return x
+
+# Extract variables
+Lh1 = df["L_h1"]
+L12 = df["L_12"]
+D   = df["lss_diameter"].apply(mean_if_array)
+t   = df["lss_wall_thickness"].apply(mean_if_array)
+
+vars_data = [Lh1, L12, D, t]
+titles = ["$L_{h1}$ [m]", "$L_{12}$ [m]", "$D^*$ [m]", "$t^*$ [m]"]
+
+# Plot loop
+for ax, data, title in zip(axs.flatten(), vars_data, titles):
+    for i, cfg in enumerate(configs):
+        ax.bar(i, data.iloc[i], color=colors[cfg])
+    # ax.set_title(title)
+    ax.set_xticks([])
+    # ax.set_xticklabels(configs, rotation=30)
+    ax.set_ylabel( title )
+
+# ---------------------------
+# Shared legend (clean!)
+# ---------------------------
+handles = [plt.Rectangle((0,0),1,1,color=colors[k]) for k in colors]
+labels = list(colors.keys())
+
+fig.legend(
+    handles, labels,
+    loc="upper center",
+    ncol=4,
+    bbox_to_anchor=(0.5, 0.97)   # move legend down a bit
+)
+
+plt.suptitle(
+    "Design variable comparison across bearing configurations",
+    y=0.995                     # move title slightly up
+)
+
+plt.tight_layout(rect=[0, 0, 1, 0.88])
+
+plt.tight_layout()
+# Save plot
+plot_path = os.path.join(results_path,
+    meth_Peq+"_bar_compr_desvars"+suffix+".pdf")
+# plt.savefig(plot_path) # NOTE: saved, so don't change now 
+plt.show()
+
+#%%
+# ---------------------------
+# FIGURE 4: PARETO SCATTER
+# ---------------------------
+
+# max constraint per config
+max_constraint = heatmap.max(axis=0)
+
+fig4, ax4 = plt.subplots(figsize=(7,7))
+
+# Plot each configuration separately (for legend control)
+for i, cfg in enumerate(configs):
+    ax4.scatter(
+        df["msa_mass"].iloc[i],
+        max_constraint.iloc[i],
+        color=colors[cfg],
+        s=300,                 # larger markers
+        edgecolors='black',    # improves visibility
+        linewidths=1.0,
+        label=cfg
+    )
+
+# Labels
+ax4.set_xlabel("Total mass [t]")
+ax4.set_ylabel("Max constraint utilization [-]")
+ax4.set_title("Pareto-style trade-off")
+
+# Legend (clean, no overlap)
+ax4.legend(loc="best")
+
+plt.tight_layout()
+# Save plot
+plot_path = os.path.join(results_path,
+    meth_Peq+"_tradeOff_maxConstr_totalMass"+suffix+".pdf")
+# plt.savefig(plot_path) # NOTE: saved, so don't change now
+plt.show()
+
+# %%
