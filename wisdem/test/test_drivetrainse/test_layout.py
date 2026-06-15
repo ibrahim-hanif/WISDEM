@@ -31,6 +31,8 @@ class TestDirectLayout(unittest.TestCase):
         self.inputs["hub_diameter"] = 4.0
 
         self.inputs["lss_rho"] = self.inputs["bedplate_rho"] = 7850.0
+        self.inputs["lss_mass_user"] = 0.
+
         for k in self.inputs:
             self.inputs[k] = np.array( [self.inputs[k]] )
 
@@ -41,7 +43,7 @@ class TestDirectLayout(unittest.TestCase):
         self.inputs["nose_wall_thickness"] = 0.04 * myones
 
         self.inputs["bedplate_wall_thickness"] = 0.06 * np.ones(4)
-        self.inputs["bedplate_mass_user"] = np.zeros(1)
+        self.inputs["bedplate_mass_user"] = [0.]
 
         self.discrete_inputs["upwind"] = True
 
@@ -297,7 +299,7 @@ class TestDirectLayout(unittest.TestCase):
         self.inputs["lss_wall_thickness"] = 0.05 * myones
         self.inputs["nose_wall_thickness"] = 0.05 * myones
         self.inputs["bedplate_wall_thickness"] = 0.05 * np.ones(npts)
-        self.inputs["bedplate_mass_user"] = 1e4 * np.ones(1)
+        self.inputs["bedplate_mass_user"] = [1.e4]
         myobj = lay.DirectLayout()
         myobj.compute(self.inputs, self.outputs, self.discrete_inputs, self.discrete_outputs)
 
@@ -364,12 +366,14 @@ class TestGearedLayout(unittest.TestCase):
         self.inputs["bedplate_flange_thickness"] = 0.05
         # self.inputs['bedplate_web_height'] = 1.0
         self.inputs["bedplate_web_thickness"] = 0.05
-        self.inputs["bedplate_mass_user"] = np.zeros(1)
+        self.inputs["bedplate_mass_user"] = 0.
 
         self.inputs["D_top"] = 6.5
         self.inputs["hub_diameter"] = 4.0
 
         self.inputs["lss_rho"] = self.inputs["hss_rho"] = self.inputs["bedplate_rho"] = 7850.0
+        self.inputs["lss_mass_user"] = 0.
+        self.inputs["hss_mass_user"] = 0.
         for k in self.inputs:
             self.inputs[k] = np.array( [self.inputs[k]] )
 
@@ -476,7 +480,7 @@ class TestGearedLayout(unittest.TestCase):
         myones = np.ones(3)
         self.inputs["hss_diameter"] = 1.5 * myones
         self.inputs["hss_wall_thickness"] = 0.04 * myones
-        self.inputs["bedplate_mass_user"] = 1e4 * np.ones(1)
+        self.inputs["bedplate_mass_user"] = [1.e4]
         myobj = lay.GearedLayout()
         myobj.compute(self.inputs, self.outputs, self.discrete_inputs, self.discrete_outputs)
 

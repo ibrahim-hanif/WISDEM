@@ -26,12 +26,11 @@ class TestRS(unittest.TestCase):
         myobj = rs.BladeCurvature(modeling_options=options)
 
         # Straight blade: Z is 'r'
-        inputs["r"] = np.linspace(0, 100, npts)
+        inputs["r"] = np.linspace(1, 101, npts) # assumes rhub=1
         inputs["precurve"] = myzero
         inputs["presweep"] = myzero
         inputs["precone"] = 0.0
-        inputs["Rhub"] = 1.0
-        inputs["blade_span_cg"] = 0.5 * inputs["r"].max()
+        inputs["blade_cg_hubcs"] = inputs["r"].mean()
         myobj.compute(inputs, outputs)
         npt.assert_equal(outputs["3d_curv"], myzero)
         npt.assert_equal(outputs["x_az"], myzero)
@@ -52,7 +51,7 @@ class TestRS(unittest.TestCase):
         inputs["precurve"] = np.linspace(0, 1, npts)
         inputs["precone"] = 0.0
         myobj.compute(inputs, outputs)
-        cone = -np.rad2deg(np.arctan(inputs["precurve"] / (inputs["r"] + 1e-20)))
+        cone = -np.rad2deg(np.arctan(inputs["precurve"] / (inputs["r"] - 1.0 + 1e-20)))
         cone[0] = cone[1]
         npt.assert_almost_equal(outputs["3d_curv"], cone)
         npt.assert_equal(outputs["x_az"], inputs["precurve"])
@@ -75,7 +74,7 @@ class TestRS(unittest.TestCase):
         inputs["presweep"] = np.linspace(0, 1, npts)
         inputs["precone"] = 0.0
         myobj.compute(inputs, outputs)
-        cone = -np.rad2deg(np.arctan(inputs["precurve"] / (inputs["r"] + 1e-20)))
+        cone = -np.rad2deg(np.arctan(inputs["precurve"] / (inputs["r"] - 1.0 + 1e-20)))
         cone[0] = cone[1]
         npt.assert_almost_equal(outputs["3d_curv"], cone)
         npt.assert_equal(outputs["x_az"], inputs["precurve"])

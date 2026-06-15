@@ -3,7 +3,7 @@
 11a. User Customized Optimization Example
 -----------------------------
 
-WISDEM offers a long list of design variables, figures of merit, and constraints that users can call in their ``analysis_options.yaml``. The full list is specified in the `modeling_options.yaml <https://github.com/WISDEM/WISDEM/blob/develop/examples/02_reference_turbines/modeling_options.yaml>`. In addition, WISDEM now offers the option to build your own optimization problem by setting any available input as a design variable and any available output as either a constraint or a figure of merit. This example 11 shows how to build your customized ``analysis_options.yaml``.
+WISDEM offers a long list of design variables, figures of merit, and constraints that users can call in their ``analysis_options.yaml``. The full list is specified in the `modeling_options.yaml <https://github.com/NLRWindSystems/WISDEM/blob/develop/examples/02_reference_turbines/modeling_options.yaml>`. In addition, WISDEM now offers the option to build your own optimization problem by setting any available input as a design variable and any available output as either a constraint or a figure of merit. This example 11 shows how to build your customized ``analysis_options.yaml``.
 
 In this example, we start from a 5MW land-based wind turbine that was developed within the Big Adaptive Rotor project (for more details refer to https://github.com/NREL/BAR_Designs) and we ask WISDEM to optimize the rated power of the turbine to minimize the levelized value of energy (LVOE) while keeping the turbine capital cost (TCC) within certain limits. Note that the focus of this example is on the capability of WISDEM, more than on the actual problem setup.
 

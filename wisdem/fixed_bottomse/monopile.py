@@ -944,7 +944,7 @@ class MonopileSEPerf(om.Group):
                 "tower_torsion_modes",
                 "f1",
                 "f2",
-                "water_depth"
+                "water_depth",
             ],
         )
 
@@ -1031,3 +1031,4 @@ class MonopileSE(om.Group):
             self.connect("soil.z_k", "monopile.z_soil")
             self.connect("soil.k", "monopile.k_soil")
             
+        self.set_input_defaults("rho_water", 1025.0, units="kg/m**3")

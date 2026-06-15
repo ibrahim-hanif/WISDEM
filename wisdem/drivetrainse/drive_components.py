@@ -547,7 +547,7 @@ class YawSystem(om.ExplicitComponent):
         self.add_input("rotor_diameter", 0.0, units="m")
         self.add_input("D_top", 0.0, units="m")
         self.add_input("rho", 0.0, units="kg/m**3") #(v) connection to `bedplate_rho` in DrivetrainSE
-        self.add_input("yaw_mass_user", 0.0, units="kg")
+        self.add_input("yaw_system_mass_user", 0.0, units="kg")
 
         self.add_output("yaw_mass", 0.0, units="kg")
         self.add_output("yaw_cm", np.zeros(3), units="m")
@@ -558,7 +558,7 @@ class YawSystem(om.ExplicitComponent):
         D_rotor = float(inputs["rotor_diameter"][0])
         D_top = float(inputs["D_top"][0])
         rho = float(inputs["rho"][0])
-        m_yaw_usr = float(inputs["yaw_mass_user"][0])
+        m_yaw_usr = float(inputs["yaw_system_mass_user"][0])
 
         # Estimate the number of yaw motors (borrowed from old DriveSE utilities)
         n_motors = 2 * np.ceil(D_rotor / 30.0) - 2
@@ -608,6 +608,10 @@ class MiscNacelleComponents(om.ExplicitComponent):
         Generator center of mass s-coordinate
     rho_fiberglass : float, [kg/m**3]
         material density of fiberglass
+    platform_mass_user : float, [kg]
+        user override mass value for platform
+    cover_mass_user : float, [kg]
+        user override mass value for cover
 
     Returns
     -------
@@ -653,6 +657,8 @@ class MiscNacelleComponents(om.ExplicitComponent):
         self.add_input("generator_cm", 0.0, units="m")
         self.add_input("rho_fiberglass", 0.0, units="kg/m**3")
         self.add_input("rho_castiron", 0.0, units="kg/m**3")
+        self.add_input("platform_mass_user", 0.0, units="kg")
+        self.add_input("cover_mass_user", 0.0, units="kg")
 
         self.add_output("hvac_mass", 0.0, units="kg")
         self.add_output("hvac_cm", 0.0, units="m")
@@ -682,6 +688,8 @@ class MiscNacelleComponents(om.ExplicitComponent):
         s_generator = float(inputs["generator_cm"][0])
         rho_fiberglass = float(inputs["rho_fiberglass"][0])
         rho_castiron = float(inputs["rho_castiron"][0])
+        platform_mass_user = float(inputs["platform_mass_user"][0])
+        cover_mass_user = float(inputs["cover_mass_user"][0])
 
         # For the nacelle cover, imagine a box from the bedplate to the hub in length and around the generator in width, height, with 10% margin in each dim
         L_cover = 1.1 * L_bedplate if direct else 1.1 * (overhang + D_top)
@@ -689,7 +697,7 @@ class MiscNacelleComponents(om.ExplicitComponent):
         H_cover = 1.1 * (R_generator + np.maximum(R_generator, H_bedplate))
         A_cover = 2 * (L_cover * W_cover + L_cover * H_cover + H_cover * W_cover)
         t_cover = 0.02
-        m_cover = A_cover * t_cover * rho_fiberglass
+        m_cover = cover_mass_user if cover_mass_user > 0.0 else A_cover * t_cover * rho_fiberglass
         cm_cover = np.array([0.5 * L_cover - 0.5 * L_bedplate, 0.0, 0.5 * H_cover])
         I_cover = (
             m_cover
@@ -723,7 +731,7 @@ class MiscNacelleComponents(om.ExplicitComponent):
         L_platform = 2 * D_top if direct else L_cover
         W_platform = 2 * D_top if direct else W_cover
         t_platform = 0.04
-        m_platform = L_platform * W_platform * t_platform * rho_castiron
+        m_platform = platform_mass_user if platform_mass_user > 0.0 else L_platform * W_platform * t_platform * rho_castiron
         I_platform = (
             m_platform
             * np.array(
@@ -933,8 +941,11 @@ class NacelleSystemAdder(om.ExplicitComponent):  # added to drive to include ele
         self.add_input("cover_cm", np.zeros(3), units="m")
         self.add_input("cover_I", np.zeros(3), units="m")
         self.add_input("x_bedplate", val=np.zeros(12), units="m")
-        self.add_input("constr_height", 0.0, units="m")
         self.add_input("above_yaw_mass_user", 0.0, units="kg")
+        self.add_input("above_yaw_cm_user", np.zeros(3), units="m")
+        self.add_input("above_yaw_I_user", np.zeros(6), units="kg*m**2")
+        self.add_input("constr_height", 0.0, units="m")
+
 
         self.add_output("shaft_start", np.zeros(3), units="m")
         self.add_output("other_mass", 0.0, units="kg")
@@ -1038,9 +1049,12 @@ class NacelleSystemAdder(om.ExplicitComponent):  # added to drive to include ele
         coeff = 1.0 if m_nac_usr == 0.0 else m_nac_usr / m_nac
         m_nac *= coeff
         I_nac *= coeff
+        if not (inputs["above_yaw_I_user"] == 0).all():
+            I_nac = inputs["above_yaw_I_user"]
         outputs["above_yaw_mass"] = copy.copy(m_nac)
-        outputs["above_yaw_cm"] = R = cm_nac.copy()
-        outputs["above_yaw_I"] = I_nac.copy()
+        R = cm_nac.copy()
+        outputs["above_yaw_cm"] = inputs["above_yaw_cm_user"] if not (inputs["above_yaw_cm_user"] == 0).all() else R
+        outputs["above_yaw_I"] = inputs["above_yaw_I_user"] if not (inputs["above_yaw_I_user"] == 0).all() else I_nac.copy()
         parallel_axis = m_nac * (np.dot(R, R) * np.eye(3) - np.outer(R, R))
         outputs["above_yaw_I_TT"] = util.unassembleI(util.assembleI(I_nac) + parallel_axis)
 

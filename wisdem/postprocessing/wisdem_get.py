@@ -114,18 +114,21 @@ def get_tower_cg(prob):
 
 
 def get_blade_shape(prob):
-    blade_shape  = np.c_[prob.get_val('blade.outer_shape_bem.s'),
-                         prob.get_val('blade.outer_shape_bem.ref_axis','m')[:,2],
-                         prob.get_val('blade.outer_shape_bem.chord','m'),
-                         prob.get_val('blade.outer_shape_bem.twist', 'deg'),
-                         prob.get_val('blade.interp_airfoils.r_thick_interp')*100,
-                         prob.get_val('blade.outer_shape_bem.pitch_axis')*100,
-                         prob.get_val('blade.outer_shape_bem.ref_axis','m')[:,0],
-                         prob.get_val('blade.outer_shape_bem.ref_axis','m')[:,1],
+    blade_shape  = np.c_[prob.get_val('blade.outer_shape.s'),
+                         prob.get_val('blade.ref_axis','m')[:,2],
+                         prob.get_val('blade.outer_shape.chord','m'),
+                         prob.get_val('blade.outer_shape.twist', 'deg'),
+                         prob.get_val('blade.interp_airfoils.rthick_interp')*100,
+                         prob.get_val('blade.outer_shape.section_offset_x'),
+                         prob.get_val('blade.outer_shape.section_offset_y'),
+                         prob.get_val('blade.ref_axis','m')[:,0],
+                         prob.get_val('blade.ref_axis','m')[:,1],
                          ]
-    blade_shape_col = ['Blade Span','Rotor Coordinate [m]',
+    blade_shape_col = ['Blade Span [r/R]','Rotor Coordinate [m]',
                        'Chord [m]', 'Twist [deg]',
-                       'Relative Thickness [%]', 'Pitch Axis Chord Location [%]',
+                       'Relative Thickness [%]',
+                       'Airfoil LE x-shift from reference axis',
+                       'Airfoil LE y-shift from reference axis',
                        'Prebend [m]', 'Sweep [m]']
     return pd.DataFrame(data=blade_shape, columns=blade_shape_col)
 
@@ -169,6 +172,34 @@ def get_blade_elasticity(prob):
     return pd.DataFrame(data=blade_stiff, columns=blade_stiff_col)
 
 
+def get_blade_layers(prob):
+    layerDF = []
+    l_s = prob.get_val('blade.outer_shape.s')
+    lthick = prob.get_val("blade.structure.layer_thickness", "m")
+    #lorient = prob.get_val("blade.structure.layer_orientation", "deg")
+    lstart = prob.get_val("blade.structure.layer_start_nd")
+    lend = prob.get_val("blade.structure.layer_end_nd")
+    lwidth = prob.get_val("blade.structure.layer_width", "m")
+    layer_code = prob.get_val("blade.structure.build_layer") #1D array of boolean values indicating how to build a layer. 0 - start and end are set constant, 1 - from offset and rotation suction side, 2 - from offset and rotation pressure side, 3 - LE and width, 4 - TE SS width, 5 - TE PS width, 6 - locked to another layer. Negative values place the layer on webs (-1 first web, -2 second web, etc.)."
+    nlay = lthick.shape[0]
+    layer_cols = ['Span','Thickness [m]','Layer Start','Layer End','Layer Width [m]'] #Fiber angle [deg]','
+    for k in range(nlay):
+        ilay = np.c_[l_s, lthick[k,:], lstart[k,:], lend[k,:], lwidth[k,:]] #lorient[k,:], 
+        layerDF.append( (layer_code[k], pd.DataFrame(data=ilay, columns=layer_cols)) )
+
+    webDF = []
+    wstart = prob.get_val('blade.structure.web_start_nd')
+    wend = prob.get_val('blade.structure.web_end_nd')
+    woff = prob.get_val('blade.structure.web_offset')
+    nweb = wstart.shape[0]
+    web_cols = ['Span','Web Start','Web End','Web Offset [m]']
+    for k in range(nweb):
+        iweb = np.c_[l_s, wstart[k,:], wend[k,:], woff[k,:]]
+        webDF.append( pd.DataFrame(data=iweb, columns=web_cols) )
+
+    return layerDF, webDF
+
+
 def get_rotor_performance(prob):
     rotor_perf = np.c_[prob.get_val("rotorse.rp.powercurve.V",'m/s'),
                        prob.get_val("rotorse.rp.powercurve.pitch",'deg'),
@@ -201,18 +232,21 @@ def get_nacelle_mass(prob):
     #              'MoI_cm_xx', 'MoI_cm_yy', 'MoI_cm_zz', 'MoI_cm_xy', 'MoI_cm_xz', 'MoI_cm_yz',
     #              'MoI_TT_xx', 'MoI_TT_yy', 'MoI_TT_zz', 'MoI_TT_xy', 'MoI_TT_xz', 'MoI_TT_yz']
     nacDF = prob.model.wt.wt_rna.drivese.nac._mass_table
-    hub_cm = prob["drivese.hub_system_cm"][0]
+    hub_cm_in = prob["drivese.hub_system_cm"][0]
     L_drive = prob["drivese.L_drive"][0]
-    tilt = prob.get_val('nacelle.uptilt', 'rad')[0]
+    tilt = prob.get_val('drivetrain.uptilt', 'rad')[0]
     shaft0 = prob["drivese.shaft_start"]
-    Cup = -1.0
-    hub_cm = R = shaft0 + (L_drive + hub_cm) * np.array([Cup * np.cos(tilt), 0.0, np.sin(tilt)])
+    Cup = -1.0 
+    cm_array = np.array([Cup * np.cos(tilt), 0.0, np.sin(tilt)])   
+    hub_cm = R = shaft0 + (L_drive + hub_cm_in) * cm_array
     hub_mass = prob['drivese.hub_system_mass']
     hub_I = prob["drivese.hub_system_I"]
     hub_I_TT = util.rotateI(hub_I, -Cup * tilt, axis="y")
     hub_I_TT = util.unassembleI( util.assembleI(hub_I_TT) +
                                  hub_mass * (np.dot(R, R) * np.eye(3) - np.outer(R, R)) )
+    blades_cm_in = prob["drivese.blades_cm"][0]
     blades_mass = prob['drivese.blades_mass']
+    blades_cm = R = shaft0 + (L_drive + hub_cm_in + blades_cm_in) * cm_array
     blades_I = prob["drivese.blades_I"]
     blades_I_TT = util.rotateI(blades_I, -Cup * tilt, axis="y")
     blades_I_TT = util.unassembleI( util.assembleI(blades_I_TT) +
@@ -220,11 +254,13 @@ def get_nacelle_mass(prob):
     rna_mass = prob['drivese.rna_mass']
     rna_cm = R = prob['drivese.rna_cm']
     rna_I_TT = prob['drivese.rna_I_TT']
-    rna_I = util.unassembleI( util.assembleI(rna_I_TT) +
-                                    rna_mass * (np.dot(R, R) * np.eye(3) + np.outer(R, R)) )
-    nacDF.loc['Blades'] = np.r_[blades_mass, hub_cm, blades_I, blades_I_TT].tolist()
+    # Moving from TT-coord sys back to CoM, so subtract.
+    rna_I = util.unassembleI( util.assembleI(rna_I_TT) -
+                              rna_mass * (np.dot(R, R) * np.eye(3) - np.outer(R, R)) )
+    nacDF.loc['Blades'] = np.r_[blades_mass, blades_cm, blades_I, blades_I_TT].tolist()
     nacDF.loc['Hub_System'] = np.r_[hub_mass, hub_cm, hub_I, hub_I_TT].tolist()
     nacDF.loc['RNA'] = np.r_[rna_mass, rna_cm, rna_I, rna_I_TT].tolist()
+
     return nacDF
 
 

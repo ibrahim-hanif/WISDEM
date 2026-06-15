@@ -17,13 +17,13 @@ This software is provided as-is and without warranty. There are no guarantees it
 Important Links
 ---------------
 
-- `Source Code Repository <https://github.com/WISDEM/WISDEM>`_
+- `Source Code Repository <https://github.com/NLRWindSystems/WISDEM>`_
 - `OpenMDAO <https://openmdao.org/>`_
 
 Feedback
 ---------------
 
-For software issues please use the `Github Issues Tracker <https://github.com/WISDEM/WISDEM/issues>`_.  For functionality and theory related questions and comments please use the NWTC forum for `Systems Engineering Software Questions <https://wind.nrel.gov/forum/wind/viewtopic.php?f=34&t=1002>`_.
+For software issues please use the `Github Issues Tracker <https://github.com/NLRWindSystems/WISDEM/issues>`_.  For functionality and theory related questions and comments please use the NWTC forum for `Systems Engineering Software Questions <https://wind.nrel.gov/forum/wind/viewtopic.php?f=34&t=1002>`_.
 
 Documentation Outline
 ------------------------------

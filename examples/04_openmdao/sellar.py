@@ -132,8 +132,8 @@ prob.setup()
 prob.run_driver()
 
 print("minimum found at")
-print(float(prob["x"]))
-print(prob["z"])
+print('x: ', prob["x"])
+print('z: ', prob["z"])
 print("minimum objective")
-print(float(prob["obj"]))
+print(prob["obj"])
 # --------

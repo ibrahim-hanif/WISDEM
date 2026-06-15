@@ -55,7 +55,7 @@ class TestRE(unittest.TestCase):
         self.inputs["r"] = np.linspace(0.0, 10.0, nspan)
         self.inputs["theta"] = np.zeros(nspan)
         self.inputs["chord"] = 2 * np.ones(nspan)
-        self.inputs["pitch_axis"] = 0.5 * np.ones(nspan) # 0=LE, 1=TE
+        self.inputs["section_offset_y"] = 1. * np.ones(nspan) # 0=LE, 1=TE
         self.inputs["precurve"] = np.zeros(nspan)
         self.inputs["presweep"] = np.zeros(nspan)
         self.inputs["coord_xy_interp"] = np.zeros( (nspan, npts, 2) )
@@ -68,8 +68,7 @@ class TestRE(unittest.TestCase):
         self.inputs["uptilt"] = np.zeros(1)
         self.discrete_inputs["n_blades"] = 3
         self.inputs["web_start_nd"] = self.inputs["web_end_nd"] = np.zeros((nweb, nspan))
-        self.inputs["layer_web"] = np.zeros(nlay)
-        self.discrete_inputs["definition_layer"] = np.ones(nlay)
+        self.discrete_inputs["build_layer"] = np.zeros(nlay)
         self.inputs["layer_thickness"] = 0.01 * np.ones((nlay, nspan))
         self.inputs["layer_start_nd"] = np.zeros((nlay, nspan))
         self.inputs["layer_end_nd"] = np.ones((nlay, nspan))
@@ -134,7 +133,7 @@ class TestRE(unittest.TestCase):
         npt.assert_almost_equal(self.outputs["blade_mass"], self.mytube.Area*self.inputs["rho"][0]*self.inputs["r"][-1], decimal=-1)
         npt.assert_almost_equal(self.outputs["mass_all_blades"], 3*self.outputs["blade_mass"], decimal=3)
         idx = np.int_(np.floor(0.5*self.inputs["r"].size))
-        npt.assert_almost_equal(self.outputs["blade_span_cg"], self.inputs["r"][idx], decimal=1)
+        npt.assert_almost_equal(self.outputs["blade_cg_hubcs"], self.inputs["r"][idx], decimal=1)
         npt.assert_almost_equal(self.outputs["blade_moment_of_inertia"], self.outputs["blade_mass"]*self.inputs["r"][-1]**2/3.0, decimal=-1)
 
         '''
@@ -176,12 +175,12 @@ class TestRE(unittest.TestCase):
         npt.assert_almost_equal(self.outputs["blade_mass"], self.mytube.Area*self.inputs["rho"][0]*self.inputs["r"][-1], decimal=-1)
         npt.assert_almost_equal(self.outputs["mass_all_blades"], 3*self.outputs["blade_mass"], decimal=3)
         idx = np.int_(np.floor(0.5*self.inputs["r"].size))
-        npt.assert_almost_equal(self.outputs["blade_span_cg"], self.inputs["r"][idx], decimal=1)
+        npt.assert_almost_equal(self.outputs["blade_cg_hubcs"], self.inputs["r"][idx], decimal=1)
         npt.assert_almost_equal(self.outputs["blade_moment_of_inertia"], self.outputs["blade_mass"]*self.inputs["r"][-1]**2/3.0, decimal=-1)
         
         
     def test_with_le_pitch_axis(self):
-        self.inputs["pitch_axis"] = np.zeros(self.inputs["pitch_axis"].shape)
+        self.inputs["section_offset_y"] = np.zeros(self.inputs["section_offset_y"].shape)
         
         self.run_precomp()
         self.myobj.compute(self.inputs, self.outputs, self.discrete_inputs, self.discrete_outputs)
@@ -207,7 +206,7 @@ class TestRE(unittest.TestCase):
         npt.assert_almost_equal(self.outputs["blade_mass"], self.mytube.Area*self.inputs["rho"][0]*self.inputs["r"][-1], decimal=-1)
         npt.assert_almost_equal(self.outputs["mass_all_blades"], 3*self.outputs["blade_mass"], decimal=3)
         idx = np.int_(np.floor(0.5*self.inputs["r"].size))
-        npt.assert_almost_equal(self.outputs["blade_span_cg"], self.inputs["r"][idx], decimal=1)
+        npt.assert_almost_equal(self.outputs["blade_cg_hubcs"], self.inputs["r"][idx], decimal=1)
         npt.assert_almost_equal(self.outputs["blade_moment_of_inertia"], self.outputs["blade_mass"]*self.inputs["r"][-1]**2/3.0, decimal=-1)
 
     def test_KI_to_Elastic(self):

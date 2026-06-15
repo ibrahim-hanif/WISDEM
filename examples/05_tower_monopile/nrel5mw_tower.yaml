@@ -1,3 +1,4 @@
+windIO_version: '2.0'
 name: 5MW Tower only
 
 assembly:
@@ -9,35 +10,35 @@ assembly:
     hub_height: 90.
     rotor_diameter: 126.
     rated_power: 5.e+6
-
+    cut_in_wind_speed: 3.0
+    cut_out_wind_speed: 25.0
 components:
     tower:
-        outer_shape_bem:
-            reference_axis: &ref_axis_tower
-                x:
-                    grid: [0.0, 1.0]
-                    values: [0.0, 0.0]
-                y:
-                    grid: [0.0, 1.0]
-                    values: [0.0, 0.0]
-                z:
-                    grid: &grid_tower [0., 0.5, 1.]
-                    values: [0., 43.8, 87.6]
+        outer_shape:
             outer_diameter:
-                grid: *grid_tower
-                values: [6., 4.935, 3.87]
-            drag_coefficient:
+                grid: &grid_tower [0.0, 0.5, 1.0]
+                values: [6.0, 4.935, 3.87]
+            cd:
                 grid: [0.0, 1.0]
                 values: [1.0, 1.0]
-        internal_structure_2d_fem:
+        structure:
             outfitting_factor: 1.07
-            reference_axis: *ref_axis_tower
             layers:
-                - name: tower_wall
+               -  name: tower_wall
                   material: steel
                   thickness:
-                    grid: *grid_tower
-                    values: [0.027, 0.0222, 0.019]
+                      grid: *grid_tower
+                      values: [0.027, 0.0222, 0.019]
+        reference_axis:
+            x:
+                grid: [0.0, 1.0]
+                values: [0.0, 0.0]
+            y:
+                grid: [0.0, 1.0]
+                values: [0.0, 0.0]
+            z:
+                grid: *grid_tower
+                values: [0.0, 43.8, 87.6974416]
 
 materials:
    -  name: steel
@@ -59,20 +60,12 @@ materials:
       m: 3
       A: 3.5534648443719767e10
       unit_cost: 0.7
-
-environment:
-    air_density: 1.225
-    air_dyn_viscosity: 1.81e-5
-    weib_shape_parameter: 2.
-    air_speed_sound: 340.
-    shear_exp: 0.2
-    water_density: 1025.0
-    water_dyn_viscosity: 1.3351e-3
-    #water_depth: 0.0
-    significant_wave_height: 0.0
-    significant_wave_period: 0.0
-    soil_shear_modulus: 140.e+6
-    soil_poisson: 0.4
-costs:
-    labor_rate: 58.8
-    painting_rate: 30.0
+control:
+    min_pitch_table:
+        wind_speed: [3.0, 25.0]
+        min_pitch: [0.0, 18.707072011021378]
+    min_rotor_speed: 6.899939740828794
+    max_rotor_speed: 14.520010641978924
+    optimal_tsr: 7.01754386
+    max_allowable_blade_tip_speed: 80.0
+    min_pitch_limit: 0.0

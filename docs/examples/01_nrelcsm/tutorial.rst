@@ -52,7 +52,7 @@ The final lines highlight the mass breakdown summaries:
 >>>    nacelle_mass         [165460.38774975]  kg
 >>>    turbine_mass         [442906.80408368]  kg
 
-See the full source for this example on `Github <https://github.com/WISDEM/WISDEM/blob/master/examples/01_nrel_csm/mass.py>`_.
+See the full source for this example on `Github <https://github.com/NLRWindSystems/WISDEM/blob/master/examples/01_nrel_csm/mass.py>`_.
 
 
 Turbine Component Masses and Costs Using the NREL_CSM (2015)
@@ -95,7 +95,7 @@ The final screen output is:
 >>>      turbine_cost                           [3543676.12253719]  USD
 >>>      turbine_cost_kW                        [708.73522451]      USD/kW
 
-See the full source for this example on `Github <https://github.com/WISDEM/WISDEM/blob/master/examples/01_nrel_csm/mass_and_cost.py>`__.
+See the full source for this example on `Github <https://github.com/NLRWindSystems/WISDEM/blob/master/examples/01_nrel_csm/mass_and_cost.py>`__.
 
 
 Turbine Component Costs Using the NREL_CSM (2015)
@@ -175,7 +175,7 @@ We can also print out an exhaustive listing of the inputs and outputs to each su
     :start-after: # 5 ---
     :end-before: # 5 ---
 
-See the full source for this example on `Github <https://github.com/WISDEM/WISDEM/blob/master/examples/01_nrel_csm/costs.py>`__.
+See the full source for this example on `Github <https://github.com/NLRWindSystems/WISDEM/blob/master/examples/01_nrel_csm/costs.py>`__.
 
 
 
@@ -234,7 +234,7 @@ To store for later postprocessing, we save everything into a large csv-file.  Fl
     :start-after: # 7 ---
     :end-before: # 7 ---
 
-See the full source for this example on `Github <https://github.com/WISDEM/WISDEM/blob/master/examples/01_nrel_csm/parametric.py>`__.
+See the full source for this example on `Github <https://github.com/NLRWindSystems/WISDEM/blob/master/examples/01_nrel_csm/parametric.py>`__.
 
 .. bibliography:: ../../references.bib
    :filter: docname in docnames

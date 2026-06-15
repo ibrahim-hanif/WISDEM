@@ -6,11 +6,23 @@ __maintainer__ = "Jake Nunemaker"
 __email__ = "jake.nunemaker@nrel.gov"
 
 
+# https://stackoverflow.com/questions/8391411/how-to-block-calls-to-print
+import os
+import sys
 from warnings import warn
 
 import openmdao.api as om
-
 from ORBIT import ProjectManager
+
+
+class HiddenPrints:
+    def __enter__(self):
+        self._original_stdout = sys.stdout
+        sys.stdout = open(os.devnull, "w")
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.close()
+        sys.stdout = self._original_stdout
 
 
 class Orbit(om.Group):
@@ -21,25 +33,26 @@ class Orbit(om.Group):
         self.options.declare("floating", default=False)
         self.options.declare("jacket", default=False)
         self.options.declare("jacket_legs", default=0)
+        self.options.declare("quiet", default=False)
 
     def setup(self):
         """Define all input variables from all models."""
         self.set_input_defaults("wtiv", "example_wtiv")
         self.set_input_defaults("feeder", "example_feeder")
-        #self.set_input_defaults("num_feeders", 1)
-        #self.set_input_defaults("num_towing", 1)
-        #self.set_input_defaults("num_station_keeping", 3)
-        #self.set_input_defaults(
+        # self.set_input_defaults("num_feeders", 1)
+        # self.set_input_defaults("num_towing", 1)
+        # self.set_input_defaults("num_station_keeping", 3)
+        # self.set_input_defaults(
         #    "oss_install_vessel", "example_heavy_lift_vessel",
-        #)
+        # )
         self.set_input_defaults("site_distance", 40.0, units="km")
         self.set_input_defaults("site_distance_to_landfall", 40.0, units="km")
         self.set_input_defaults("interconnection_distance", 40.0, units="km")
         self.set_input_defaults("plant_turbine_spacing", 7)
         self.set_input_defaults("plant_row_spacing", 7)
         self.set_input_defaults("plant_substation_distance", 1, units="km")
-        #self.set_input_defaults("num_port_cranes", 1)
-        #self.set_input_defaults("num_assembly_lines", 1)
+        # self.set_input_defaults("num_port_cranes", 1)
+        # self.set_input_defaults("num_assembly_lines", 1)
         self.set_input_defaults("takt_time", 170.0, units="h")
         self.set_input_defaults("port_cost_per_month", 2e6, units="USD/mo")
         self.set_input_defaults("construction_insurance", 44.0, units="USD/kW")
@@ -72,6 +85,7 @@ class OrbitWisdem(om.ExplicitComponent):
         self.options.declare("floating", default=False)
         self.options.declare("jacket", default=False)
         self.options.declare("jacket_legs", default=0)
+        self.options.declare("quiet", default=False)
 
     def setup(self):
         """Define all the inputs."""
@@ -86,10 +100,7 @@ class OrbitWisdem(om.ExplicitComponent):
         self.add_discrete_input(
             "wtiv",
             "example_wtiv",
-            desc=(
-                "Vessel configuration to use for installation of foundations"
-                " and turbines."
-            ),
+            desc=("Vessel configuration to use for installation of foundations" " and turbines."),
         )
         self.add_discrete_input(
             "feeder",
@@ -99,10 +110,7 @@ class OrbitWisdem(om.ExplicitComponent):
         self.add_discrete_input(
             "num_feeders",
             1,
-            desc=(
-                "Number of feeder barges to use for installation of"
-                " foundations and turbines."
-            ),
+            desc=("Number of feeder barges to use for installation of" " foundations and turbines."),
         )
         self.add_discrete_input(
             "num_towing",
@@ -115,10 +123,7 @@ class OrbitWisdem(om.ExplicitComponent):
         self.add_discrete_input(
             "num_station_keeping",
             3,
-            desc=(
-                "Number of station keeping or AHTS vessels that attach to floating"
-                " platforms under tow-out."
-            ),
+            desc=("Number of station keeping or AHTS vessels that attach to floating" " platforms under tow-out."),
         )
         self.add_discrete_input(
             "oss_install_vessel",
@@ -155,7 +160,9 @@ class OrbitWisdem(om.ExplicitComponent):
 
         # Plant
         self.add_discrete_input(
-            "number_of_turbines", 60, desc="Number of turbines.",
+            "number_of_turbines",
+            60,
+            desc="Number of turbines.",
         )
         self.add_input(
             "plant_turbine_spacing",
@@ -188,10 +195,16 @@ class OrbitWisdem(om.ExplicitComponent):
             desc="Rated windspeed of the turbine.",
         )
         self.add_input(
-            "turbine_capex", 1100, units="USD/kW", desc="Turbine CAPEX",
+            "turbine_capex",
+            1100,
+            units="USD/kW",
+            desc="Turbine CAPEX",
         )
         self.add_input(
-            "hub_height", 100.0, units="m", desc="Turbine hub height.",
+            "hub_height",
+            100.0,
+            units="m",
+            desc="Turbine hub height.",
         )
         self.add_input(
             "turbine_rotor_diameter",
@@ -200,7 +213,10 @@ class OrbitWisdem(om.ExplicitComponent):
             desc="Turbine rotor diameter.",
         )
         self.add_input(
-            "tower_mass", 400.0, units="t", desc="mass of the total tower.",
+            "tower_mass",
+            400.0,
+            units="t",
+            desc="mass of the total tower.",
         )
         self.add_input(
             "tower_length",
@@ -234,10 +250,15 @@ class OrbitWisdem(om.ExplicitComponent):
             ),
         )
         self.add_discrete_input(
-            "number_of_blades", 3, desc="Number of blades per turbine.",
+            "number_of_blades",
+            3,
+            desc="Number of blades per turbine.",
         )
         self.add_input(
-            "blade_mass", 50.0, units="t", desc="mass of an individual blade.",
+            "blade_mass",
+            50.0,
+            units="t",
+            desc="mass of an individual blade.",
         )
         self.add_input(
             "blade_deck_space",
@@ -274,7 +295,10 @@ class OrbitWisdem(om.ExplicitComponent):
             desc="Unstretched mooring line length",
         )
         self.add_input(
-            "anchor_mass", 1e4, units="kg", desc="Total mass of an anchor",
+            "anchor_mass",
+            1e4,
+            units="kg",
+            desc="Total mass of an anchor",
         )
         self.add_input(
             "mooring_line_cost",
@@ -338,7 +362,10 @@ class OrbitWisdem(om.ExplicitComponent):
             desc="Length of monopile (including pile).",
         )
         self.add_input(
-            "monopile_diameter", 7.0, units="m", desc="Diameter of monopile.",
+            "monopile_diameter",
+            7.0,
+            units="m",
+            desc="Diameter of monopile.",
         )
         self.add_input(
             "monopile_mass",
@@ -347,7 +374,10 @@ class OrbitWisdem(om.ExplicitComponent):
             desc="mass of an individual monopile.",
         )
         self.add_input(
-            "monopile_cost", 4e6, units="USD", desc="Monopile unit cost.",
+            "monopile_cost",
+            4e6,
+            units="USD",
+            desc="Monopile unit cost.",
         )
 
         # Jacket
@@ -364,7 +394,10 @@ class OrbitWisdem(om.ExplicitComponent):
             desc="mass of an individual jacket.",
         )
         self.add_input(
-            "jacket_cost", 4e6, units="USD", desc="Jacket unit cost.",
+            "jacket_cost",
+            4e6,
+            units="USD",
+            desc="Jacket unit cost.",
         )
         self.add_input(
             "jacket_r_foot",
@@ -444,10 +477,7 @@ class OrbitWisdem(om.ExplicitComponent):
             "boem_review_cost",
             0.0,
             units="USD",
-            desc=(
-                "Cost for additional review by U.S. Dept of Interior Bureau"
-                " of Ocean Energy Management (BOEM)"
-            ),
+            desc=("Cost for additional review by U.S. Dept of Interior Bureau" " of Ocean Energy Management (BOEM)"),
         )
         self.add_input("commissioning_cost_kW", 44.0, units="USD/kW", desc="Commissioning cost.")
         self.add_input("decommissioning_cost_kW", 58.0, units="USD/kW", desc="Decommissioning cost.")
@@ -470,9 +500,9 @@ class OrbitWisdem(om.ExplicitComponent):
             "project_capex",
             0.0,
             units="USD",
-            desc="costs associated with the lease area, "+
-            "the development of the construction operations plan,"+
-            "and any environmental review and other upfront project costs."
+            desc="costs associated with the lease area, "
+            + "the development of the construction operations plan,"
+            + "and any environmental review and other upfront project costs.",
         )
         self.add_output(
             "total_capex",
@@ -498,9 +528,24 @@ class OrbitWisdem(om.ExplicitComponent):
             units="USD",
             desc="Total balance of system installation cost.",
         )
+        self.add_output(
+            "capacity",
+            0,
+            units="MW",
+            desc="Wind plant capacity, in MW.",
+        )
+        self.add_discrete_output(
+            "layout",
+            None,
+            desc="Farm layout to be used by WOMBAT.",
+        )
 
     def compile_orbit_config_file(
-        self, inputs, outputs, discrete_inputs, discrete_outputs,
+        self,
+        inputs,
+        outputs,
+        discrete_inputs,
+        discrete_outputs,
     ):
         """Compiles the ORBIT configuration dictionary."""
 
@@ -509,11 +554,7 @@ class OrbitWisdem(om.ExplicitComponent):
 
         config = {
             # Vessels
-            "wtiv": (
-                "floating_heavy_lift_vessel"
-                if floating_flag
-                else discrete_inputs["wtiv"]
-            ),
+            "wtiv": ("floating_heavy_lift_vessel" if floating_flag else discrete_inputs["wtiv"]),
             "array_cable_install_vessel": "example_cable_lay_vessel",
             "array_cable_bury_vessel": "example_cable_lay_vessel",
             "export_cable_install_vessel": "example_cable_lay_vessel",
@@ -522,9 +563,7 @@ class OrbitWisdem(om.ExplicitComponent):
             "site": {
                 "depth": float(inputs["site_depth"][0]),
                 "distance": float(inputs["site_distance"][0]),
-                "distance_to_landfall": float(
-                    inputs["site_distance_to_landfall"][0]
-                ),
+                "distance_to_landfall": float(inputs["site_distance_to_landfall"][0]),
                 "mean_windspeed": float(inputs["site_mean_windspeed"][0]),
             },
             "plant": {
@@ -532,9 +571,7 @@ class OrbitWisdem(om.ExplicitComponent):
                 "num_turbines": int(discrete_inputs["number_of_turbines"]),
                 "row_spacing": float(inputs["plant_row_spacing"][0]),
                 "turbine_spacing": float(inputs["plant_turbine_spacing"][0]),
-                "substation_distance": float(
-                    inputs["plant_substation_distance"][0]
-                ),
+                "substation_distance": float(inputs["plant_substation_distance"][0]),
             },
             # Turbine + components
             "turbine": {
@@ -582,22 +619,16 @@ class OrbitWisdem(om.ExplicitComponent):
             },
             # Phase Specific
             "OffshoreSubstationInstallation": {
-                "oss_install_vessel": (
-                    "floating_heavy_lift_vessel"
-                    if floating_flag
-                    else "example_heavy_lift_vessel"
-                ),
-                "feeder": (
-                    "floating_barge" if floating_flag else "future_feeder"
-                ),
+                "oss_install_vessel": ("floating_heavy_lift_vessel" if floating_flag else "example_heavy_lift_vessel"),
+                "feeder": ("floating_barge" if floating_flag else "future_feeder"),
                 "num_feeders": int(discrete_inputs["num_feeders"]),
             },
             # Project development costs
             "project_parameters": {
                 "construction_insurance": float(inputs["construction_insurance"][0]),
                 "construction_financing": float(inputs["construction_financing"][0]),
-                "installation_contingency": 0.5*float(inputs["contingency"][0]),
-                "procurement_contingency": 0.5*float(inputs["contingency"][0]),
+                "installation_contingency": 0.5 * float(inputs["contingency"][0]),
+                "procurement_contingency": 0.5 * float(inputs["contingency"][0]),
                 "site_auction_price": float(inputs["site_auction_price"][0]),
                 "site_assessment_cost": float(inputs["site_assessment_cost"][0]),
                 "construction_plan_cost": float(inputs["construction_plan_cost"][0]),
@@ -623,8 +654,7 @@ class OrbitWisdem(om.ExplicitComponent):
 
         if "landfall" in config and "interconnection_distance" in config["landfall"]:
             warn(
-                "landfall dictionary will be deprecated and moved"
-                " into [export_system_design][landfall].",
+                "landfall dictionary will be deprecated and moved" " into [export_system_design][landfall].",
                 DeprecationWarning,
                 stacklevel=2,
             )
@@ -648,9 +678,7 @@ class OrbitWisdem(om.ExplicitComponent):
                 "ArrayCableInstallation": ("MooredSubInstallation", 0.25),
             }
         else:
-            fixedStr = (
-                "JacketInstallation" if jacket_flag else "MonopileInstallation"
-            )
+            fixedStr = "JacketInstallation" if jacket_flag else "MonopileInstallation"
 
             if jacket_flag:
                 monopile = config.get("monopile", {})
@@ -675,9 +703,7 @@ class OrbitWisdem(om.ExplicitComponent):
                 "mooring_install_vessel": "example_support_vessel",
                 "towing_vessel_groups": {
                     "towing_vessels": int(discrete_inputs["num_towing"]),
-                    "ahts_vessels": int(
-                        discrete_inputs["num_station_keeping"]
-                    ),
+                    "ahts_vessels": int(discrete_inputs["num_station_keeping"]),
                 },
             }
         else:
@@ -691,12 +717,8 @@ class OrbitWisdem(om.ExplicitComponent):
         # Unique support structure design/assembly
         if floating_flag:
             config["port"] = {
-                "sub_assembly_lines": int(
-                    discrete_inputs["num_assembly_lines"]
-                ),
-                "turbine_assembly_cranes": int(
-                    discrete_inputs["num_port_cranes"]
-                ),
+                "sub_assembly_lines": int(discrete_inputs["num_assembly_lines"]),
+                "turbine_assembly_cranes": int(discrete_inputs["num_port_cranes"]),
                 "monthly_rate": float(inputs["port_cost_per_month"][0]),
             }
 
@@ -746,11 +768,7 @@ class OrbitWisdem(om.ExplicitComponent):
                     "type": "Monopile",
                     "length": float(inputs["monopile_length"][0]),
                     "diameter": float(inputs["monopile_diameter"][0]),
-                    "deck_space": 0.25
-                    * float(
-                        inputs["monopile_diameter"][0]
-                        * inputs["monopile_length"][0]
-                    ),
+                    "deck_space": 0.25 * float(inputs["monopile_diameter"][0] * inputs["monopile_length"][0]),
                     "mass": float(inputs["monopile_mass"][0]),
                     "unit_cost": float(inputs["monopile_cost"][0]),
                 }
@@ -760,13 +778,21 @@ class OrbitWisdem(om.ExplicitComponent):
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Creates and runs the project, then gathers the results."""
+        quiet_flag = self.options["quiet"]
 
         config = self.compile_orbit_config_file(
-            inputs, outputs, discrete_inputs, discrete_outputs,
+            inputs,
+            outputs,
+            discrete_inputs,
+            discrete_outputs,
         )
 
         project = ProjectManager(config)
-        project.run()
+        if quiet_flag:
+            with HiddenPrints():
+                project.run()
+        else:
+            project.run()
 
         # The ORBIT version of total_capex includes turbine capex, so we do our own sum of
         # the parts here that wisdem doesn't account for
@@ -778,3 +804,8 @@ class OrbitWisdem(om.ExplicitComponent):
         outputs["total_capex_kW"] = outputs["total_capex"] / capacity_kW
         outputs["installation_time"] = project.installation_time
         outputs["installation_capex"] = project.installation_capex
+        outputs["capacity"] = project.capacity
+        if "ArraySystemDesign" in project.phases:
+            discrete_outputs["layout"] = project.phases["ArraySystemDesign"].create_layout_df()
+        elif "CustomArraySystemDesign" in project.phases:
+            discrete_outputs["layout"] = project.phases["CustomArraySystemDesign"].create_layout_df()

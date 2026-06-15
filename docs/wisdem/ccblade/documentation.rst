@@ -52,6 +52,6 @@ A Polar object is meant to represent the variation in lift, drag, and pitching m
 
 .. module:: wisdem.ccblade.Polar
 
-.. autoclass:: wisdem.ccblae.Polar.Polar
+.. autoclass:: wisdem.ccblade.Polar.Polar
 
 .. _polar-class-label:

@@ -42,13 +42,12 @@ class ParametrizeBladeAero(om.ExplicitComponent):
             units="rad",
             desc="1D array of the twist angle being optimized at the n_opt locations.",
         )
-        # Blade chord
-        # self.add_input(
-        #     "chord_original",
-        #     val=np.zeros(n_span),
-        #     units="m",
-        #     desc="1D array of the chord values defined along blade span. The chord is the one defined in the yaml.",
-        # )
+        self.add_input(
+            "chord_original",
+            val=np.zeros(n_span),
+            units="m",
+            desc="1D array of the chord values defined along blade span. The chord is the one defined in the yaml.",
+        )
         self.add_input(
             "s_opt_chord",
             val=np.zeros(n_opt_chord),
@@ -60,7 +59,17 @@ class ParametrizeBladeAero(om.ExplicitComponent):
             units="m",
             desc="1D array of the chord being optimized at the n_opt locations.",
         )
-
+        self.add_input(
+            "section_offset_y",
+            val=np.zeros(n_span),
+            units="m",
+            desc="1D array of the airfoil position relative to the reference axis, specifying the distance in meters along the chordline from the reference axis to the leading edge. The distribution is the original from the yaml.",
+        )
+        self.add_input(
+            "ac_interp",
+            val=np.zeros(n_span),
+            desc="1D array of the aerodynamic center of the blade defined along span.",
+        )
         # Outputs
         self.add_output(
             "twist_param",
@@ -73,6 +82,12 @@ class ParametrizeBladeAero(om.ExplicitComponent):
             val=np.zeros(n_span),
             units="m",
             desc="1D array of the chord values defined along blade span. The chord is the result of the parameterization.",
+        )
+        self.add_output(
+            "section_offset_y_param",
+            val=np.zeros(n_span),
+            units="m",
+            desc="1D array of the airfoil position relative to the reference axis, specifying the distance in meters along the chordline from the reference axis to the leading edge. The distribution is the result of the parameterization.",
         )
         self.add_output(
             "max_chord_constr",
@@ -111,6 +126,10 @@ class ParametrizeBladeAero(om.ExplicitComponent):
         slope_twist_constr = np.diff(inputs["twist_opt"])
         slope_twist_constr[id_min_twist:] *= -1 
         outputs["slope_twist_constr"] = slope_twist_constr
+        # Update section_offset_y
+        outputs["section_offset_y_param"] = inputs["section_offset_y"] * outputs["chord_param"] / inputs["chord_original"]
+        # Alternative approach following the aerodynamic center, which probably needs some smoothing first though
+        # outputs["section_offset_y_param"] = inputs["ac_interp"] * outputs["chord_param"]
 
 
 class ParametrizeBladeStruct(om.ExplicitComponent):
@@ -179,7 +198,6 @@ class ComputeReynolds(om.ExplicitComponent):
             desc="Diameter of the wind turbine rotor specified by the user, defined as 2 x (Rhub + blade length along z) * cos(precone).",
         )
         self.add_input("maxOmega", val=0.0, units="rad/s", desc="Maximum allowed rotor speed.")
-        self.add_input("max_TS", val=0.0, units="m/s", desc="Maximum allowed blade tip speed.")
         self.add_input("V_out", val=0.0, units="m/s", desc="Cut out wind speed. This is the wind speed where region III ends.")
 
         self.add_output("Re", val=np.zeros((n_span)), ref=1.0e6)
@@ -188,10 +206,8 @@ class ComputeReynolds(om.ExplicitComponent):
         # Note that we used to use ccblade outputs of local wind speed at the rated condition
         # This is more accurate, of course, but creates an implicit feedback loop in the code
         # This way gets an order-of-magnitude estimate for Reynolds number, which is really all that is needed
-        max_local_TS = inputs["max_TS"][0] / (inputs["rotor_diameter"][0] / 2.) * inputs["r_blade"][0]
-        if np.all(max_local_TS == 0.0):
-            max_local_TS = inputs["maxOmega"] * inputs["r_blade"]
 
+        max_local_TS = inputs["maxOmega"] * inputs["r_blade"]
         max_local_V = np.sqrt(inputs["V_out"]**2 + max_local_TS**2)
         outputs["Re"] = np.nan_to_num(
             inputs["rho"] * max_local_V * inputs["chord"] / inputs["mu"]

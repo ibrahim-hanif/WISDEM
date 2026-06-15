@@ -125,6 +125,10 @@ Thumbs.db
 *outputs*
 examples/*/*_out
 examples/01_nrel_csm/*.csv
+examples/06_drivetrain/*.csv
+examples/06_drivetrain/*.npz
+examples/06_drivetrain/*.pkl
+examples/06_drivetrain/*.xlsx
 examples/06_drivetrain/**/*.csv
 examples/06_drivetrain/**/*.npz
 examples/06_drivetrain/**/*.pkl
@@ -142,10 +146,4 @@ examples/19_rotor_drivetrain_tower/test*
 *pytest*_out/
 *temp1.yaml
 *temp2.yaml
-*test.csvu
-
-# uqpylab env and others
-uqpylab-wisdem-env/
-venv/
-env/
-.venv/
+*test.csv

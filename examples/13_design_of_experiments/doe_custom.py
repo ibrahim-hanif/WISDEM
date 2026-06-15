@@ -37,7 +37,7 @@ def driver():
     aep_output = np.zeros( npts ) # Initialize output container
     myargs = [] # Container for parallel run arguments
     for k in range(npts):
-        overrides = {'hub.cone':Blades[k], 'nacelle.uptilt': Shafts[k]}
+        overrides = {'hub.cone':Blades[k], 'drivetrain.uptilt': Shafts[k]}
         myargs.append([k, fname_wt_input, fname_modeling_options, fname_analysis_options, overrides])
 
         # Run cases in serial this way

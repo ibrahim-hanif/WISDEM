@@ -9,8 +9,8 @@ design_variables:
                 flag: True  # Flag to optimize the twist
                 inverse: False # Flag to determine twist from the user-defined desired margin to stall (defined in constraints)
                 n_opt: 4     # Number of control points along blade span
-                max_decrease: 0.08722222222222221 # Maximum decrease for the twist in [rad] at the n_opt locations
-                max_increase: 0.08722222222222221 # Maximum increase for the twist in [rad] at the n_opt locations
+                max_decrease: 5.0 # Maximum decrease for the twist in [deg] at the n_opt locations
+                max_increase: 5.0 # Maximum increase for the twist in [deg] at the n_opt locations
                 index_start: 2 # Lock the first two DVs from blade root
                 index_end: 4 # All DVs close to blade tip are active
             chord:
@@ -29,8 +29,8 @@ design_variables:
           ref: [10.] # reference value to bring values close to 1, set as array to support design variables as arrays
           # indices: only used for design variables as arrays
 
-# This will be ignored if there is a merit_figure_user entry
-merit_figure: AEP
+# Multiple merit figures are allowed, so this should only be enabled with solvers that support multi-objective optimization
+# merit_figure: AEP
 
 # See the list of potential outputs.  Variable name is taken from the WISDEM namespace.
 merit_figure_user:
@@ -42,7 +42,7 @@ constraints:
     blade:
         stall:
             flag: True     # Constraint on minimum stall margin
-            margin: 0.087 # Value of minimum stall margin in [rad]
+            margin: 5.0 # Value of minimum stall margin in [deg]
         chord:
             flag: False # Constraint max chord to its default value (4.75 m)
         root_circle_diameter:

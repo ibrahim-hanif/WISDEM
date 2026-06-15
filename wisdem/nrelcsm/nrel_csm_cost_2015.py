@@ -597,14 +597,19 @@ class ConverterCost2015(om.ExplicitComponent):
     def setup(self):
         self.add_input("converter_mass", 0.0, units="kg")
         self.add_input("converter_mass_cost_coeff", 18.8, units="USD/kg")
+        self.add_input("converter_cost_external", 0.0, units="USD")
 
         self.add_output("converter_cost", 0.0, units="USD")
 
     def compute(self, inputs, outputs):
         converter_mass = inputs["converter_mass"]
         converter_mass_cost_coeff = inputs["converter_mass_cost_coeff"]
+        converter_cost_external = inputs["converter_cost_external"]
 
-        outputs["converter_cost"] = converter_mass_cost_coeff * converter_mass
+        if converter_cost_external == 0.0:
+            outputs["converter_cost"] = converter_mass_cost_coeff * converter_mass
+        else:
+            outputs["converter_cost"] = converter_cost_external
 
 
 # ---------------------------------------------------------------------------------

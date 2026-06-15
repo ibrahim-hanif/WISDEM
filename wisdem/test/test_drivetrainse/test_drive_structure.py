@@ -103,6 +103,7 @@ class TestDirectStructure(unittest.TestCase):
         self.inputs["lss_G"] = self.inputs["hss_G"] = self.inputs["bedplate_G"] = 80.8e9
         self.inputs["lss_rho"] = self.inputs["hss_rho"] = self.inputs["bedplate_rho"] = 7850.0
         self.inputs["lss_Xy"] = self.inputs["hss_Xy"] = self.inputs["bedplate_Xy"] = 250e6
+        self.inputs["lss_mass_user"] = 0.
 
         self.inputs["shaft_deflection_allowable"] = np.array([1e-4])
         self.inputs["shaft_angle_allowable"] = np.array([1e-3])
@@ -305,6 +306,7 @@ class TestDirectStructure(unittest.TestCase):
         self.inputs["M_mb2"] = np.zeros(3).reshape((3, 1))
         self.inputs["M_torq"] = np.zeros(3).reshape((3, 1))
         self.inputs["M_generator"] = np.zeros(3).reshape((3, 1))
+        self.inputs["hss_mass_user"] = [0.]
         self.compute_layout(False)
         myobj = ds.Bedplate_IBeam_Frame(modeling_options=self.opt, n_dlcs=1)
         myobj.compute(self.inputs, self.outputs, self.discrete_inputs, self.discrete_outputs)
@@ -344,6 +346,7 @@ class TestDirectStructure(unittest.TestCase):
         self.inputs["M_mb2"] = np.zeros(3).reshape((3, 1))
         self.inputs["M_torq"] = np.zeros(3).reshape((3, 1))
         self.inputs["M_generator"] = np.zeros(3).reshape((3, 1))
+        self.inputs["hss_mass_user"] = [0.]
         self.compute_layout(False)
         myobj = ds.Bedplate_IBeam_Frame(modeling_options=self.opt, n_dlcs=1)
         myobj.compute(self.inputs, self.outputs, self.discrete_inputs, self.discrete_outputs)
@@ -549,6 +552,8 @@ class TestDirectStructure(unittest.TestCase):
         self.inputs["blades_mass"] = np.array([0.0])
         self.inputs["blades_cm"] = np.array([0.0])
         self.inputs["blades_I"] = np.zeros(6)
+        self.inputs["lss_mass_user"] = [0.]
+        self.inputs["hss_mass_user"] = [0.]
         self.compute_layout(False)
         myobj = ds.Hub_Rotor_LSS_Frame(n_dlcs=1, modeling_options=self.opt, direct_drive=False)
         myobj.compute(self.inputs, self.outputs, self.discrete_inputs, self.discrete_outputs)
@@ -606,6 +611,8 @@ class TestDirectStructure(unittest.TestCase):
         self.inputs["blades_mass"] = np.array([0.0])
         self.inputs["blades_cm"] = np.array([0.0])
         self.inputs["blades_I"] = np.zeros(6)
+        self.inputs["lss_mass_user"] = [0.]
+        self.inputs["hss_mass_user"] = [0.]
         self.compute_layout(False)
         myobj = ds.Hub_Rotor_LSS_Frame(n_dlcs=1, modeling_options=self.opt, direct_drive=False)
         myobj.compute(self.inputs, self.outputs, self.discrete_inputs, self.discrete_outputs)
@@ -658,6 +665,7 @@ class TestDirectStructure(unittest.TestCase):
         self.inputs["gear_ratio"] = np.array([50.0])
         self.inputs["F_aero_hub"] = np.zeros(3).reshape((3, 1))
         self.inputs["M_aero_hub"] = np.zeros(3).reshape((3, 1))
+        self.inputs["hss_mass_user"] = [0.]
         self.compute_layout(False)
         myobj = ds.HSS_Frame(modeling_options=self.opt, n_dlcs=1)
         myobj.compute(self.inputs, self.outputs)
@@ -682,6 +690,7 @@ class TestDirectStructure(unittest.TestCase):
         self.inputs["gear_ratio"] = np.array([50.0])
         self.inputs["F_aero_hub"] = np.zeros(3).reshape((3, 1))
         self.inputs["M_aero_hub"] = np.zeros(3).reshape((3, 1))
+        self.inputs["hss_mass_user"] = [0.]
         self.compute_layout(False)
         myobj = ds.HSS_Frame(modeling_options=self.opt, n_dlcs=1)
         myobj.compute(self.inputs, self.outputs)
@@ -723,6 +732,8 @@ class TestDirectStructure(unittest.TestCase):
         self.inputs["lss_wall_thickness"] = 0.5 * myones
         self.inputs["G"] = np.array([100e9])
         self.inputs["lss_rho"] = np.array([1e-6])
+        self.inputs["lss_mass_user"] = [0.]
+        self.inputs["hss_mass_user"] = [0.]
         self.compute_layout()
         myobj = ds.Hub_Rotor_LSS_Frame(n_dlcs=1, modeling_options=self.opt, direct_drive=True)
         myobj.compute(self.inputs, self.outputs, self.discrete_inputs, self.discrete_outputs)
@@ -753,6 +764,9 @@ class TestDirectStructure(unittest.TestCase):
         self.inputs["hss_wall_thickness"] = 0.5 * myones
         self.inputs["G"] = np.array([100e9])
         self.inputs["hss_rho"] = np.array([1e-6])
+        self.inputs["lss_mass_user"] = [0.]
+        self.inputs["hss_mass_user"] = [0.]
+
         self.compute_layout()
         myobj = ds.HSS_Frame(modeling_options=self.opt, n_dlcs=1)
         myobj.compute(self.inputs, self.outputs)

@@ -5,11 +5,11 @@ design_variables:
 
     floating:
         joints:
-            flag: True
             r_coordinate:
                 - names: [anchor1, anchor2, anchor3]
                   lower_bound: 400.0
                   upper_bound: 2000.0
+                  flag: True
     mooring:
         line_length:
             flag: True
@@ -26,9 +26,9 @@ merit_figure: mooring_mass
 constraints:
     floating:
         operational_heel:
-            upper_bound: 0.08726646259971647 # 5 deg
+            upper_bound: 5.0
         survival_heel:
-            upper_bound: 0.17453292519943295 # 10 deg
+            upper_bound: 10.0
         max_surge:
             flag: false
             upper_bound: 0.1

@@ -30,7 +30,7 @@ Alternatively, you can create a summary WISDEM file that points to each file,
 
 Where the contents of ``nrel5mw_driver.yaml`` are,
 
-.. literalinclude:: /../examples/02_reference_turbines/nrel5mw_driver.yaml
+.. literalinclude:: /../examples/02_reference_turbines/nrel5mw.yaml
     :language: yaml
 
 Note that to run the IEA Wind 15-MW reference wind turbine, simply substitute the file, ``IEA-15-240-RWT.yaml``, in as the geometry file.  The ``modeling_options.yaml`` and ``analysis_options.yaml`` file can remain the same.

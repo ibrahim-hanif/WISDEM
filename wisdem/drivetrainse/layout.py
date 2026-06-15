@@ -68,6 +68,8 @@ class Layout(om.ExplicitComponent):
         LSS outer diameter from hub to bearing 2
     lss_wall_thickness : numpy array[2], [m]
         LSS wall thickness
+    lss_mass_user : float, [kg]
+        User override of lss mass
     hub_diameter : float, [m]
         Diameter of hub
     D_top : float, [m]
@@ -132,6 +134,7 @@ class Layout(om.ExplicitComponent):
         self.add_input("tilt", 0.0, units="deg")
         self.add_input("lss_diameter", np.zeros(2), units="m")
         self.add_input("lss_wall_thickness", np.zeros(2), units="m")
+        self.add_input("lss_mass_user", val=0.0, units="kg")
         self.add_input("D_top", 0.0, units="m")
         self.add_input("hub_diameter", val=0.0, units="m")
         self.add_input("lss_rho", val=0.0, units="kg/m**3")
@@ -233,7 +236,7 @@ class DirectLayout(Layout):
         self.add_output("L_nose", 0.0, units="m")
         self.add_output("D_bearing1", 0.0, units="m")
         self.add_output("D_bearing2", 0.0, units="m")
-
+        
         self.add_output("s_nose", val=np.zeros(5), units="m")
         self.add_output("nose_mass", val=0.0, units="kg")
         self.add_output("nose_cm", val=0.0, units="m")
@@ -269,6 +272,7 @@ class DirectLayout(Layout):
         lss_rho = float(inputs["lss_rho"][0])
         bedplate_rho = float(inputs["bedplate_rho"][0])
         bedplate_mass_user = float(inputs["bedplate_mass_user"][0])
+        lss_mass_user = float(inputs["lss_mass_user"][0])
 
         # ------- Discretization ----------------
         L_grs = 0.5 * L_h1
@@ -421,6 +425,8 @@ class DirectLayout(Layout):
         outputs["nose_I"] = I_nose
 
         m_lss, cm_lss, I_lss, Ds_lss, ts_lss = rod_prop(s_lss, D_lss, t_lss, lss_rho)
+        if lss_mass_user > 0.0:
+            m_lss = lss_mass_user
         outputs["lss_mass"] = m_lss
         outputs["lss_cm"] = cm_lss
         outputs["lss_I"] = I_lss
@@ -457,6 +463,7 @@ class GearedLayout(Layout):
         length of high speed shaft (HSS)
     hss_diameter : numpy array[2], [m]
         HSS outer diameter from gearbox to generator
+        HSS outer diameter from gearbox to generator
     hss_wall_thickness : numpy array[2], [m]
         HSS wall thickness
     bedplate_flange_width : float, [m]
@@ -469,6 +476,8 @@ class GearedLayout(Layout):
         Bedplate is two parallel I beams, this is the web height
     hss_rho : float, [kg/m**3]
         material density
+    hss_mass_user : float, [kg]
+        User override of hss mass
 
     Returns
     -------
@@ -506,6 +515,7 @@ class GearedLayout(Layout):
         self.add_input("hss_diameter", np.zeros(2), units="m")
         self.add_input("hss_wall_thickness", np.zeros(2), units="m")
         self.add_input("hss_rho", val=0.0, units="kg/m**3")
+        self.add_input("hss_mass_user", val=0.0, units="kg")
         self.add_input("bedplate_flange_width", val=0.0, units="m")
         self.add_input("bedplate_flange_thickness", val=0.0, units="m")
         self.add_input("bedplate_web_thickness", val=0.0, units="m")
@@ -536,6 +546,8 @@ class GearedLayout(Layout):
         t_lss = inputs["lss_wall_thickness"]
         D_hss = inputs["hss_diameter"]
         t_hss = inputs["hss_wall_thickness"]
+        lss_mass_user = float(inputs["lss_mass_user"][0])
+        hss_mass_user = float(inputs["hss_mass_user"][0])
 
         D_top = float(inputs["D_top"][0])
         D_hub = float(inputs["hub_diameter"][0])
@@ -595,6 +607,8 @@ class GearedLayout(Layout):
         outputs["s_hss"] = s_hss
         # consistent ordering of D, t arrays with s-coordinate (PR #720)
         m_lss, cm_lss, I_lss, Ds_lss, ts_lss = rod_prop(s_lss, np.flip(D_lss), np.flip(t_lss), lss_rho) #(v) LSS
+        if lss_mass_user > 0.0:
+            m_lss = lss_mass_user
         outputs["lss_mass"] = m_lss
         outputs["lss_cm"] = cm_lss
         outputs["lss_I"] = I_lss

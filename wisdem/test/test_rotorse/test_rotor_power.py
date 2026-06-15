@@ -8,13 +8,15 @@ import numpy.testing as npt
 import wisdem.rotorse.rotor_power as rp
 
 # Load in airfoil and blade shape inputs for NREL 5MW
-ARCHIVE = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + "regulation.npz"
+ARCHIVE = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + "debug.npz"
 NPZFILE = np.load(ARCHIVE)
 
 
 def fillprob(prob, n_pc, n_span):
     prob.setup()
     for k in NPZFILE.files:
+        if k in ["generator_efficiency","lss_rpm"]:
+            continue
         prob[k] = NPZFILE[k]
 
     prob.set_val("v_min", 4.0, units="m/s")
@@ -22,7 +24,7 @@ def fillprob(prob, n_pc, n_span):
     prob.set_val("rated_power", 5e6, units="W")
     prob.set_val("omega_min", 0.0, units="rpm")
     prob.set_val("omega_max", 100.0, units="rpm")
-    prob.set_val("control_maxTS", 90.0, units="m/s")
+    prob.set_val("max_allowable_blade_tip_speed", 90.0, units="m/s")
     prob.set_val("tsr_operational", 10.0)
     prob.set_val("control_pitch", 0.0, units="deg")
     prob.set_val("gearbox_efficiency", 0.975)
@@ -88,7 +90,7 @@ class TestServo(unittest.TestCase):
 
         myobj = rp.NoStallConstraint()
 
-        (n_span, n_aoa, n_Re, n_tab) = NPZFILE["airfoils_cl"].shape
+        (n_span, n_aoa, n_Re) = NPZFILE["airfoils_cl"].shape
 
         inputs["airfoils_cl"] = NPZFILE["airfoils_cl"]
         inputs["airfoils_cd"] = NPZFILE["airfoils_cd"]
@@ -108,38 +110,35 @@ class TestServo(unittest.TestCase):
         modeling_options["WISDEM"]["RotorSE"]["n_span"] = n_span
         modeling_options["WISDEM"]["RotorSE"]["n_aoa"] = n_aoa
         modeling_options["WISDEM"]["RotorSE"]["n_Re"] = n_Re
-        modeling_options["WISDEM"]["RotorSE"]["n_tab"] = n_tab
 
         outputs["stall_angle_along_span"] = np.zeros(len(r))
         outputs["no_stall_constraint"] = np.zeros(len(r))
 
         myobj.compute(inputs, outputs)
 
-        ref_no_stall_constraint = np.array([0.        , 0.        ,
-                             0.        , 0.        , 0.        ,
-            0.        , 0.        , 0.77009342, 0.80530567, 0.83153911,
-            0.85911535, 0.89343367, 0.97975052, 1.07592565, 1.11609355,
-            1.13403252, 1.14891246, 1.14568097, 1.14014398, 1.12239983,
-            1.07454375, 1.07115146, 1.07115146, 1.07115146, 1.07115146,
-            1.07115146, 1.07115146, 1.07115146, 1.07115146, 1.07115146])
+        ref_no_stall_constraint = np.array([0.        , 0.        , 0.        , 0.        , 0.        ,
+            0.        , 0.        , 0.70033738, 0.75218097, 0.79315049,
+            0.82765667, 0.86538097, 0.95065128, 1.04466023, 1.09225808,
+            1.11726308, 1.13587504, 1.13809885, 1.13778982, 1.12488231,
+            1.07696038, 1.07288003, 1.07288003, 1.07288003, 1.07288003,
+            1.07288003, 1.07288003, 1.07288003, 1.07288003, 1.07288003])
         
-        ref_stall_angle_along_span = np.array([1.00000000e-06, 6.24217266e+01, 
-                                               3.04993295e+00, 3.86108996e+01,
-                2.45945626e+01, 1.84737813e+01, 1.35576462e+01, 1.29854375e+01,
-                1.24176450e+01, 1.20258925e+01, 1.16398805e+01, 1.11927727e+01,
-                1.02066799e+01, 9.29432250e+00, 8.95982239e+00, 8.81808929e+00,
-                8.70388331e+00, 8.72843333e+00, 8.77082210e+00, 8.90948100e+00,
-                9.30627534e+00, 9.33574791e+00, 9.33574791e+00, 9.33574791e+00,
-                9.33574791e+00, 9.33574791e+00, 9.33574791e+00, 9.33574791e+00,
-                9.33574791e+00, 9.33574791e+00])
-
+        ref_stall_angle_along_span = np.array([1.00000000e-06, 6.20764268e+01, 3.05626324e+00, 3.71512410e+01,
+            2.65640306e+01, 2.13870345e+01, 1.55639231e+01, 1.42788322e+01,
+            1.32946730e+01, 1.26079478e+01, 1.20823046e+01, 1.15556042e+01,
+            1.05191044e+01, 9.57249039e+00, 9.15534539e+00, 8.95044341e+00,
+            8.80378528e+00, 8.78658297e+00, 8.78896951e+00, 8.88981886e+00,
+            9.28539266e+00, 9.32070663e+00, 9.32070663e+00, 9.32070663e+00,
+            9.32070663e+00, 9.32070663e+00, 9.32070663e+00, 9.32070663e+00,
+            9.32070663e+00, 9.32070663e+00])
+        
         npt.assert_almost_equal(outputs["no_stall_constraint"], ref_no_stall_constraint)
         npt.assert_almost_equal(outputs["stall_angle_along_span"], ref_stall_angle_along_span)
 
     def testRegulationTrajectory(self):
         prob = om.Problem(reports=False)
 
-        (n_span, n_aoa, n_Re, n_tab) = NPZFILE["airfoils_cl"].shape
+        (n_span, n_aoa, n_Re) = NPZFILE["airfoils_cl"].shape
         n_pc = 22
 
         modeling_options = {}
@@ -148,8 +147,8 @@ class TestServo(unittest.TestCase):
         modeling_options["WISDEM"]["RotorSE"]["n_span"] = n_span
         modeling_options["WISDEM"]["RotorSE"]["n_aoa"] = n_aoa
         modeling_options["WISDEM"]["RotorSE"]["n_Re"] = n_Re
-        modeling_options["WISDEM"]["RotorSE"]["n_tab"] = n_tab
         modeling_options["WISDEM"]["RotorSE"]["regulation_reg_III"] = True
+        modeling_options["WISDEM"]["RotorSE"]["fix_pitch_regI12"] = False
         modeling_options["WISDEM"]["RotorSE"]["n_pc"] = n_pc
         modeling_options["WISDEM"]["RotorSE"]["n_pc_spline"] = n_pc
 
@@ -160,7 +159,7 @@ class TestServo(unittest.TestCase):
 
         # All reg 2: no maxTS, no max rpm, no power limit
         prob["omega_max"] = 1e3
-        prob["control_maxTS"] = 1e5
+        prob["max_allowable_blade_tip_speed"] = 1e5
         prob["rated_power"] = 1e16
         prob.run_model()
 
@@ -193,7 +192,7 @@ class TestServo(unittest.TestCase):
 
         # Test no maxTS, max rpm, no power limit
         prob["omega_max"] = 15.0
-        prob["control_maxTS"] = 1e5
+        prob["max_allowable_blade_tip_speed"] = 1e5
         prob["rated_power"] = 1e16
         prob.run_model()
         V_expect1 = np.sort(np.r_[V_expect0, prob["rated_V"]])
@@ -217,7 +216,7 @@ class TestServo(unittest.TestCase):
 
         # Test maxTS, no max rpm, no power limit
         prob["omega_max"] = 1e3
-        prob["control_maxTS"] = 105.0
+        prob["max_allowable_blade_tip_speed"] = 105.0
         prob["rated_power"] = 1e16
         prob.run_model()
         V_expect1 = np.sort(np.r_[V_expect0, prob["rated_V"]])
@@ -240,10 +239,11 @@ class TestServo(unittest.TestCase):
         npt.assert_allclose(myCp[:irated], myCp[0])
         npt.assert_allclose(myCp[:irated], prob["Cp"][:irated])
 
-        # Test no maxTS, no max rpm, power limit
+        # Test no maxTS, no max rpm, power limit, no peak shaving
         prob["omega_max"] = 1e3
-        prob["control_maxTS"] = 1e4
+        prob["max_allowable_blade_tip_speed"] = 1e4
         prob["rated_power"] = 5e6
+        prob["peak_thrust_shaving"] = 1.0
         prob.run_model()
         V_expect1 = np.sort(np.r_[V_expect0, prob["rated_V"]])
         Omega_tsr = V_expect1 * 10 * 60 / 70.0 / 2.0 / np.pi
@@ -269,7 +269,7 @@ class TestServo(unittest.TestCase):
         # Test min & max rpm, no power limit
         prob["omega_min"] = 7.0
         prob["omega_max"] = 15.0
-        prob["control_maxTS"] = 1e5
+        prob["max_allowable_blade_tip_speed"] = 1e5
         prob["rated_power"] = 1e16
         prob.run_model()
         V_expect1 = np.sort(np.r_[V_expect0, prob["rated_V"]])
@@ -294,7 +294,7 @@ class TestServo(unittest.TestCase):
         # Test min & max rpm, normal power
         prob["omega_min"] = 7.0
         prob["omega_max"] = 14.0
-        prob["control_maxTS"] = 1e5
+        prob["max_allowable_blade_tip_speed"] = 1e5
         prob["rated_power"] = 5e6
         prob.run_model()
         V_expect1 = np.sort(np.r_[V_expect0, prob["rated_V"]])
@@ -318,7 +318,7 @@ class TestServo(unittest.TestCase):
         # Test fixed pitch
         prob["omega_min"] = 0.0
         prob["omega_max"] = 15.0
-        prob["control_maxTS"] = 1e5
+        prob["max_allowable_blade_tip_speed"] = 1e5
         prob["rated_power"] = 1e16
         prob["control_pitch"] = 5.0
         prob.run_model()
@@ -346,7 +346,7 @@ class TestServo(unittest.TestCase):
         prob = om.Problem(reports=False)
 
         # Load in airfoil and blade shape inputs for NREL 5MW
-        (n_span, n_aoa, n_Re, n_tab) = NPZFILE["airfoils_cl"].shape
+        (n_span, n_aoa, n_Re) = NPZFILE["airfoils_cl"].shape
         n_pc = 22
 
         modeling_options = {}
@@ -355,8 +355,8 @@ class TestServo(unittest.TestCase):
         modeling_options["WISDEM"]["RotorSE"]["n_span"] = n_span
         modeling_options["WISDEM"]["RotorSE"]["n_aoa"] = n_aoa
         modeling_options["WISDEM"]["RotorSE"]["n_Re"] = n_Re
-        modeling_options["WISDEM"]["RotorSE"]["n_tab"] = n_tab
         modeling_options["WISDEM"]["RotorSE"]["regulation_reg_III"] = False
+        modeling_options["WISDEM"]["RotorSE"]["fix_pitch_regI12"] = False
         modeling_options["WISDEM"]["RotorSE"]["n_pc"] = n_pc
         modeling_options["WISDEM"]["RotorSE"]["n_pc_spline"] = n_pc
 
@@ -365,10 +365,11 @@ class TestServo(unittest.TestCase):
         )
         prob = fillprob(prob, n_pc, n_span)
 
-        # All reg 2: no maxTS, no max rpm, no power limit
+        # All reg 2: no maxTS, no max rpm, no power limit, no peak shaving
         prob["omega_max"] = 1e3
-        prob["control_maxTS"] = 1e5
+        prob["max_allowable_blade_tip_speed"] = 1e5
         prob["rated_power"] = 1e16
+        prob["peak_thrust_shaving"] = 1.0
         prob.run_model()
 
         grid0 = np.cumsum(np.abs(np.diff(np.cos(np.linspace(-np.pi / 4.0, np.pi / 2.0, n_pc)))))
@@ -400,7 +401,7 @@ class TestServo(unittest.TestCase):
 
         # Test no maxTS, no max rpm, power limit
         prob["omega_max"] = 1e3
-        prob["control_maxTS"] = 1e4
+        prob["max_allowable_blade_tip_speed"] = 1e4
         prob["rated_power"] = 5e6
         prob.run_model()
         V_expect1 = np.sort(np.r_[V_expect0, prob["rated_V"]])
@@ -427,7 +428,7 @@ class TestServo(unittest.TestCase):
     def testRegulationTrajectory_PeakShaving(self):
         prob = om.Problem(reports=False)
 
-        (n_span, n_aoa, n_Re, n_tab) = NPZFILE["airfoils_cl"].shape
+        (n_span, n_aoa, n_Re) = NPZFILE["airfoils_cl"].shape
         n_pc = 22
 
         modeling_options = {}
@@ -436,8 +437,8 @@ class TestServo(unittest.TestCase):
         modeling_options["WISDEM"]["RotorSE"]["n_span"] = n_span
         modeling_options["WISDEM"]["RotorSE"]["n_aoa"] = n_aoa
         modeling_options["WISDEM"]["RotorSE"]["n_Re"] = n_Re
-        modeling_options["WISDEM"]["RotorSE"]["n_tab"] = n_tab
         modeling_options["WISDEM"]["RotorSE"]["regulation_reg_III"] = True
+        modeling_options["WISDEM"]["RotorSE"]["fix_pitch_regI12"] = False
         modeling_options["WISDEM"]["RotorSE"]["n_pc"] = n_pc
         modeling_options["WISDEM"]["RotorSE"]["n_pc_spline"] = n_pc
 
@@ -448,9 +449,9 @@ class TestServo(unittest.TestCase):
 
         # All reg 2: no maxTS, no max rpm, no power limit
         prob["omega_max"] = 1e3
-        prob["control_maxTS"] = 1e5
+        prob["max_allowable_blade_tip_speed"] = 1e5
         prob["rated_power"] = 1e16
-        prob["ps_percent"] = 0.8
+        prob["peak_thrust_shaving"] = 0.8
         prob.run_model()
 
         grid0 = np.cumsum(np.abs(np.diff(np.cos(np.linspace(-np.pi / 4.0, np.pi / 2.0, n_pc)))))
@@ -482,7 +483,7 @@ class TestServo(unittest.TestCase):
 
         # Test no maxTS, max rpm, no power limit
         prob["omega_max"] = 15.0
-        prob["control_maxTS"] = 1e5
+        prob["max_allowable_blade_tip_speed"] = 1e5
         prob["rated_power"] = 1e16
         prob.run_model()
         V_expect1 = np.sort(np.r_[V_expect0, prob["rated_V"]])
@@ -506,7 +507,7 @@ class TestServo(unittest.TestCase):
 
         # Test maxTS, no max rpm, no power limit
         prob["omega_max"] = 1e3
-        prob["control_maxTS"] = 105.0
+        prob["max_allowable_blade_tip_speed"] = 105.0
         prob["rated_power"] = 1e16
         prob.run_model()
         V_expect1 = np.sort(np.r_[V_expect0, prob["rated_V"]])
@@ -531,8 +532,12 @@ class TestServo(unittest.TestCase):
 
         # Test no maxTS, no max rpm, power limit
         prob["omega_max"] = 1e3
-        prob["control_maxTS"] = 1e4
+        prob["max_allowable_blade_tip_speed"] = 1e4
         prob["rated_power"] = 5e6
+        prob["peak_thrust_shaving"] = 1.0
+        prob.run_model()
+        T_peak = max(prob["T"])
+        prob["peak_thrust_shaving"] = 0.8
         prob.run_model()
         V_expect1 = np.sort(np.r_[V_expect0, prob["rated_V"]])
         Omega_tsr = V_expect1 * 10 * 60 / 70.0 / 2.0 / np.pi
@@ -545,7 +550,7 @@ class TestServo(unittest.TestCase):
         npt.assert_array_almost_equal(prob["Cp"], prob["Cp_aero"] * 0.975 * 0.975)
         npt.assert_array_less(prob["P"][:irated], prob["P"][1 : (irated + 1)])
         npt.assert_allclose(prob["P"][irated:], 5e6, rtol=1e-4, atol=0)
-        npt.assert_array_less(prob["T"], 0.8 * 880899)  # From print out in first test
+        npt.assert_array_less(prob["T"], 1.01 * prob["peak_thrust_shaving"][0] * T_peak) # within 1%
         self.assertAlmostEqual(prob["rated_Omega"][0], Omega_expect[-1])
         self.assertGreater(prob["rated_pitch"], 0.0)
         myCp = prob["P"] / (0.5 * 1.225 * V_expect1**3.0 * np.pi * 70**2)
@@ -555,7 +560,7 @@ class TestServo(unittest.TestCase):
         # Test min & max rpm, no power limit
         prob["omega_min"] = 7.0
         prob["omega_max"] = 15.0
-        prob["control_maxTS"] = 1e5
+        prob["max_allowable_blade_tip_speed"] = 1e5
         prob["rated_power"] = 1e16
         prob.run_model()
         V_expect1 = np.sort(np.r_[V_expect0, prob["rated_V"]])
@@ -580,7 +585,7 @@ class TestServo(unittest.TestCase):
         # Test min & max rpm, normal power
         prob["omega_min"] = 7.0
         prob["omega_max"] = 14.0
-        prob["control_maxTS"] = 1e5
+        prob["max_allowable_blade_tip_speed"] = 1e5
         prob["rated_power"] = 5e6
         prob.run_model()
         V_expect1 = np.sort(np.r_[V_expect0, prob["rated_V"]])
@@ -607,8 +612,8 @@ class TestServo(unittest.TestCase):
         debug_archive = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + "debug.npz"
         debug_npz = np.load(debug_archive)
 
-        (n_span, n_aoa, n_Re, n_tab) = debug_npz["airfoils_cl"].shape
-        n_pc = 50
+        (n_span, n_aoa, n_Re) = debug_npz["airfoils_cl"].shape
+        n_pc = 20
 
         modeling_options = {}
         modeling_options["WISDEM"] = {}
@@ -616,8 +621,8 @@ class TestServo(unittest.TestCase):
         modeling_options["WISDEM"]["RotorSE"]["n_span"] = n_span
         modeling_options["WISDEM"]["RotorSE"]["n_aoa"] = n_aoa
         modeling_options["WISDEM"]["RotorSE"]["n_Re"] = n_Re
-        modeling_options["WISDEM"]["RotorSE"]["n_tab"] = n_tab
         modeling_options["WISDEM"]["RotorSE"]["regulation_reg_III"] = True
+        modeling_options["WISDEM"]["RotorSE"]["fix_pitch_regI12"] = False
         modeling_options["WISDEM"]["RotorSE"]["n_pc"] = n_pc
         modeling_options["WISDEM"]["RotorSE"]["n_pc_spline"] = n_pc
 

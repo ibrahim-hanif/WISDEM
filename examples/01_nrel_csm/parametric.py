@@ -86,7 +86,7 @@ for k in range(npts):
 
     # Compute Turbine capital cost using the NREL CSM (2015) and store the result
     prob.run_model()
-    tcc[k] = float(prob["turbine_cost_kW"])
+    tcc[k] = prob["turbine_cost_kW"][0]
 
     # Compute AEP using original CSM function and store result
     aep_instance.compute(

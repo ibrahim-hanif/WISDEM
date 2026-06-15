@@ -14,6 +14,7 @@ This module consists of two classes:
 
 import math
 import traceback
+from itertools import product
 
 import numpy as np
 import pandas as pd
@@ -1173,6 +1174,72 @@ class ArraySystem(CostModule):
         self.output_dict["collection_cost_csv"] = result
         return result
 
+    def create_layout_for_opex(self, input_dict, output_dict):
+        """Creates a generic grid layout in DataFrame format to be used by WOMBAT for the
+        OpEx calculation.
+        """
+        num_full_strings = int(output_dict["num_full_strings"])
+        num_partial_strings = int(output_dict["num_partial_strings"])
+        num_turb_full_string = int(output_dict["total_turb_per_string"])
+        num_turb_partial_string = int(output_dict["num_leftover_turb"])
+        turbine_distance_m = input_dict["turbine_spacing_rotor_diameters"] * input_dict["rotor_diameter_m"]
+        row_distance_m = input_dict["row_spacing_rotor_diameters"]
+
+        total_strings = num_full_strings + num_partial_strings
+        turbines_x = np.full(
+            total_strings,
+            turbine_distance_m,
+        ).reshape(-1, 1) * np.add(
+            np.arange(num_turb_full_string, dtype=float),
+            1,
+        )
+
+        turbines_y = np.arange(total_strings, dtype=float)[::-1].reshape(-1, 1) * np.full(
+            (1, num_turb_full_string), row_distance_m
+        )
+
+        if num_partial_strings > 0:
+            turbines_x[-1, num_turb_partial_string:] = None
+            turbines_y[-1, num_turb_partial_string:] = None
+
+        substation_x = 0.0
+        substation_y = turbines_y[:, 0].mean()
+
+        num_turbines = num_full_strings * num_turb_full_string + num_partial_strings * num_turb_partial_string
+        columns = [
+            "id",
+            "substation_id",
+            "name",
+            "latitude",
+            "longitude",
+            "string",
+            "order",
+        ]
+        layout_df = pd.DataFrame(
+            np.zeros((num_turbines + 1, len(columns))),
+            columns=columns,
+        )
+        layout_df.string = layout_df.string.astype(int)
+        layout_df.order = layout_df.order.astype(int)
+
+        strings = [("", ""), *product(range(num_full_strings), range(num_turb_full_string))]
+        if num_partial_strings > 0:
+            strings.extend(
+                product(range(num_full_strings, num_full_strings + num_partial_strings), range(num_turb_partial_string))
+            )
+        layout_df[["string", "order"]] = strings
+
+        coords = np.array(
+            [[substation_x, substation_y], *zip(turbines_x.flatten(), turbines_y.flatten(), strict=False)]
+        )
+        coords = coords[: num_turbines + 1]
+        layout_df[["longitude", "latitude"]] = coords
+
+        layout_df["substation_id"] = "sub1"
+        layout_df["id"] = ["sub1"] + [f"t{i}" for i in range(layout_df.shape[0] - 1)]
+        layout_df["name"] = ["substation-1"] + [f"turbine-{i}" for i in range(num_turbines)]
+        return layout_df
+
     def run_module(self):
         """
         Runs the CollectionCost module and populates the IO dictionaries with calculated values.
@@ -1218,6 +1285,7 @@ class ArraySystem(CostModule):
             self.output_dict["collection_cost_module_type_operation"] = self.outputs_for_costs_by_module_type_operation(
                 input_df=self.output_dict["total_collection_cost"], project_id=self.project_name, total_or_turbine=True
             )
+            self.output_dict["layout"] = self.create_layout_for_opex(self.input_dict, self.output_dict)
             return 0, 0  # module ran successfully
         except Exception as error:
             traceback.print_exc()

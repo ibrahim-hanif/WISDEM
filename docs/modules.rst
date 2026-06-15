@@ -24,3 +24,4 @@ Module documentation
    wisdem/pyframe3dd/index
    wisdem/rotorse/index
    wisdem/towerse/index
+   wisdem/wombat/index

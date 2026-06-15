@@ -406,7 +406,8 @@ def create_all_plots(
     plt.subplots_adjust(bottom=0.15, left=0.15)
     fig_name = "tower-monopile_geometry" + extension
     ftow.subplots_adjust(hspace=0.02, wspace=0.02, bottom=0.15, left=0.15)
-    ftow.savefig(os.path.join(folder_output, fig_name), pad_inches=0.1, bbox_inches="tight")
+    # Save fig commented out because it is failing as of Dec 29, 2025 with numpy upgrading to 2.4
+    # ftow.savefig(os.path.join(folder_output, fig_name), pad_inches=0.1, bbox_inches="tight")
     plt.close()
     # except KeyError:
     #    pass
