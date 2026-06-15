@@ -322,10 +322,10 @@ class DrivetrainSE_M4W( om.Group ):
         n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
         direct = opt_drivese["direct"]
         if direct:
-            use_gb_torque_density = False
+            gearbox_torque_density = 0.0
         else:
-            use_gb_torque_density = opt_drivese["use_gb_torque_density"]
-            
+            gearbox_torque_density = opt_drivese["gearbox_torque_density"]
+
         dogen = self.options["modeling_options"]["flags"]["generator"]
         n_pc = self.options["modeling_options"]["WISDEM"]["RotorSE"]["n_pc"]
         flag_hub = self.options["modeling_options"]["flags"]["hub"] #TODO: this modified; remove and add hub as legacy
@@ -333,7 +333,7 @@ class DrivetrainSE_M4W( om.Group ):
         
         # print flag information (debugging)
         print("=== Problem 'DrivetrainSE_M4W' setting up ===")
-        print(f"flag info: doMBfls={doMBfls}, use_gb_torque_density={use_gb_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
+        print(f"flag info: doMBfls={doMBfls}, gearbox_torque_density={gearbox_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
 
         # self.set_input_defaults("machine_rating", units="kW")
         #self.set_input_defaults("hvac_mass_coeff", 0.025, units="kg/kW/m")
@@ -356,7 +356,7 @@ class DrivetrainSE_M4W( om.Group ):
         
         # # 2. gearbox
         self.add_subsystem(
-            "gear", Gearbox(direct_drive=direct, use_gb_torque_density=use_gb_torque_density),
+            "gear", Gearbox(direct_drive=direct, gearbox_torque_density=gearbox_torque_density),
                 promotes=["*"]
             )
 
@@ -388,7 +388,7 @@ class DrivetrainSE_M4W( om.Group ):
         # 3. yaw system
         self.add_subsystem(
             "yaw", dc.YawSystem(),
-            promotes=["yaw_mass", "yaw_mass_user", "yaw_I", "yaw_cm", "rotor_diameter", "D_top"]
+            promotes=["yaw_mass", "yaw_system_mass_user", "yaw_I", "yaw_cm", "rotor_diameter", "D_top"]
             )
         
         # Generator (simple for now)

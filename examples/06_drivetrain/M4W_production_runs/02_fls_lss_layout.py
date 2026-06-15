@@ -128,7 +128,7 @@ opts["WISDEM"]["DriveSE"]["hub"]["hub_gamma"] = 2.0
 opts["WISDEM"]["DriveSE"]["hub"]["spinner_gamma"] = 1.5
 
 opts["WISDEM"]["DriveSE"]["direct"] = False
-opts["WISDEM"]["DriveSE"]["use_gb_torque_density"] = True # False =(GB  optim, in-capabale)
+opts["WISDEM"]["DriveSE"]["gearbox_torque_density"] = 0.0
 
 opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
 opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
@@ -184,9 +184,9 @@ class LSS_layout( om.Group ):
         n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
         direct = opt_drivese["direct"]
         if direct:
-            use_gb_torque_density = False
+            gearbox_torque_density = 0.0
         else:
-            use_gb_torque_density = opt_drivese["use_gb_torque_density"]
+            gearbox_torque_density = opt_drivese["gearbox_torque_density"]
             
         dogen = self.options["modeling_options"]["flags"]["generator"]
         n_pc = self.options["modeling_options"]["WISDEM"]["RotorSE"]["n_pc"]
@@ -195,7 +195,7 @@ class LSS_layout( om.Group ):
 
         # print flag information
         print("=== Problem 'LSS_layout' setting up ===")
-        print(f"flag info: doMBfls={doMBfls}, use_gb_torque_density={use_gb_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
+        print(f"flag info: doMBfls={doMBfls}, gearbox_torque_density={gearbox_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
 
         # self.set_input_defaults("machine_rating", units="kW")
         #self.set_input_defaults("hvac_mass_coeff", 0.025, units="kg/kW/m")
@@ -218,7 +218,7 @@ class LSS_layout( om.Group ):
         
         # # 2. gearbox
         self.add_subsystem(
-            "gear", Gearbox(direct_drive=direct, use_gb_torque_density=use_gb_torque_density),
+            "gear", Gearbox(direct_drive=direct, gearbox_torque_density=gearbox_torque_density),
                 promotes=["*"]
             )
 

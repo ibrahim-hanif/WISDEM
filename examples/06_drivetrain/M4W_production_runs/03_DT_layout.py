@@ -83,7 +83,7 @@ flag_scaling_show_browser = False
 
 flag_save_new_data = False
 load_from_saved_data = True
-flag_save_RNAprops4tower = False
+flag_save_RNAprops4tower = False # TODO: modify to match latest windio schema
 
 # Parametric study
 flag_study_parametric = False
@@ -163,7 +163,7 @@ opts["WISDEM"]["DriveSE"]["hub"]["hub_gamma"] = 2.0
 opts["WISDEM"]["DriveSE"]["hub"]["spinner_gamma"] = 1.5
 
 opts["WISDEM"]["DriveSE"]["direct"] = False
-opts["WISDEM"]["DriveSE"]["use_gb_torque_density"] = True # False =(GB  optim, in-capabale)
+opts["WISDEM"]["DriveSE"]["gearbox_torque_density"] = 0.0 # False =(GB  optim, in-capabale)
 
 opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
 opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
