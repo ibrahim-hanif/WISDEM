@@ -4,11 +4,11 @@ channels:
 
 dependencies:
 # NOTE: uncomment the OS-dependent lines below as needed
-  # - gfortran  # [win]
-  # - gcc       # [win]
+  - gfortran  # [win]
+  - gcc       # [win]
   # - gfortran  # [osx]  # only if not installed via homebrew or macports
-  - petsc4py  # [unix]
-  - mpi4py  # [unix] # only needed if local system has mpi built and is used
+  # - petsc4py  # [unix]
+  # - mpi4py  # [unix] # only needed if local system has mpi built and is used
   - coveralls
   - cython
   - jsonmerge
@@ -33,5 +33,7 @@ dependencies:
   - pip:
     - dearpygui
 # ---- (v) TODO
+    - pyxdsm
+    - pip install omxdsm@https://github.com/onodip/OpenMDAO-XDSM/tarball/master
     # - git+(link to uploaded util funcs used in wisdem)
 # ----
