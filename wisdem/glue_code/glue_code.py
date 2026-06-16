@@ -383,8 +383,8 @@ class WT_RNTA(om.Group):
             self.connect("drivetrain.mb2_mass_user", "drivese.bear2.mb_mass_user")
             #(v) ---- 'mb_e' is an input (from geo yaml thru nacelle ivc): direct connections to rspt compns (within DrivetrainSE) ----
             if modeling_options["flags"]["mb_fls"]:
-                self.connect("nacelle.mb1_e", "drivese.bear1.mb_e")
-                self.connect("nacelle.mb2_e", ["drivese.bear2.mb_e", "drivese.mb_fls.e_mb"]) #(v) ----
+                self.connect("drivetrain.mb1_e", "drivese.bear1.mb_e")
+                self.connect("drivetrain.mb2_e", ["drivese.bear2.mb_e", "drivese.mb_fls.e_mb"]) #(v) ----
             self.connect("drivetrain.hvac_mass_coeff", "drivese.hvac_mass_coeff")
             self.connect("drivetrain.converter_mass_user", "drivese.converter_mass_user")
             self.connect("drivetrain.transformer_mass_user", "drivese.transformer_mass_user")

@@ -743,8 +743,8 @@ def assign_drivetrain_values(wt_opt, modeling_options, drivetrain, yaw, flags, u
             wt_opt["drivetrain.lss_mass_user"] = drivetrain["lss"]["mass_user"]
         wt_opt["drivetrain.mb1Type"] = drivetrain["other_components"]["mb1Type"]
         wt_opt["drivetrain.mb2Type"] = drivetrain["other_components"]["mb2Type"]
-        wt_opt["nacelle.mb1_e"] = drivetrain["drivetrain"]["mb1_e"] #(v) new
-        wt_opt["nacelle.mb2_e"] = drivetrain["drivetrain"]["mb2_e"] #(v) new
+        wt_opt["drivetrain.mb1_e"] = drivetrain["other_components"]["mb1_e"] #(v) new
+        wt_opt["drivetrain.mb2_e"] = drivetrain["other_components"]["mb2_e"] #(v) new
         wt_opt["drivetrain.uptower"] = drivetrain["other_components"]["uptower"]
         wt_opt["drivetrain.hvac_mass_coeff"] = drivetrain["other_components"]["hvac_mass_coefficient"]
         wt_opt["drivetrain.bedplate_material"] = drivetrain["bedplate"]["material"]
@@ -800,12 +800,12 @@ def assign_drivetrain_values(wt_opt, modeling_options, drivetrain, yaw, flags, u
             wt_opt["drivetrain.bedplate_web_thickness"] = drivetrain["bedplate"]["web_thickness"]
             wt_opt["drivetrain.gear_configuration"] = drivetrain["gearbox"]["gear_configuration"].lower()
             wt_opt["drivetrain.planet_numbers"] = drivetrain["gearbox"]["planet_numbers"]
-            if "mass_user" in drivetrain["gearbox"]:
-                wt_opt["drivetrain.gearbox_mass_user"] = drivetrain["gearbox"]["mass_user"]
-            if "gearbox_radius_user" in drivetrain["gearbox"]:
-                wt_opt["drivetrain.gearbox_radius_user"] = drivetrain["gearbox_radius_user"]
-            if "gearbox_length_user" in drivetrain["gearbox"]:
-                wt_opt["drivetrain.gearbox_length_user"] = drivetrain["gearbox_length_user"]
+            if "mass" in drivetrain["gearbox"]:
+                wt_opt["drivetrain.gearbox_mass_user"] = drivetrain["gearbox"]["mass"]
+            if "radius" in drivetrain["gearbox"]:
+                wt_opt["drivetrain.gearbox_radius_user"] = drivetrain["gearbox"]["radius"]
+            if "length" in drivetrain["gearbox"]:
+                wt_opt["drivetrain.gearbox_length_user"] = drivetrain["gearbox"]["length"]
 
     if user_elastic:
         wt_opt["drivese.above_yaw_mass"] = drivetrain["elastic_properties"]["mass"]
