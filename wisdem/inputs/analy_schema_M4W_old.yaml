@@ -4,9 +4,6 @@ title: WISDEM wind turbine optimization options schema
 description: Schema that describes the analysis and optimization options for WISDEM
 type: object
 properties:
-    fname_input_analysis:
-        type: string
-        description: Used to store file name of analysis options file
     general:
         type: object
         default: {}
@@ -58,7 +55,7 @@ properties:
                             twist:
                                 type: object
                                 default: {}
-                                description: Blade twist as a design variable by adding or subtracting degrees from the initial value at spline control points along the span.
+                                description: Blade twist as a design variable by adding or subtracting radians from the initial value at spline control points along the span.
                                 properties:
                                     flag: *flag
                                     inverse:
@@ -78,13 +75,13 @@ properties:
                                     max_decrease:
                                         type: number
                                         description: Maximum allowable decrease of twist at each DV location along blade span.
-                                        default: 5.0
-                                        unit: deg
+                                        default: 0.1
+                                        unit: rad
                                     max_increase:
                                         type: number
                                         description: Maximum allowable increase of twist at each DV location along blade span.
-                                        default: 5.0
-                                        unit: deg
+                                        default: 0.1
+                                        unit: rad
                                     index_start: &index_start
                                         type: integer
                                         default: 0
@@ -100,8 +97,8 @@ properties:
                                     cap_twist_root:
                                         type: number
                                         description: Maximum allowable twist during an inverse design. Close to blade root, twist will be capped to this value.
-                                        default: 20.0
-                                        unit: deg
+                                        default: 0.349
+                                        unit: rad
                             chord:
                                 type: object
                                 default: {}
@@ -134,6 +131,86 @@ properties:
                                         default: 4
                                         minimum: 1
                                         description: Index of airfoil where the optimization can start shifting airfoil position. The airfoil at blade tip is always locked.
+                            rthick:
+                                type: object
+                                default: {}
+                                description: Blade relative thickness as a design variable by scaling (multiplying) the initial value at spline control points along the span. This requires the INN for airfoil design
+                                properties:
+                                    flag: *flag
+                                    n_opt:
+                                        type: integer
+                                        default: 8
+                                        minimum: 4
+                                        description: Number of equally-spaced control points of the spline parametrizing the relative thickness distribution along blade span.
+                                    max_decrease: *max_decrease
+                                    max_increase: *max_increase
+                                    index_start: *index_start
+                                    index_end: *index_end
+                            L/D:
+                                type: object
+                                default: {}
+                                description: Lift to drag ratio as a design variable by scaling (multiplying) the initial value at spline control points along the span. This requires the INN for airfoil design
+                                properties:
+                                    flag: *flag
+                                    n_opt:
+                                        type: integer
+                                        default: 8
+                                        minimum: 4
+                                        description: Number of equally-spaced control points of the spline parametrizing the lift to drag ratio distribution along blade span.
+                                    max_decrease: *max_decrease
+                                    max_increase: *max_increase
+                                    index_start: *index_start
+                                    index_end: *index_end
+                            c_d:
+                                type: object
+                                default: {}
+                                description: Drag coefficient at rated conditions as a design variable by scaling (multiplying) the initial value at spline control points along the span. This requires the INN for airfoil design
+                                properties:
+                                    flag: *flag
+                                    n_opt:
+                                        type: integer
+                                        default: 8
+                                        minimum: 4
+                                        description: Number of equally-spaced control points of the spline parametrizing the drag coefficient distribution along blade span.
+                                    max_decrease: *max_decrease
+                                    max_increase: *max_increase
+                                    index_start: *index_start
+                                    index_end: *index_end
+                            stall_margin:
+                                type: object
+                                default: {}
+                                description: Stall margin at rated conditions as a design variable by scaling (multiplying) the initial value at spline control points along the span. This requires the INN for airfoil design
+                                properties:
+                                    flag: *flag
+                                    n_opt:
+                                        type: integer
+                                        default: 8
+                                        minimum: 4
+                                        description: Number of equally-spaced control points of the spline parametrizing the stall margin distribution along blade span.
+                                    max_decrease: *max_decrease
+                                    max_increase: *max_increase
+                                    index_start: *index_start
+                                    index_end: *index_end
+                            z:
+                                type: object
+                                default: {}
+                                description: INN design parameter z
+                                properties:
+                                    flag: *flag
+                                    n_opt:
+                                        type: integer
+                                        default: 3
+                                        description: z design parameter count
+                                    lower_bound:
+                                        type: number
+                                        default: -1.0
+                                        minimum: -1.e30
+                                        maximum: 1.e30
+                                    upper_bound:
+                                        type: number
+                                        default: 1.0
+                                        minimum: -1.e30
+                                        maximum: 1.e30
                     structure:
                         type: array
                         description: Design variables associated with the internal blade structure
@@ -143,7 +220,7 @@ properties:
                             description: Set the thickness of any blade layer as a design variable by scaling (multiplying) the initial value at spline control points along the span.
                             default: {}
                             properties:
-                                layer_name:
+                                layer_name: 
                                     type: string
                                     description: Name of blade structural layer to be optimized
                                 n_opt:
@@ -194,9 +271,9 @@ properties:
                             lower_bound: &angbound
                                 type: number
                                 minimum: 0.0
-                                maximum: 30.0
+                                maximum: 0.5235987756 # 30 deg
                                 default: 0.0
-                                unit: deg
+                                unit: rad
                                 description: Design variable bound
                             upper_bound: *angbound
                     hub_diameter:
@@ -581,6 +658,7 @@ properties:
                         description: Design variables associated with the node/joint locations used in the floating platform
                         default: {}
                         properties:
+                            flag: *flag
                             z_coordinate: &link_m
                                 type: array
                                 description: List of joints or members by name sets that should be adjusted. A single entry for an independent joint/member or a list of names for joints/members that are linked by symmetry
@@ -593,7 +671,6 @@ properties:
                                             description: Joint or member names of those that are linked
                                             items:
                                                 type: string
-                                        flag: *flag
                                         lower_bound:
                                             type: number
                                             unit: m
@@ -605,9 +682,10 @@ properties:
                             r_coordinate: *link_m
                     members:
                         type: object
-                        description: Design variables associated with the sets of members that share the same design
+                        description: Design variables associated with the members used in the floating platform
                         default: {}
                         properties:
+                            flag: *flag
                             groups:
                                 type: array
                                 description: Sets of members that share the same design
@@ -616,7 +694,6 @@ properties:
                                     type: object
                                     properties:
                                         names: *floatname
-                                        flag: *flag
                                         diameter:
                                             type: object
                                             #default: {}
@@ -733,18 +810,18 @@ properties:
                                                             properties:
                                                                 lower_bound:
                                                                     type: number
-                                                                    unit: deg
+                                                                    unit: rad
                                                                     description: Design variable bound
                                                                     default: 0.0
                                                                     minimum: 0.0
-                                                                    maximum: 180.0 #180 deg
+                                                                    maximum: 3.141592653589793 #180 deg
                                                                 upper_bound:
                                                                     type: number
-                                                                    unit: deg
+                                                                    unit: rad
                                                                     description: Design variable bound
-                                                                    default: 5.0
+                                                                    default: 0.1
                                                                     minimum: 0.0
-                                                                    maximum: 180.0 #180 deg
+                                                                    maximum: 3.141592653589793 #180 deg
             mooring:
                 type: object
                 description: Design variables associated with the mooring system
@@ -787,44 +864,16 @@ properties:
                             flag: *flag
                             lower_bound: *lboundm
                             upper_bound: *uboundm
-            # mooring:
-            #     type: object
-            #     description: Design variables associated with the mooring system
-            #     default: {}
-            #     properties:
-            #         line_length: &mooringdv
-            #             type: array
-            #             description: List of lines by name sets that should be adjusted.  A single entry for an independent line or a list of names for those that should be linked by symmetry.
-            #             default: []
-            #             items:
-            #                 type: object
-            #                 properties:
-            #                     names: *floatname
-            #                     flag: *flag
-            #                     lower_bound:
-            #                         type: number
-            #                         unit: m
-            #                         description: Design variable bound
-            #                         default: 0.0
-            #                         minimum: 0.0
-            #                     upper_bound:
-            #                         type: number
-            #                         unit: m
-            #                         description: Design variable bound
-            #                         minimum: 0.0
-            #         line_diameter: *mooringdv
-            #         line_mass_density_coeff: *mooringdv
-            #         line_stiffness_coeff: *mooringdv
             user:
                 type: array
-                description: List of user-defined design variables. These must be already listed as OpenMDAO indipendent cariable components.
+                description: List of user-defined design variables. These must be already listed as OpenMDAO indipendent cariable components. 
                 default: []
                 items:
                     type: object
-                    description: OpenMDAO entries, taken from https://openmdao.org/newdocs/versions/latest/features/core_features/adding_desvars_cons_objs/adding_design_variables.html
+                    description: OpenMDAO entries, taken from https://openmdao.org/newdocs/versions/latest/features/core_features/adding_desvars_cons_objs/adding_design_variables.html 
                     default: {}
                     properties:
-                        name:
+                        name: 
                             type: string
                             description: Promoted name of the design variable in the system.
                         lower_bound:
@@ -931,10 +980,10 @@ properties:
                             flag: *flag
                             margin:
                                 type: number
-                                default: 5.0 # 5 deg
+                                default: 0.05233 # 3 deg
                                 minimum: 0.0
-                                maximum: 30.0
-                                unit: deg
+                                maximum: 0.5
+                                unit: radians
                     chord:
                         type: object
                         description: Enforcing the maximum chord length limit at all points along blade span.
@@ -1288,8 +1337,8 @@ properties:
                                 type: number
                                 default: 1e-3
                                 minimum: 1e-5
-                                maximum: 30.0
-                                unit: deg
+                                maximum: 1.0
+                                unit: radian
                                 description: Upper limit of angular deflection
                     stator_deflection:
                         type: object
@@ -1301,7 +1350,7 @@ properties:
                     stator_angle:
                         type: object
                         default: {}
-                        description: Allowable non-torque angular deflection of the nose or bedplate, in degrees, at the generator stator attachment
+                        description: Allowable non-torque angular deflection of the nose or bedplate, in radians, at the generator stator attachment
                         properties:
                             flag: *flag
                             upper_bound: *angular_upper
@@ -1322,10 +1371,10 @@ properties:
                         properties:
                             upper_bound: &upang
                                 type: number
-                                default: 10.0 
-                                minimum: 1.0 
-                                maximum: 45.0 
-                                unit: deg
+                                default: 0.17453292519943295 # 10 deg
+                                minimum: 0.017453292519943295 # 1 deg
+                                maximum: 0.7853981633974483 # 45 deg
+                                unit: rad
                     survival_heel: *heelang
                     max_surge:
                         type: object
@@ -1442,7 +1491,7 @@ properties:
                     roll_period: *period
                     pitch_period: *period
                     yaw_period: *period
-
+                    
             user:
                 type: array
                 description: User-defined constraints based on full variable name.  Must enter a lower_bound and/or an upper bound for each constraint
@@ -1468,37 +1517,30 @@ properties:
                             description: Optional string of python indices in a list (i.e. [0,1,2]) or slice (i.e. [:3])
                             items:
                                 type: integer
-                        ref:
-                            type: number
-                            description: Value to scale constraint close to 1.0 in the driver (for optimization conditioning)
-                            default: 1.0
+
     merit_figure:
-        type: [string, array]
-        description: Objective function / merit figure for optimization (not checked via schema, but in python).  Choices are LCOE- levelized cost of energy, AEP- turbine annual energy production, turbine_cost- turbine CapEx, bos_cost- balance of station CapEx, Cp- rotor power coefficient, blade_mass, tower_mass, tower_cost, monopile_mass, monopile_cost, structural_mass- tower+monopile mass, structural_cost- tower+monopile cost, blade_tip_deflection- blade tip deflection distance towards tower, My_std- blade flap moment standard deviation, flp1_std- trailing flap standard deviation, platform_mass- floating platform mass without variable ballast, inverse_design- custom inverse design used to match reference values of any arbitrary output. Can make a list of objectives.
-        default: [none]
-        items:
-            type: string
+        type: string
+        description: Objective function / merit figure for optimization (not checked via schema, but in python).  Choices are LCOE- levelized cost of energy, AEP- turbine annual energy production, turbine_cost- turbine CapEx, bos_cost- balance of station CapEx, Cp- rotor power coefficient, blade_mass, tower_mass, tower_cost, monopile_mass, monopile_cost, structural_mass- tower+monopile mass, nacelle_mass, nacelle_cost, structural_cost- tower+monopile cost, blade_tip_deflection- blade tip deflection distance towards tower, My_std- blade flap moment standard deviation, flp1_std- trailing flap standard deviation, platform_mass- floating platform mass without variable ballast, inverse_design- custom inverse design used to match reference values of any arbitrary output
+        default: LCOE
 
     merit_figure_user:
-        type: [array, object]
-        default: []
+        type: object
+        default: {}
         description: Provides mechanism for a user-specific objective function.  Overrides any entries in merit_figure.
-        items:
-            type: object
-            properties: &merit_user
-                name:
-                    type: string
-                    description: User-specified objective function / merit figure using full variable name in the WISDEM namespace
-                    default: ''
-                ref:
-                    type: number
-                    description: Approximate expected value of the user-defined objective function (just need the nearest order-of-magnitude) for scaling the objective function for optimization conditioning.  For example, if you expect values in the range of 6000, enter in 1000.
-                    default: 1
-                max_flag:
-                    type: boolean
-                    default: False
-                    description: If true, this maximizes the objective function.  If false, then minimize
-
+        properties:
+            name:
+                type: string
+                description: User-specified objective function / merit figure using full variable name in the WISDEM namespace
+                default: ''
+            ref:
+                type: number
+                description: Approximate expected value of the user-defined objective function (just need the nearest order-of-magnitude) for scaling the objective function for optimization conditioning.  For example, if you expect values in the range of 6000, enter in 1000.
+                default: 1
+            max_flag:
+                type: boolean
+                default: False
+                description: If true, this maximizes the objective function.  If false, then minimize
+        
     inverse_design:
         type: object
         description: For use with the inverse_design merit_figure. Specifies the reference output variable's 'prom_name' name and the desired value, accepts multiple variables. A normalized difference between the actual value and reference value is calculated for each variable. A Root Mean Square (RMS) is calculated with all variables and the optimizer minimizes the RMS. If the refernce output variable is an array, specify the element index number via "idx".
@@ -1536,40 +1578,9 @@ properties:
                         minimum: 1e-12
                         maximum: 1.0
                         unit: none
-                    catol:
-                        type: number
-                        description: Some type of tolerance?
-                        default: 1e-6
-                        minimum: 1e-12
-                        maximum: 1.0
-                        unit: none
-                    xtol:
-                        type: number
-                        description: Convergence tolerance based on changes in design variables instead of objective function (NLOpt driver only)
-                        default: 1e-6
-                        minimum: 1e-12
-                        maximum: 1.0
-                        unit: none
-                    rhobeg:
-                        type: number
-                        description: Initial rho?
-                        default: 0.0
-                        minimum: 0.0
-                        maximum: 10.0
-                        unit: none
-                    adaptive:
-                        type: boolean
-                        description: Adaptive solver flag?
-                        default: False
                     max_iter:
                         type: integer
                         description: Max number of optimization iterations
-                        default: 100
-                        minimum: 0
-                        maximum: 100000
-                    max_gen:
-                        type: integer
-                        description: Max number of generations for evolutionary drivers
                         default: 100
                         minimum: 0
                         maximum: 100000
@@ -1639,32 +1650,6 @@ properties:
                         type: boolean
                         default: False
                         description: Toggle driver debug printing
-                    pop_size:
-                        type: integer
-                        description: Population size for evolutionary drivers (e.g. NSGA2)
-                        default: 20
-                        minimum: 1
-                    run_parallel:
-                        type: boolean
-                        default: False
-                        description: Toggle parallel model evaluations for evolutionary drivers
-                    seed:
-                        type: integer
-                        description: Random seed for evolutionary drivers
-                        default: 1
-                        minimum: 1
-                    Pc:
-                        type: number
-                        description: Crossover probability for NSGA2
-                        default: 0.9
-                        minimum: 0.0
-                        maximum: 1.0
-                    Pm:
-                        type: number
-                        description: Mutation probability for NSGA2
-                        default: 0.02
-                        minimum: 0.0
-                        maximum: 1.0
             design_of_experiments:
                 type: object
                 description: Specification of the design of experiments driver parameters
