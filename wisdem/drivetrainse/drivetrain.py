@@ -489,6 +489,9 @@ class DrivetrainSE_M4W( om.Group ):
         # Dynamics
         self.add_subsystem("dyn", dc.DriveDynamics(), promotes=["*"])
 
+        # Converter costs and efficiency
+        self.add_subsystem("converter", Converter(), promotes=["machine_rating"])
+        
         # MOO
         self.add_subsystem("moo", dc.Nacelle_MOO_withDerivatives(), promotes=["*"])
 
