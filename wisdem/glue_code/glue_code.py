@@ -351,7 +351,9 @@ class WT_RNTA(om.Group):
             if modeling_options["flags"]["tower"]:
                 self.connect("tower.diameter", "drivese.D_top", src_indices=[-1]) #(v) TODO: why D_top (important for driveSE) depends on tower? what if user wants to only analyse driveSE (+rotorSE)?
             
-            flag_own_hub_loads = modeling_options["WISDEM"]["DriveSE"]['own_hub_loads'] #(v) user hub loads override those from rotorSE
+            if 'own_hub_loads' in modeling_options["WISDEM"]["DriveSE"]: #(v) user hub loads override those from rotorSE
+                flag_own_hub_loads = modeling_options["WISDEM"]["DriveSE"]['own_hub_loads']
+            else: flag_own_hub_loads = False
             if not flag_own_hub_loads:
                 self.connect("rotorse.rs.aero_hub_loads.Fhub", "drivese.F_aero_hub") #(v) TODO: check and learn usage (coz these loads MUCH lower than ours)
                 self.connect("rotorse.rs.aero_hub_loads.Mhub", "drivese.M_aero_hub")

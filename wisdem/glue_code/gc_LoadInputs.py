@@ -71,8 +71,12 @@ class WindTurbineOntologyPython(object):
             ]["type"].lower()
 
         #(v) MB FLS flag (made like the generator flag)
-        flags["mb_fls"] = (flags["drivetrain"] and "other_components" in self.wt_init["components"]["drivetrain"]
-            and self.wt_init["components"]["drivetrain"]["other_components"]["mb2_e"] > 0.0)
+        flags["mb_fls"] = (
+            flags["drivetrain"] 
+            and "other_components" in self.wt_init["components"]["drivetrain"]
+            and "mb2_e" in self.wt_init["components"]["drivetrain"]["other_components"]
+            and self.wt_init["components"]["drivetrain"]["other_components"]["mb2_e"] > 0.0
+            )
 
         # Offshore flags
         flags["floating"] = self.modeling_options["flags"]["floating_platform"]
