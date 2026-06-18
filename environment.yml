@@ -35,5 +35,6 @@ dependencies:
 # ---- (v) TODO
     - pyxdsm
     - pip install omxdsm@https://github.com/onodip/OpenMDAO-XDSM/tarball/master
+    - pip install git+https://github.com/ibrahim-hanif/Drive4Wind.git
     # - git+(link to uploaded util funcs used in wisdem)
 # ----
