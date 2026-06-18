@@ -52,11 +52,11 @@ import wisdem.drivetrainse.drive_structure as ds
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict
 from wisdem.commonse.fileIO import save_data, load_data, get_variable_list, var_df2dict
 # import the utilities_drivetrain module as utilsDT
-import utilities_drivetrain as utilsDT
+import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 
 # %% [markdown]
 # ### Define flags
-suffix = "_m4w"
+suffix = "_m4w_flip"
 # information
 # 1. 'm4w_flip': np.flip on D and t of lss in GearedLayout
 # 2. 'm4w_noflip': no np.flip on D and t of lss in GearedLayout
@@ -70,7 +70,7 @@ load_fls_loads = False
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 
 # Optimization flags
-flag_opt_GBO = True     # GBO: gradient based optimizer
+flag_opt_GBO = False     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 flag_debug_print = True
