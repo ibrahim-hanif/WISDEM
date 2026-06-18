@@ -47,7 +47,7 @@ import wisdem.drivetrainse.drive_structure as ds
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict
 from wisdem.commonse.fileIO import save_data, load_data
 from wisdem.commonse.cross_sections import Tube
-import utilities_drivetrain as utilsDT
+import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 # %%
 # ### Define flags
 suffix = "_m4w"
@@ -762,9 +762,9 @@ if flag_save_new_data: save_data(loc_save_data, prob)
 # ### Plot recorded results
 #%%
 # main colors
-from my_util_tools import util_funcs
-loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
-clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
+from Drive4Wind.post_processing import color_schemes
+loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
+clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
 # -------------------------
 # options: Journal polish
 # plot rc params
