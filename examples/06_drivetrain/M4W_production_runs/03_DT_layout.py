@@ -57,6 +57,10 @@ import utilities_drivetrain as utilsDT
 # %% [markdown]
 # ### Define flags
 suffix = "_m4w"
+# information
+# 1. 'm4w_flip': np.flip on D and t of lss in GearedLayout
+# 2. 'm4w_noflip': no np.flip on D and t of lss in GearedLayout
+# 3. 'm4w': no flip as well
 
 # pre-processing; Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -66,7 +70,7 @@ load_fls_loads = False
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 
 # Optimization flags
-flag_opt_GBO = False     # GBO: gradient based optimizer
+flag_opt_GBO = True     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 flag_debug_print = True
@@ -268,7 +272,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
 
     # 2. HSS (TODO: add later if needed)
     prob.model.add_design_var("L_hss", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
-    prob.model.add_design_var("hss_diameter", lower=0.5, upper=5.0, ref=5.0, ref0=0.5)
+    prob.model.add_design_var("hss_diameter", lower=0.5, upper=3.0, ref=3.0, ref0=0.5)
     prob.model.add_design_var("hss_wall_thickness", lower=4e-3, upper=0.2, ref=0.2, ref0=4e-3)
 
     # 3. Bedplate (TODO: add later if needed)
