@@ -26,13 +26,13 @@ geometry_options:
             flange_thickness: 0.10475035074785298
             web_thickness: 0.0700594755210736
             material: steel_drive
-        others_components:
+        other_components:
             mb1Type: CRB
             mb2Type: TRB2
             mb1_e: 0.4
             mb2_e: 0.4
             uptower: true
-            converter_mass_user: 5625.0
+            converter_mass: 5625.0
         generator:
             mass: 34800.0
             length: 1.5507360000000001
