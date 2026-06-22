@@ -649,8 +649,8 @@ components: #(v) specifications for individual components (blades, tower, nacell
         outer_shape:
             uptilt: 6.0
             distance_tt_hub: 5.614
-            distance_hub_mb: 0.3621372276834023
-            distance_mb_mb: 5.192940883253409
+            distance_hub_mb: 0.5855741923557886
+            distance_mb_mb: 5.06206409969046
             overhang: 12.0313
             cd: 0.05
         gearbox:
@@ -660,18 +660,18 @@ components: #(v) specifications for individual components (blades, tower, nacell
             length: 2.7636198183
             radius: 2.3120240000000005
         lss:
-            diameter: [3.7963420208099907, 2.7526856627049927]
-            wall_thickness: [0.05485168842502003, 0.19312666299496742]
+            diameter: [2.9049704195636323, 3.463743325427855]
+            wall_thickness: [0.14399803765868038, 0.06202845526267202]
             material: steel_drive
         hss:
-            length: 2.3672417387162223
-            diameter: [1.5604806309694106, 1.1716969766377088]
-            wall_thickness: [0.004000000143349083, 0.0041482008194753395]
+            length: 0.9335580495459397
+            diameter: [0.5, 0.5000000000000007]
+            wall_thickness: [0.08691967744308626, 0.013628246224271914]
             material: steel_drive
         bedplate:
-            flange_width: 1.6900784365536679
-            flange_thickness: 0.14591328329023917
-            web_thickness: 0.08205271248357443
+            flange_width: 2.166987357865463
+            flange_thickness: 0.10475035074785298
+            web_thickness: 0.0700594755210736
             material: steel_drive
         other_components:
             mb1Type: CRB
