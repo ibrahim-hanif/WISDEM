@@ -129,9 +129,9 @@ except Exception as e:
 
 #%% plotting options
 # main colors
-from my_util_tools import util_funcs
-loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
-clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
+from Drive4Wind.post_processing import color_schemes
+loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
+clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
 
 #%%[markdown]
 # ### Tower utilizations
@@ -247,14 +247,14 @@ if flag_plot:
 # ### Tower geometry
 #%%
 if flag_plot:
-    from wisdem.postprocessing.plot_tower_data import plot_tower_geo_comparison
+    from Drive4Wind.utilities.plot_tower_data import plot_tower_geo_comparison
     # define yamls and run plot
     # Geometry YAML files
     # 1. base IEA 15-MW
     iea_report_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
     acciona_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_acciona.yaml"
     # 2. Made4Wind
-    m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_m4w.yaml"
+    m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_m4w_new.yaml"
     # loc save img
     if save_new_plot:
         loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
