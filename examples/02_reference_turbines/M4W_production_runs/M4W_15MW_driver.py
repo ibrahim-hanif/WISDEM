@@ -141,9 +141,9 @@ except: pass
 
 #%% plotting options
 # main colors
-from my_util_tools import util_funcs
-loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
-clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
+from Drive4Wind.post_processing import color_schemes
+loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
+clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
 
 #%%[markdown]
 # ### Tower utilizations
