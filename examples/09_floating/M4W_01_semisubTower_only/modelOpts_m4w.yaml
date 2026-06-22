@@ -13,8 +13,8 @@ WISDEM:
         gamma_m: 1.3     # Safety factor for material properties
         gamma_n: 1.0     # Safety factor for consequence of failure
         gamma_b: 1.1     # Safety factor for buckling
-        # gamma_fatigue: 1.755  # Safety factor for fatigue failure (def: 1.0)
-        # buckling_method: dnvgl # Buckling code type [eurocode or dnvgl] (def: dnvgl)
+        gamma_fatigue: 1.755  # Safety factor for fatigue failure (def: 1.0)
+        buckling_method: dnvgl # Buckling code type [eurocode or dnvgl] (def: dnvgl)
         buckling_length: 15    # Buckling parameter
         frame3dd:
             shear: True
@@ -30,17 +30,33 @@ WISDEM:
         gamma_fatigue: 1.755  # Safety factor for fatigue loads
     BOS:
         flag: False
+    OpEx:
+        flag: False
     LCOE:
         flag: False
 
     Loading:
-        mass: 930499.7182304717
-        center_of_mass: [-6.7879529741332565, -0.13573405507331612, 3.775449481479317]
-        moment_of_inertia: [360403348.95247865, 290075968.18688405, 277033859.39320356, 503.11850099550793, 14752205.946577286, 226645.50965191465]
+        mass: 883219.1694411677
+        center_of_mass: [-6.717886796932881, -0.14300017976275708, 3.9077860696396596]
+        moment_of_inertia: [360309222.227464, 275803400.30740815, 262649300.6624307, 626.0694882989046, 12636406.17174711, 226494.8553912695]
         loads:
-            - force: [4787211.038093101, 1369691.0923608593, 1250608.865351364]
-              moment: [15560127.612668518, 143087347.0969987, 3481862.259332855]
+           -  force: [4787210.007396288, 1369703.5004503343, 1952914.9030555636]
+              moment: [15556967.428202141, 142926217.21762758, 5999166.768431177]
               velocity: 11.0
+
+Environment:
+    air_density: 1.225
+    air_dyn_viscosity: 1.81e-5
+    weib_shape_parameter: 2.
+    air_speed_sound: 340.
+    shear_exp: 0.12
+    water_density: 1025.0
+    water_dyn_viscosity: 1.3351e-3
+    soil_shear_modulus: 140.e+6
+    soil_poisson: 0.4
+    water_depth: 200.0
+    significant_wave_height: 4.52
+    significant_wave_period: 9.45
 
 #(v) -------------- NEW! TODO: MB FLS options --------------
 # ref to WEIS schema

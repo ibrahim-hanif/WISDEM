@@ -1,7 +1,7 @@
 # Generic analysis options where nothing is run
 general:
     folder_output: M4W_01_semisubTower_only//outputs
-    fname_output: test_m4w
+    fname_output: test_m4w_new
 
 design_variables:
     tower:                          # TODO
@@ -88,7 +88,7 @@ merit_figure: tower_mass # structural_mass #(tower+monpoile) # TODO
 driver:
     optimization:
         flag: True
-        max_iter: 30         # Maximum number of iterations (SLSQP)
+        max_iter: 40         # Maximum number of iterations (SLSQP)
         tol: 1e-6           # Convergence tolerance (SLSQP)
         solver: SLSQP       # Optimization solver. Other options are 'SLSQP' - 'CONMIN'
         step_size: 1.e-6    # Step size for finite differencing (def.: 1.e-3)

@@ -1,7 +1,7 @@
 # Generic analysis options where nothing is run
 general: #(v) TODO: change?
     folder_output: M4W_01_semisubTower_only//outputs
-    fname_output: iea_NOoptim # iea: refturb_output / m4w: M4Wturb_NOoptim
+    fname_output: m4w_NOoptim # iea: refturb_output / m4w: M4Wturb_NOoptim
 
 driver:
     optimization:
