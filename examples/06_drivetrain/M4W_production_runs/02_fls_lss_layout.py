@@ -50,7 +50,7 @@ from wisdem.commonse.cross_sections import Tube
 import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 # %%
 # ### Define flags
-suffix = "_m4w"
+suffix = "_m4w" # _noMBfls
 
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
@@ -72,7 +72,7 @@ loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
 # Optimization flags
-flag_opt_GBO = True     # GBO: gradient based optimizer
+flag_opt_GBO = False     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 
