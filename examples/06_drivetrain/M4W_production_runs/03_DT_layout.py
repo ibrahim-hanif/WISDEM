@@ -58,9 +58,10 @@ import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 # ### Define flags
 suffix = "_m4w_flip"
 # information
-# 1. 'm4w_flip': np.flip on D and t of lss in GearedLayout
-# 2. 'm4w_noflip': no np.flip on D and t of lss in GearedLayout
-# 3. 'm4w': no flip as well
+# 1. '_m4w_flip': np.flip on D and t of lss in GearedLayout
+# 2. '_m4w_noflip': no np.flip on D and t of lss in GearedLayout
+# 3. '_m4w': no flip as well (same as 2. above)
+# 4. '_m4w_noMBfls'
 
 # pre-processing; Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -720,7 +721,8 @@ if plot_cases:
         loc_save_img = os.path.join( results_path,
                         "compare_mass"+suffix+".png" )
     # plot via func
-    utilsDT.plot_drivetrain_mass_comparison(prob, loc_save_img)
+    utilsDT.plot_drivetrain_mass_comparison(prob, loc_save_img,
+        m4w_label="Made4Wind", iea_label="IEA 15MW")
 
 #%%
 # Save rna properties into `yaml` file for next tower optimization
