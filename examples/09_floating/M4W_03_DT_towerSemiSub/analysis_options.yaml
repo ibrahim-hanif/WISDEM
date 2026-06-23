@@ -1,7 +1,7 @@
 # Generic analysis options where nothing is run
 general:
     folder_output: M4W_03_DT_towerSemiSub//outputs
-    fname_output: test_m4w
+    fname_output: test_m4w_new
 
 design_variables:
     drivetrain:
@@ -139,6 +139,7 @@ constraints:
 merit_figure_user: # TODO
     name: "towerse.turbine_mass" # = rna_mass + tower_mass
     ref: 1e7
+    max_flag: False
 
 driver:
     optimization:

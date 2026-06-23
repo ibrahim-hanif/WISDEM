@@ -14,7 +14,7 @@ WISDEM:
         gamma_f: 1.35    # Safety factor for loads
         gamma_m: 1.3     # Safety factor for material properties
         gamma_n: 1.0     # Safety factor for consequence of failure
-        use_gb_torque_density: True
+        gearbox_torque_density: 0.0
         own_hub_loads: True # User defined hub loads; override those from RotorSE
     TowerSE:             # Options of TowerSE module
         flag: True
@@ -23,8 +23,8 @@ WISDEM:
         gamma_m: 1.3     # Safety factor for material properties
         gamma_n: 1.0     # Safety factor for consequence of failure
         gamma_b: 1.1     # Safety factor for buckling
-        # gamma_fatigue: 1.755  # Safety factor for fatigue failure (def: 1.0)
-        # buckling_method: dnvgl # Buckling code type [eurocode or dnvgl] (def: dnvgl)
+        gamma_fatigue: 1.755  # Safety factor for fatigue failure (def: 1.0)
+        buckling_method: dnvgl # Buckling code type [eurocode or dnvgl] (def: dnvgl)
         buckling_length: 15    # Buckling parameter
         frame3dd:
             shear: True
@@ -39,9 +39,82 @@ WISDEM:
         gamma_b: 1.1     # Safety factor for ...
         gamma_fatigue: 1.755  # Safety factor for fatigue loads
     BOS:
+        flag: True
+        plant_turbine_spacing: 7
+        plant_row_spacing: 7
+        commissioning_cost_kW: 44.0
+        decommissioning_cost_kW: 58.0
+        distance_to_substation: 1.0
+        distance_to_interconnection: 8.5
+        interconnect_voltage: 130.
+        distance_to_site: 115.  # TODO: check on updated COWER asumptions
+        distance_to_landfall: 50.
+        port_cost_per_month: 2e6
+        review_cost: 0.0
+        construction_insurance: 44.0
+        construction_financing: 183.0
+        contingency: 316.0
+        site_auction_price: 100e6
+        site_assessment_cost: 50e6
+        construction_plan_cost: 2.5e5
+        installation_plan_cost: 1e6
+    OpEx:
         flag: False
+        workday_start: 7
+        workday_end: 19
+        equipment_dispatch_distance: 116
+        n_ctv: 3
+        maintenance_start: None
+        non_operational_start: None
+        non_operational_end: None
+        reduced_speed_start: None
+        reduced_speed_end: None
+        reduced_speed: 0
+        n_hlv: 1
+        random_seed: 42
     LCOE:
-        flag: False # TODO: coz merit func in analy_opts is lcoe
+        flag: True
+        wake_loss_factor: 0.15
+        fixed_charge_rate: 0.056
+        bos_per_kW: 4053.0
+        opex_per_kW: 137.0
+        turbine_number: 40.0
+        labor_rate: 58.8
+        painting_rate: 30.0
+        blade_mass_cost_coeff: 14.6
+        hub_mass_cost_coeff: 3.9
+        pitch_system_mass_cost_coeff: 22.1
+        spinner_mass_cost_coeff: 11.1
+        lss_mass_cost_coeff: 11.9
+        bearing_mass_cost_coeff: 4.5
+        gearbox_mass_cost_coeff: 12.9
+        hss_mass_cost_coeff: 6.8
+        generator_mass_cost_coeff: 12.4
+        bedplate_mass_cost_coeff: 2.9
+        yaw_mass_cost_coeff: 8.3
+        converter_mass_cost_coeff: 18.8
+        transformer_mass_cost_coeff: 18.8
+        hvac_mass_cost_coeff: 124.0
+        cover_mass_cost_coeff: 5.7
+        elec_connec_machine_rating_cost_coeff: 41.85
+        platforms_mass_cost_coeff: 17.1
+        tower_mass_cost_coeff: 2.9
+        controls_machine_rating_cost_coeff: 21.15
+        crane_cost: 12000.0
+
+Environment:
+    air_density: 1.225
+    air_dyn_viscosity: 1.81e-5
+    weib_shape_parameter: 2.
+    air_speed_sound: 340.
+    shear_exp: 0.12
+    water_density: 1025.0
+    water_dyn_viscosity: 1.3351e-3
+    soil_shear_modulus: 140.e+6
+    soil_poisson: 0.4
+    water_depth: 200.0
+    significant_wave_height: 4.52
+    significant_wave_period: 9.45
 
 #(v) -------------- NEW! DONE: MB FLS options --------------
 # ref to WEIS schema
