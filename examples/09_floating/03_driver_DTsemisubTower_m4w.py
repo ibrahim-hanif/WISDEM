@@ -25,7 +25,7 @@ flag_plot = True
 save_new_plot = False
 verbose = False
 
-flag_opt_GBO = False
+flag_opt_GBO = True
 flag_scaling_show_browser = False
 
 flag_override_own_hub_loads = True # TODO
@@ -43,8 +43,8 @@ dir_m4w_run = mydir + os.sep + "M4W_03_DT_towerSemiSub"
 
 # ---- wind turbine geometry (same init for both iea and m4w)
 # fname_wt_input = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
-# fname_wt_input = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
-fname_wt_input = dir_m4w_run + os.sep + "outputs//test_m4w.yaml"
+fname_wt_input = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
+# fname_wt_input = dir_m4w_run + os.sep + "outputs//test_m4w.yaml"
 
 # ---- modelling options
 fname_model_opts_m4w = dir_m4w_run+os.sep+ "modeling_options_m4w_DTtower.yaml"
@@ -181,9 +181,9 @@ except Exception as e:
 
 #%% plotting options
 # main colors
-from my_util_tools import util_funcs
-loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
-clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
+from Drive4Wind.post_processing import color_schemes
+loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
+clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
 
 #%%[markdown]
 # ### Tower utilizations
@@ -299,7 +299,7 @@ if flag_plot:
 # ### Tower geometry
 #%%
 if flag_plot:
-      from wisdem.postprocessing.plot_tower_data import plot_tower_geo_comparison
+      from Drive4Wind.utilities.plot_tower_data import plot_tower_geo_comparison
       # define yamls and run plot
       # Geometry YAML files
       # 1. base IEA 15-MW
