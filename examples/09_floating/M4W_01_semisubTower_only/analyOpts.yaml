@@ -1,7 +1,7 @@
 # Generic analysis options where nothing is run
 general:
     folder_output: M4W_01_semisubTower_only//outputs
-    fname_output: test_m4w_new
+    fname_output: test_m4w
 
 design_variables:
     tower:                          # TODO
