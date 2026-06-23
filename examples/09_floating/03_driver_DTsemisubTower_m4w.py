@@ -25,7 +25,7 @@ flag_plot = True
 save_new_plot = False
 verbose = False
 
-flag_opt_GBO = True
+flag_opt_GBO = False
 flag_scaling_show_browser = False
 
 flag_override_own_hub_loads = True # TODO
@@ -43,8 +43,8 @@ dir_m4w_run = mydir + os.sep + "M4W_03_DT_towerSemiSub"
 
 # ---- wind turbine geometry (same init for both iea and m4w)
 # fname_wt_input = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
-fname_wt_input = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
-# fname_wt_input = dir_m4w_run + os.sep + "outputs//test_m4w.yaml"
+# fname_wt_input = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
+fname_wt_input = dir_m4w_run + os.sep + "outputs//test_m4w.yaml"
 
 # ---- modelling options
 fname_model_opts_m4w = dir_m4w_run+os.sep+ "modeling_options_m4w_DTtower.yaml"
@@ -93,9 +93,13 @@ wt_opt, analysis_options, opt_options = run_wisdem(
 # # _____ Post-processing _____
 
 # %%
+# Print the results
+print("Optimization driver exited with message: ",
+      wt_opt.driver.get_exit_status(), "\n")
+
 doMBfls = analysis_options["flags"]["mb_fls"]
 print("MB FLS: ", doMBfls)
-# Print the results
+
 print("\nF_aero_hub [M-N]:") # NOTE: overwritten with hub loads .mat input
 print(" ", wt_opt["drivese.F_aero_hub"]/1e6 )
 print("M_aero_hub [M-Nm]:")
@@ -319,6 +323,24 @@ if flag_plot:
       else: loc_save_img = None
       # plot
       plot_tower_geo_comparison( m4w_yaml, m4w_IC_yaml,
-                                loc_save_img=loc_save_img )
+                                loc_save_img=loc_save_img,
+                                 m4w_label="Integrated",
+                                 iea_label="De-coupled" )
 
+#%%[markdown]
+# ### Drivetrain mass comparison (IEA and M4W)
 #%%
+if flag_plot:
+    from Drive4Wind.utilities import utilities_drivetrain as utilsDT
+    # save plot loc
+    loc_save_img = None
+    if save_new_plot:
+        loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
+                        "compare_mass_m4w.png" )
+    # plot via func
+    utilsDT.plot_drivetrain_mass_comparison(wt_opt, loc_save_img,
+        m4w_label="Made4Wind (Integrated)",
+        iea_label="IEA 15MW",
+        flag_WTnamespace=True)
+
+# %%
