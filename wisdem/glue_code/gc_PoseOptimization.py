@@ -676,6 +676,7 @@ class PoseOptimization(object):
             "gear_ratio",
             "bedplate_flange_width",
             "lss_diameter",
+            "hss_length",
             "hss_diameter",
             "nose_diameter",
         ]:

@@ -310,6 +310,14 @@ properties:
                             flag: *flag
                             lower_bound: *drive_dim_low
                             upper_bound: *drive_dim_up
+                    hss_length:
+                        type: object
+                        default: {}
+                        description: Adjust the length of the high speed shaft
+                        properties:
+                            flag: *flag
+                            lower_bound: *drive_dim_low
+                            upper_bound: *drive_dim_up
                     hss_diameter:
                         type: object
                         default: {}
