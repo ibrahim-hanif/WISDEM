@@ -6,6 +6,7 @@ geometry_options:
             distance_hub_mb: 0.5855741923557886
             distance_mb_mb: 5.06206409969046
             overhang: 12.0313
+            cd: 0.5
         gearbox:
             gear_ratio: 49.61325590726571
             mass: 138728.6451
