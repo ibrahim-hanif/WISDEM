@@ -756,8 +756,8 @@ def assign_drivetrain_values(wt_opt, modeling_options, drivetrain, yaw, flags, u
             wt_opt["drivetrain.mb1_mass_user"] = drivetrain["other_components"]["mb1_mass_user"]
         if "mb2_mass_user" in drivetrain["other_components"]:
             wt_opt["drivetrain.mb2_mass_user"] = drivetrain["other_components"]["mb2_mass_user"]
-        if "converter_mass_user" in drivetrain["other_components"]:
-            wt_opt["drivetrain.converter_mass_user"] = drivetrain["other_components"]["converter_mass_user"]
+        if "converter_mass" in drivetrain["other_components"]:
+            wt_opt["drivetrain.converter_mass_user"] = drivetrain["other_components"]["converter_mass"]
         if "transformer_mass_user" in drivetrain["other_components"]:
             wt_opt["drivetrain.transformer_mass_user"] = drivetrain["other_components"]["transformer_mass_user"]
         if "platform_mass_user" in drivetrain["other_components"]:
