@@ -15,6 +15,7 @@
 import os
 from wisdem import run_wisdem
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from wisdem.commonse.utilities import load_all_mat_to_dict
 
@@ -374,4 +375,28 @@ plot_loads_TT_comparison(dict_WT, dict_DT,
       m4w_label='Integrated', iea_label='De-coupled',figsize=(11,8),
       loc_save_img=loc_save_img)
 
+# %%
+# Compare tower base loads
+from Drive4Wind.utilities.plot_tower_data import get_towerBaseLoads_from_csv, plot_compr_towerBaseLoads_from_dict
+
+# 1. tower only optim 01_
+dir_tower_01results =  os.path.join(mydir,"M4W_01_semisubTower_only","outputs")
+towerOnly_csv = os.path.join(dir_tower_01results,"test_m4w.csv")
+towerBaseLoads_towerOnly = get_towerBaseLoads_from_csv(towerOnly_csv)
+
+# 2. integrated optim 03_
+integratedWT_csv = os.path.join(dir_m4w_run,"outputs\\test_m4w.csv")
+towerBaseLoads_integrated = get_towerBaseLoads_from_csv(integratedWT_csv)
+
+#%%
+# - plot tower base loads
+if save_new_plot:
+      loc_save_img = os.path.join(dir_m4w_run,'outputs',
+            "compr_towerBaseLoads_decoupl&integrated.pdf")
+      
+plot_compr_towerBaseLoads_from_dict(
+     m4w_dict=towerBaseLoads_integrated, iea_dict=towerBaseLoads_towerOnly,
+     m4w_label="Integrated", iea_label="De-coupled",
+     figsize=(6,6), loc_save_img=loc_save_img
+)
 # %%
