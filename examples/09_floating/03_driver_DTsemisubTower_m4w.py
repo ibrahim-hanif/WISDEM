@@ -31,6 +31,8 @@ flag_scaling_show_browser = False
 flag_override_own_hub_loads = True # TODO
 flag_override_tower_init = False
 
+flag_save_RNAprops4tower = False
+
 #%%
 ## File management (inputs)
 mydir = os.path.dirname(os.path.abspath(__file__))  # get path to this file
@@ -60,6 +62,9 @@ else:
 ## File Management (outputs)
 loc_scaling_report = os.path.join(dir_m4w_run,
       'outputs', 'scaling_report.html')
+if flag_save_RNAprops4tower:
+    loc_save_RNAprops4tower = os.path.join(dir_m4w_run,'outputs',
+            "RNA_props_model_for_tower.yaml")
 
 #%% Overwrite values ?
 overrides = {}
@@ -322,7 +327,7 @@ if flag_plot:
                   )
       else: loc_save_img = None
       # plot
-      plot_tower_geo_comparison( m4w_yaml, m4w_IC_yaml,
+      plot_tower_geo_comparison( m4w_yaml=m4w_yaml, iea15_yaml=m4w_IC_yaml,
                                 loc_save_img=loc_save_img,
                                  m4w_label="Integrated",
                                  iea_label="De-coupled" )
@@ -342,5 +347,31 @@ if flag_plot:
         m4w_label="Made4Wind (Integrated)",
         iea_label="IEA 15MW",
         flag_WTnamespace=True)
+
+# %%
+# Save rna properties into `yaml` file for next tower optimization
+if flag_save_RNAprops4tower:
+    utilsDT.write_yaml_of_drivetrain_properties( wt_opt,
+            loc_save_RNAprops4tower, flag_WTnamespace=True )
+# ===============================================================
+# %%
+# Compare RNA-TT props btw de-coupled and integrated DT optimization
+# 1. de-coupled DT optim
+dir_DT_03results =  os.path.join( dir_examples,
+      "06_drivetrain","M4W_production_runs","03_results"
+)
+file_DT = os.path.join(dir_DT_03results,"RNA_props_model_for_tower_m4w_flip.yaml")
+# parse
+from Drive4Wind.utilities.plot_tower_data import parse_Loading_modelYAML2dict, plot_loads_TT_comparison
+dict_DT = parse_Loading_modelYAML2dict(file_DT,flag_yamlFromDrivetrain=True)
+dict_WT = parse_Loading_modelYAML2dict(loc_save_RNAprops4tower,flag_yamlFromDrivetrain=True)
+# loc_save_img
+if save_new_plot:
+      loc_save_img = os.path.join(dir_m4w_run,'outputs',
+            "compr_RNAprops_DT_decoupl&integrated.pdf")
+# plot
+plot_loads_TT_comparison(dict_WT, dict_DT,
+      m4w_label='Integrated', iea_label='De-coupled',figsize=(11,8),
+      loc_save_img=loc_save_img)
 
 # %%

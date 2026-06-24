@@ -144,7 +144,7 @@ merit_figure_user: # TODO
 driver:
     optimization:
         flag: True
-        max_iter: 20         # Max number of iters (SLSQP); TODO: DT req 80
+        max_iter: 80         # Max number of iters (SLSQP); TODO: DT req 80
         tol: 1e-4           # Convergence tolerance (SLSQP)
         solver: SLSQP       # Optimization solver. Other options are 'SLSQP' - 'CONMIN'
         step_size: 1.e-6    # Step size for finite differencing (def.: 1.e-3)
