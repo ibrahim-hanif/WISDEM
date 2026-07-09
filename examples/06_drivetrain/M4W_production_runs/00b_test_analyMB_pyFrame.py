@@ -31,8 +31,9 @@ import wisdem.drivetrainse.drive_components as dc
 
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, pdf_norm_int_using_cdf, bin_counting_of_load, compute_LRD, compute_LRD_matrix_vectorized
 from wisdem.commonse.fileIO import var_df2dict
-import utilities_drivetrain as utilsDT
-from my_util_tools import analyseWTLoads, util_funcs, funcs_errors
+from Drive4Wind.utilities import utilities_drivetrain as utilsDT
+from Drive4Wind.post_processing import analyseWTLoads, color_schemes
+from Drive4Wind.utilities import funcs_errors
 
 #%%
 # paths / locations
@@ -59,6 +60,9 @@ load_fls_loads = False
 
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
+# TODO new
+loc_all_loads_mat_file = "C:\\SIMA_M4W_loads\\all_main_shaft_loads.mat"
+
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_new.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
@@ -77,8 +81,8 @@ else: # define paths
 
 # %%
 # Define plotting options
-loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
-clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
+loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
+clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
 
 params_plot_rc = {
         "font.size": 24,
@@ -93,7 +97,7 @@ plt.rcParams.update( params_plot_rc )
 loc_hub_loads_stats = os.path.join(dir_loads, "hub_loads_M4W_stats.pdf")
 
 analyseWTLoads.plot_ms_load_statistics(
-    S_all,clrs_m4w["Turquoise"],clrs_m4w["Aqua"], (15,15)
+    S_all,clrs_m4w["Turquoise"],clrs_m4w["Aqua"], (22,16)
     ) 
 
 #%%
@@ -579,8 +583,8 @@ M_mb2_myframe[3,:] = np.hypot(M_mb2_myframe[1,:], M_mb2_myframe[2,:])
 #%%
 # plot options
 # --- main colors
-loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
-clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
+loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
+clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
 clr_Frame = clrs_m4w['Dark_Blue']
 if analysis == 1: clr_Beam = clrs_m4w['Aqua']
 else: clr_Beam = clrs_m4w['Red']
