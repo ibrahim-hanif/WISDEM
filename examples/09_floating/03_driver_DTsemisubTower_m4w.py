@@ -388,6 +388,9 @@ towerBaseLoads_towerOnly = get_towerBaseLoads_from_csv(towerOnly_csv)
 integratedWT_csv = os.path.join(dir_m4w_run,"outputs\\test_m4w.csv")
 towerBaseLoads_integrated = get_towerBaseLoads_from_csv(integratedWT_csv)
 
+# percentage differences/decrease in F and M from both dicts
+diff = {key: ((towerBaseLoads_integrated[key] - towerBaseLoads_towerOnly[key]) / towerBaseLoads_towerOnly[key]) * 100 for key in towerBaseLoads_integrated}
+
 #%%
 # - plot tower base loads
 if save_new_plot:
