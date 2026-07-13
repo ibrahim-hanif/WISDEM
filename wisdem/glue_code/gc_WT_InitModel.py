@@ -743,8 +743,10 @@ def assign_drivetrain_values(wt_opt, modeling_options, drivetrain, yaw, flags, u
             wt_opt["drivetrain.lss_mass_user"] = drivetrain["lss"]["mass_user"]
         wt_opt["drivetrain.mb1Type"] = drivetrain["other_components"]["mb1Type"]
         wt_opt["drivetrain.mb2Type"] = drivetrain["other_components"]["mb2Type"]
-        wt_opt["drivetrain.mb1_e"] = drivetrain["other_components"]["mb1_e"] #(v) new
-        wt_opt["drivetrain.mb2_e"] = drivetrain["other_components"]["mb2_e"] #(v) new
+        if "mb1_e" in drivetrain["other_components"]:
+            wt_opt["drivetrain.mb1_e"] = drivetrain["other_components"]["mb1_e"] #(v) new
+        if "mb2_e" in drivetrain["other_components"]:
+            wt_opt["drivetrain.mb2_e"] = drivetrain["other_components"]["mb2_e"] #(v) new
         wt_opt["drivetrain.uptower"] = drivetrain["other_components"]["uptower"]
         wt_opt["drivetrain.hvac_mass_coeff"] = drivetrain["other_components"]["hvac_mass_coefficient"]
         wt_opt["drivetrain.bedplate_material"] = drivetrain["bedplate"]["material"]
