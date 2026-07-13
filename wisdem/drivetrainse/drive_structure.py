@@ -2176,9 +2176,8 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input("carrier_mass", 0.0, units="kg")
         self.add_input("tilt", 0.0, units="deg")
         self.add_input("s_lss", val=np.zeros(5), units="m")
-        if direct:
-            self.add_input("s_generator", val=0.0, units="m")
-            self.add_input("generator_mass", val=0.0, units="kg")
+        self.add_input("s_generator", val=0.0, units="m")
+        self.add_input("generator_mass", val=0.0, units="kg")
         # - 5. material properties
         self.add_input("lss_E", val=0.0, units="Pa")
         # ---- Outputs ----
