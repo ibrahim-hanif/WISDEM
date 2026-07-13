@@ -8,7 +8,7 @@ WISDEM:
         spar_cap_ps: Spar_Cap_PS # Name in the yaml of the spar cap laminate on the pressure side
         te_ss: TE_reinforcement_SS # Name in the yaml of the trailing edge reinforcement on the suction side
         te_ps: TE_reinforcement_PS # Name in the yaml of the trailing edge reinforcement on the pressure side
-        gust_std: 15.0 # def:3.0, max:15.0 (in schema) | (used in rotor_power.py, line 108)
+        # gust_std: 15.0 # def:3.0, max:15.0 (in schema) | (used in rotor_power.py, line 108)
     DriveSE:
         flag: True
         gamma_f: 1.35    # Safety factor for loads
@@ -31,7 +31,7 @@ WISDEM:
             geom: True
             tol: 1e-9
     FloatingSE:
-        flag: True
+        flag: False
         symmetric_moorings: True
         gamma_f: 1.35    # Safety factor for fatigue loads
         gamma_m: 1.3     # Safety factor for material properties

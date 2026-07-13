@@ -26,20 +26,20 @@ flag_override_tower_init = False
 #%%
 ## File management (inputs)
 mydir = os.path.dirname(os.path.abspath(__file__))  # get path to this file
-dir_examples = os.path.dirname(mydir)
+dir_examples = os.path.dirname(os.path.dirname(mydir))
 dir_02_ref_turbines = dir_examples +os.sep+ "02_reference_turbines" # get path to 02_reference_turbines
 dir_02_rwt_m4w = dir_02_ref_turbines +os.sep+"M4W_production_runs"
 
 # M4W run directory
-dir_m4w_run = mydir + os.sep + "M4W_03_DT_towerSemiSub"
+dir_m4w_run = mydir + os.sep + "04_results"
 
 # ---- wind turbine geometry (same init for both iea and m4w)
-# fname_wt_input = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
+fname_wt_input = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
 # fname_wt_input = dir_m4w_run +os.sep + "m4w-DT-towerSemiSub.yaml"
-fname_wt_input = dir_m4w_run + os.sep + "outputs//test_m4w.yaml"
+# fname_wt_input = dir_m4w_run + os.sep + "outputs//test_m4w.yaml"
 
 # ---- modelling options
-fname_model_opts_m4w = dir_m4w_run+os.sep+ "modeling_options_m4w_DTtower.yaml"
+fname_model_opts_m4w = dir_m4w_run+os.sep+ "modeling_options.yaml"
 
 fname_modeling_options = fname_model_opts_m4w
 
@@ -102,7 +102,7 @@ print("1P (blade period) freq ranges:")
 print(" ", freq_range_1P, " Hz" )
 print("3P (blade passing) freq ranges:")
 print(" ", freq_range_3P, " Hz" )
-freq_tower = wt_opt["floatingse.structural_frequencies"] # OR towerse.tower
+freq_tower = wt_opt["towerse.tower.structural_frequencies"] # towerse.tower OR floatingse.structural_frequencies
 print("Tower fore-aft/side-side freq range:")
 print(" ", freq_tower[0:2], " Hz \n" )
 
@@ -150,7 +150,6 @@ print(f"nacelle mass: {wt_opt["drivese.nacelle_mass"]}")
 print(f"nacelle cm: {wt_opt["drivese.nacelle_cm"]}")
 
 print("\n--- RNA properties ---")
-print(f"Nacelle mass: {wt_opt["drivese.nacelle_mass"]}")
 print(f"RNA mass: {wt_opt["drivese.rna_mass"]}")
 print(f"RNA cm: {wt_opt["drivese.rna_cm"]}")
 #
@@ -161,3 +160,4 @@ print("\nNacelle+Tower mass: ",
       )
 print("\nRNA+Tower mass: ", wt_opt['towerse.turbine_mass'])
 # -----------------------------------------------------------------------
+# %%
