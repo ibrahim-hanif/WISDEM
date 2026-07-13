@@ -1,4 +1,6 @@
-General: {verbosity: false, solver_maxiter: 5}
+General:
+    verbosity: true
+    solver_maxiter: 5
 WISDEM:
     RotorSE:
         flag: true
@@ -13,14 +15,12 @@ WISDEM:
         n_pc_spline: 200
         n_pitch_perf_surfaces: 20
         min_pitch_perf_surfaces: -5.0
-        max_pitch_perf_surfaces: 30.0
+        max_pitch_perf_surfaces: 40.0
         n_tsr_perf_surfaces: 20
         min_tsr_perf_surfaces: 2.0
         max_tsr_perf_surfaces: 12.0
         n_U_perf_surfaces: 1
         regulation_reg_III: true
-        peak_thrust_shaving: false
-        thrust_shaving_coeff: 1.0
         fix_pitch_regI12: false
         gamma_freq: 1.1
         gust_std: 3.0
@@ -31,38 +31,86 @@ WISDEM:
         usecd: true
         n_sector: 4
         3d_af_correction: true
-        inn_af: false
-        inn_af_max_rthick: 0.4
-        inn_af_min_rthick: 0.15
-        rail_transport: false
-        n_af: 7
-        aoa: [-3.141592653589793, -3.0892327760299634, -3.036872898470133, -2.9845130209103035, -2.9321531433504737, -2.8797932657906435, -2.827433388230814, -2.775073510670984, -2.722713633111154, -2.670353755551324, -2.617993877991494, -2.5656340004316642, -2.5132741228718345, -2.4609142453120043, -2.4085543677521746, -2.356194490192345, -2.3038346126325147, -2.251474735072685, -2.199114857512855, -2.146754979953025, -2.0943951023931953, -2.0420352248333655, -1.9896753472735356, -1.9373154697137056, -1.8849555921538759, -1.832595714594046, -1.780235837034216, -1.727875959474386, -1.6755160819145563, -1.6231562043547263, -1.5707963267948963, -1.5184364492350666, -1.4660765716752366, -1.4137166941154067, -1.361356816555577, -1.308996938995747, -1.256637061435917, -1.2042771838760873, -1.1519173063162573, -1.0995574287564276, -1.0471975511965974, -0.9948376736367677, -0.9424777960769379, -0.8901179185171078, -0.837758040957278, -0.7853981633974483, -0.7330382858376181, -0.6806784082777884, -0.6283185307179586, -0.5759586531581284, -0.5235987755982988, -0.513021022555909, -0.502443269513519, -0.4918655164711292, -0.4812877634287393, -0.4707100103863494, -0.46013225734395957, -0.4495545043015697, -0.4389767512591798, -0.42839899821678995, -0.41782124517440006, -0.40724349213201017, -0.39666573908962033, -0.38608798604723044, -0.37551023300484054, -0.3649324799624507, -0.3543547269200608, -0.3437769738776709, -0.3331992208352811, -0.3226214677928912, -0.3120437147505013, -0.30146596170811146, -0.29088820866572157, -0.2803104556233317, -0.26973270258094184, -0.25915494953855195, -0.24857719649616206, -0.23799944345377216, -0.22742169041138233, -0.21684393736899243, -0.20626618432660254, -0.1956884312842127, -0.1851106782418228, -0.17453292519943292, -0.16395517215704308, -0.1533774191146532, -0.1427996660722633, -0.13222191302987346, -0.12164415998748357, -0.11106640694509368, -0.10048865390270378, -0.08991090086031395, -0.07933314781792405, -0.06875539477553416, -0.058177641733144325, -0.04759988869075443, -0.03702213564836454, -0.026444382605974703, -0.015866629563584866, -0.0052888765211949185, 0.0052888765211949185, 0.015866629563584866, 0.026444382605974703, 0.03702213564836454, 0.04759988869075449, 0.058177641733144325, 0.06875539477553416, 0.07933314781792411, 0.08991090086031395, 0.10048865390270378, 0.11106640694509373, 0.12164415998748357, 0.1322219130298734, 0.14279966607226335, 0.1533774191146532, 0.16395517215704303, 0.17453292519943298, 0.1851106782418228, 0.19568843128421265, 0.2062661843266026, 0.21684393736899243, 0.22742169041138227, 0.23799944345377222, 0.24857719649616206, 0.2591549495385519, 0.26973270258094184, 0.2803104556233317, 0.2908882086657215, 0.30146596170811146, 0.3120437147505013, 0.32262146779289125, 0.3331992208352811, 0.3437769738776709, 0.35435472692006087, 0.3649324799624507, 0.37551023300484054, 0.3860879860472305, 0.39666573908962033, 0.40724349213201017, 0.4178212451744001, 0.42839899821678995, 0.4389767512591798, 0.44955450430156974, 0.46013225734395957, 0.4707100103863494, 0.48128776342873925, 0.4918655164711291, 0.5024432695135191, 0.513021022555909, 0.5235987755982988, 0.5759586531581287, 0.6283185307179586, 0.6806784082777885, 0.7330382858376183, 0.7853981633974483, 0.8377580409572781, 0.890117918517108, 0.9424777960769379, 0.9948376736367679, 1.0471975511965979, 1.0995574287564276, 1.1519173063162573, 1.2042771838760875, 1.2566370614359172, 1.3089969389957472, 1.3613568165555772, 1.413716694115407, 1.4660765716752369, 1.5184364492350668, 1.5707963267948966, 1.6231562043547263, 1.6755160819145565, 1.7278759594743862, 1.780235837034216, 1.8325957145940461, 1.8849555921538759, 1.937315469713706, 1.9896753472735358, 2.0420352248333655, 2.0943951023931957, 2.1467549799530254, 2.199114857512855, 2.2514747350726854, 2.303834612632515, 2.356194490192345, 2.408554367752175, 2.4609142453120048, 2.5132741228718345, 2.5656340004316642, 2.6179938779914944, 2.670353755551324, 2.722713633111154, 2.775073510670984, 2.827433388230814, 2.8797932657906435, 2.9321531433504737, 2.9845130209103035, 3.036872898470133, 3.0892327760299634, 3.141592653589793]
+        place_webs_caps: false
+        n_af_database: 8
+        aoa: [-180.0, -177.0, -174.0, -171.0, -168.0, -165.0, -162.0, -159.0, -156.0, -153.0, -150.0, -147.0, -144.0, -141.0, -138.0, -135.0, -132.0, -129.0, -126.0, -123.0, -120.0, -117.0, -114.0, -111.0, -108.0, -105.0, -102.0, -99.0, -96.0, -93.0, -90.0, -87.0, -84.0, -81.0, -78.0, -75.0, -72.0, -69.0, -66.0, -63.0, -60.0, -57.0, -54.0, -51.0, -48.0, -45.0, -42.0, -39.0, -36.0, -33.0, -30.0, -29.393939393939394, -28.78787878787879, -28.18181818181818, -27.575757575757574, -26.96969696969697, -26.363636363636363, -25.757575757575758, -25.151515151515152, -24.545454545454547, -23.939393939393938, -23.333333333333332, -22.727272727272727, -22.12121212121212, -21.515151515151516, -20.909090909090907, -20.303030303030305, -19.696969696969695, -19.09090909090909, -18.484848484848484, -17.87878787878788, -17.272727272727273, -16.666666666666664, -16.060606060606062, -15.454545454545453, -14.848484848484848, -14.242424242424242, -13.636363636363637, -13.030303030303031, -12.424242424242422, -11.818181818181817, -11.212121212121211, -10.606060606060606, -10.0, -9.393939393939394, -8.787878787878789, -8.18181818181818, -7.575757575757574, -6.969696969696969, -6.363636363636363, -5.757575757575758, -5.151515151515152, -4.545454545454543, -3.9393939393939377, -3.333333333333332, -2.7272727272727266, -2.121212121212121, -1.5151515151515156, -0.9090909090909065, -0.303030303030301, 0.30303030303030454, 0.9090909090909101, 1.5151515151515156, 2.1212121212121247, 2.7272727272727266, 3.3333333333333357, 3.9393939393939377, 4.545454545454547, 5.151515151515156, 5.757575757575758, 6.363636363636367, 6.969696969696969, 7.575757575757578, 8.18181818181818, 8.787878787878789, 9.393939393939398, 10.0, 10.606060606060609, 11.212121212121211, 11.81818181818182, 12.424242424242422, 13.030303030303031, 13.63636363636364, 14.242424242424242, 14.848484848484851, 15.454545454545453, 16.060606060606062, 16.66666666666667, 17.272727272727273, 17.878787878787882, 18.484848484848484, 19.090909090909093, 19.696969696969695, 20.303030303030305, 20.909090909090914, 21.515151515151516, 22.121212121212125, 22.727272727272727, 23.333333333333336, 23.939393939393938, 24.545454545454547, 25.151515151515156, 25.757575757575758, 26.363636363636367, 26.96969696969697, 27.575757575757578, 28.181818181818187, 28.78787878787879, 29.393939393939398, 30.0, 33.0, 36.0, 39.0, 42.0, 45.0, 48.0, 51.0, 54.0, 57.0, 60.0, 63.0, 66.0, 69.0, 72.0, 75.0, 78.0, 81.0, 84.0, 87.0, 90.0, 93.0, 96.0, 99.0, 102.0, 105.0, 108.0, 111.0, 114.0, 117.0, 120.0, 123.0, 126.0, 129.0, 132.0, 135.0, 138.0, 141.0, 144.0, 147.0, 150.0, 153.0, 156.0, 159.0, 162.0, 165.0, 168.0, 171.0, 174.0, 177.0, 180.0]
         AFTabMod: 1
-        n_Re: 1
-        n_tab: 1
-        af_used: [cylinder, cylinder, FX77-W-500, FX77-W-400, DU00-W2-350, DU97-W-300, DU91-W2-250, DU08-W-210, DU08-W-210]
-        bjs: false
+        n_Re: 3
+        Re: [3000000.0, 8100000.0, 10000000.0]
+        n_af_master: 10
+        af_master:
+           -  circular
+           -  circular
+           -  SNL-FFA-W3-500
+           -  FFA-W3-360
+           -  FFA-W3-330blend
+           -  FFA-W3-301
+           -  FFA-W3-270blend
+           -  FFA-W3-241
+           -  FFA-W3-211
+           -  FFA-W3-211
         nd_span: [0.0, 0.034482758620689655, 0.06896551724137931, 0.10344827586206896, 0.13793103448275862, 0.1724137931034483, 0.20689655172413793, 0.24137931034482757, 0.27586206896551724, 0.3103448275862069, 0.3448275862068966, 0.3793103448275862, 0.41379310344827586, 0.4482758620689655, 0.48275862068965514, 0.5172413793103449, 0.5517241379310345, 0.5862068965517241, 0.6206896551724138, 0.6551724137931034, 0.6896551724137931, 0.7241379310344828, 0.7586206896551724, 0.7931034482758621, 0.8275862068965517, 0.8620689655172413, 0.896551724137931, 0.9310344827586207, 0.9655172413793103, 1.0]
-        n_af_span: 9
-        n_webs: 2
-        n_layers: 17
         lofted_output: false
         n_freq: 10
-        layer_name: [UV_protection, Shell_skin, Spar_Cap_SS, Spar_Cap_PS, LE_reinf, TE_reinforcement_PS, TE_reinforcement_SS, TE_SS_filler, LE_SS_filler, LE_PS_filler, TE_PS_filler, Web_aft_skin_LE, Web_aft_filler, Web_aft_skin_TE, Web_rear_skin_LE, Web_rear_filler, Web_rear_skin_TE]
-        layer_mat: [paint, triax, ud, ud, ud, ud, ud, balsa, balsa, balsa, balsa, biax, balsa, biax, biax, balsa, biax]
-        web_name: [fore_web, rear_web]
-        n_te_flaps: 0
-        spars_tereinf: [0, 0, 0, 0]
+        n_webs: 2
+        n_layers: 18
+        layer_name:
+           -  UV_protection
+           -  Shell_skin
+           -  Spar_Cap_SS
+           -  Spar_Cap_PS
+           -  LE_reinforcement
+           -  TE_reinforcement_SS
+           -  TE_reinforcement_PS
+           -  TE_SS_filler
+           -  LE_SS_filler
+           -  LE_PS_filler
+           -  TE_PS_filler
+           -  Shell_skin_inner
+           -  web0_skinLE
+           -  web0_filler
+           -  web0_skinTE
+           -  web1_skinLE
+           -  web1_filler
+           -  web1_skinTE
+        layer_mat:
+           -  Gelcoat
+           -  glass_triax
+           -  CarbonUD
+           -  CarbonUD
+           -  glass_uni
+           -  glass_uni
+           -  glass_uni
+           -  medium_density_foam
+           -  medium_density_foam
+           -  medium_density_foam
+           -  medium_density_foam
+           -  glass_triax
+           -  glass_biax
+           -  medium_density_foam
+           -  glass_biax
+           -  glass_biax
+           -  medium_density_foam
+           -  glass_biax
+        web_name:
+           -  web0
+           -  web1
+        id_joint_position: 0
+        spars_tereinf: [2, 3, 5, 6]
     DriveSE:
-        flag: false
-        model_generator: false
+        flag: true
         gamma_f: 1.35
         gamma_m: 1.3
         gamma_n: 1.0
-        use_gb_torque_density: true
-        hub: {hub_gamma: 2.0, spinner_gamma: 1.5}
+        gearbox_torque_density: 200.0
+        hub:
+            hub_gamma: 2.0
+            spinner_gamma: 1.5
+        generator:
+            type: pmsg_outer
+        direct: true
     TowerSE:
-        flag: false
+        flag: true
         wind: PowerWind
         gamma_f: 1.35
         gamma_m: 1.3
@@ -72,10 +120,19 @@ WISDEM:
         gamma_fatigue: 1.0
         buckling_method: dnvgl
         buckling_length: 10.0
-        frame3dd: {shear: true, geom: true, modal_method: 1, tol: 1e-09}
+        frame3dd:
+            shear: true
+            geom: true
+            modal_method: 1
+            tol: 1e-09
         n_refine: 3
+        rank_and_file: false
+        n_height: 11
+        n_height_tower: 11
+        n_layers: 1
+        n_layers_tower: 1
     FixedBottomSE:
-        flag: false
+        flag: true
         soil_springs: true
         type: monopile
         wind: PowerWind
@@ -87,29 +144,196 @@ WISDEM:
         gamma_fatigue: 1.0
         buckling_method: dnvgl
         buckling_length: 10.0
-        frame3dd: {shear: true, geom: true, modal_method: 1, tol: 1e-09}
+        frame3dd:
+            shear: true
+            geom: true
+            modal_method: 1
+            tol: 1e-09
         gravity_foundation: false
         n_refine: 3
         n_legs: 4
         n_bays: 3
         mud_brace: true
         save_truss_figures: false
-    BOS: {flag: false}
+        rank_and_file: false
+        n_height: 7
+        n_height_monopile: 7
+        n_layers: 1
+        n_layers_monopile: 1
+    BOS:
+        flag: true
+        plant_turbine_spacing: 7
+        plant_row_spacing: 7
+        commissioning_cost_kW: 44.0
+        decommissioning_cost_kW: 58.0
+        distance_to_substation: 1.0
+        distance_to_interconnection: 8.5
+        interconnect_voltage: 130.0
+        distance_to_site: 115.0
+        distance_to_landfall: 50.0
+        port_cost_per_month: 2000000.0
+        review_cost: 0.0
+        construction_insurance: 44.0
+        construction_financing: 183.0
+        contingency: 316.0
+        site_auction_price: 100000000.0
+        site_assessment_cost: 50000000.0
+        construction_plan_cost: 250000.0
+        installation_plan_cost: 1000000.0
+        quiet: false
+    OpEx:
+        flag: true
+        workday_start: 7
+        workday_end: 19
+        equipment_dispatch_distance: 116
+        n_ctv: 3
+        maintenance_start: None
+        non_operational_start: None
+        non_operational_end: None
+        reduced_speed_start: None
+        reduced_speed_end: None
+        reduced_speed: 0
+        n_hlv: 1
+        random_seed: 42
+        n_tugboat: 2
+        port_workday_start: 6
+        port_workday_end: 18
+        n_port_crews: 2
+        max_port_operations: 2
+        repair_port_distance: 116
+    LCOE:
+        flag: true
+        wake_loss_factor: 0.15
+        fixed_charge_rate: 0.056
+        bos_per_kW: 4053.0
+        opex_per_kW: 137.0
+        turbine_number: 40.0
+        labor_rate: 58.8
+        painting_rate: 30.0
+        blade_mass_cost_coeff: 11.128809229296666
+        hub_mass_cost_coeff: 3.9
+        pitch_system_mass_cost_coeff: 22.1
+        spinner_mass_cost_coeff: 11.1
+        lss_mass_cost_coeff: 11.9
+        bearing_mass_cost_coeff: 8.999999999999998
+        gearbox_mass_cost_coeff: 12.9
+        hss_mass_cost_coeff: 6.8
+        generator_mass_cost_coeff: 13.565077029267542
+        bedplate_mass_cost_coeff: 2.9
+        yaw_mass_cost_coeff: 8.3
+        converter_mass_cost_coeff: 82.47116038408373
+        transformer_mass_cost_coeff: 18.8
+        hvac_mass_cost_coeff: 124.0
+        cover_mass_cost_coeff: 5.7
+        elec_connec_machine_rating_cost_coeff: 41.85
+        platforms_mass_cost_coeff: 17.1
+        tower_mass_cost_coeff: 2.8060753222689696
+        controls_machine_rating_cost_coeff: 21.15
+        crane_cost: 12000.0
+        gearbox_torque_cost: 50.0
+        electricity_price: 0.04
+        reserve_margin_price: 120.0
+        capacity_credit: 0.0
+        benchmark_price: 0.071
     n_dlc: 1
     FloatingSE:
         flag: false
         n_refine: 1
-        frame3dd: {shear: false, geom: false, modal_method: 2, shift: 10.0, tol: 1e-08}
+        frame3dd:
+            shear: false
+            geom: false
+            modal_method: 2
+            shift: 100.0
+            tol: 1e-08
+            skip_duplicate_modes: true
         gamma_f: 1.35
         gamma_m: 1.3
         gamma_n: 1.0
         gamma_b: 1.1
         gamma_freq: 1.1
         gamma_fatigue: 1.0
+        rank_and_file: false
         symmetric_moorings: true
-    GeneratorSE: {type: dfig}
-flags: {blade: true, hub: false, nacelle: false, tower: false, monopile: false, jacket: false, floating_platform: false, mooring: false, RNA: false, assembly: true, components: true, airfoils: true, materials: true, control: true, environment: true, bos: false, costs: true, generator: false, floating: false, offshore: false}
-materials: {n_mat: 9}
+    Environment:
+        air_density: 1.225
+        air_dyn_viscosity: 1.81e-05
+        weib_shape_parameter: 2.0
+        air_speed_sound: 340.0
+        shear_exp: 0.12
+        water_density: 1025.0
+        water_dyn_viscosity: 0.0013351
+        soil_shear_modulus: 140000000.0
+        soil_poisson: 0.4
+        water_depth: 30.0
+        significant_wave_height: 4.52
+        significant_wave_period: 9.45
+        gravity: 9.80665
+        air_pressure: 103500.0
+        air_vapor_pressure: 1700.0
+        V_mean: 0.0
+Environment:
+    air_density: 1.225
+    air_dyn_viscosity: 1.81e-05
+    weib_shape_parameter: 2.0
+    air_speed_sound: 340.0
+    shear_exp: 0.12
+    water_density: 1025.0
+    water_dyn_viscosity: 0.0013351
+    soil_shear_modulus: 140000000.0
+    soil_poisson: 0.4
+    water_depth: 30.0
+    significant_wave_height: 4.52
+    significant_wave_period: 9.45
+    gravity: 9.80665
+    air_pressure: 103500.0
+    air_vapor_pressure: 1700.0
+    V_mean: 0.0
+flags:
+    blade: true
+    hub: true
+    drivetrain: true
+    yaw: true
+    tower: true
+    monopile: true
+    jacket: false
+    floating_platform: false
+    mooring: false
+    RNA: false
+    assembly: true
+    components: true
+    airfoils: true
+    materials: true
+    control: true
+    generator: true
+    mb_fls: false
+    floating: false
+    bos: true
+    opex: true
+    environment: true
+    costs: true
+    offshore: true
+user_elastic:
+    blade: false
+    hub: false
+    drivetrain: false
+    yaw: false
+    tower: false
+    monopile: false
+    jacket: false
+    floating_platform: false
+    mooring: false
+    RNA: false
+    assembly: false
+    components: false
+    airfoils: false
+    materials: false
+    control: false
+    generator: false
+    mb_fls: false
+    floating: false
+materials:
+    n_mat: 11
 floating: {}
 mooring: {}
-assembly: {number_of_blades: 3}
+assembly:
+    number_of_blades: 3
