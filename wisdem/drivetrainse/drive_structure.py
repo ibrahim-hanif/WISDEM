@@ -1918,6 +1918,57 @@ def analytical_MBforces_EBbeam(
 # ---------------
 
 # ---------------
+def analytical_MBforces_DirectDrive(
+        Fx,Fy,Fz, Mx,My,Mz, m_generator,tilt,
+        L_h1,L_12,L_1grm
+    ):
+    """
+    for the iea 15mw direct-drive wind turbine
+    References:
+    1. Veronica Krathe et al (2025), Main bearing response in a waked 15-MW floating wind turbine in below-rated conditions
+    -- eq.2-5, with a_t and J_gr = 0
+
+    Inputs
+    _______
+    L_1grm : float
+        distance between location of mb1 and generator mass center
+
+    Internal Progress
+    _______
+    - TODO : implement and test
+    - TODO : moment reacting for TRB2 as MB1 (as per iea15mw report); cf. _EBbeam func above
+    """
+    # === sanity check and init ===
+    gy = 0.0
+    gx = gravity * np.sin(tilt)
+    gz = gravity * np.cos(tilt)
+    n_ts, n_ws = Fx.shape[0], Fx.shape[1] # = 72e4, 10
+    x3 = L_h1 + L_12
+
+    ### === Loads on bearings ===
+    F_mb1 = np.zeros( (n_ts,n_ws,4) ) # for 4 forces (ax,y,z,rad)
+    F_mb2 = np.zeros( (n_ts,n_ws,4) ) # for 4 forces (ax,y,z,rad)
+        
+    # --- MB1 (TRB2) ---
+    F_mb1_ax = np.abs( -Fx - (m_generator*gx) ) # `abs` coz mb2 reacts to the axial load, regardless if tensile or compressive.
+    F_mb1_y = ( Mz - (Fy*x3) ) / L_12
+    F_mb1_z = ( - My - (Fz*x3) + (m_generator*gz*(L_12-L_1grm)) ) / L_12
+    F_mb1_rad = np.hypot(F_mb1_y, F_mb1_z) # element-wise
+
+    # --- MB2 (SRB) ---
+    F_mb2_ax = np.zeros_like(Fx)
+    F_mb2_y = ( -Mz + Fy*L_h1 ) / L_12
+    F_mb2_z = ( My + Fz*L_h1 + m_generator*gz*L_1grm ) / L_12
+    F_mb2_rad = np.hypot(F_mb2_y, F_mb2_z) # element-wise
+
+    # ----- collect for outputs
+    F_mb1 = np.stack([F_mb1_ax, F_mb1_y, F_mb1_z, F_mb1_rad])
+    F_mb2 = np.stack([F_mb2_ax, F_mb2_y, F_mb2_z, F_mb2_rad])
+
+    return F_mb1, F_mb2
+# ---------------
+
+# ---------------
 def del_bearing_computation(load_series, ws_bins, t_step, omega,
                     probabilities, p=10/3, dP_dL=[]):
     """
@@ -2065,6 +2116,9 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
     - DONE : make DLC load series (yaml; not local stored) compatible with WEIS iA
     - DONE : modify for more_realisitc analy_MBforces: add relevant inputs
     - TODO : use log-space constraints?
+    - DONE : implement for direct-drive
+    - TODO : 1. implement when MB1 is locating
+    - TODO : 2. implement when MB1 is also moment-reacting
     """
     
     def initialize(self):
@@ -2075,6 +2129,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
     def setup(self):
         # Extract options + sanity check.
         opts_drivese = self.options['modeling_options']
+        direct = opts_drivese["direct"]
         opts_openfast = self.options['openfast_options']
         opts_dlcs = self.options['dlc_options']
         # ---- DLC loads & operational ----
@@ -2121,6 +2176,9 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input("carrier_mass", 0.0, units="kg")
         self.add_input("tilt", 0.0, units="deg")
         self.add_input("s_lss", val=np.zeros(5), units="m")
+        if direct:
+            self.add_input("s_generator", val=0.0, units="m")
+            self.add_input("generator_mass", val=0.0, units="kg")
         # - 5. material properties
         self.add_input("lss_E", val=0.0, units="Pa")
         # ---- Outputs ----
@@ -2150,6 +2208,13 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         m_carrier = float(inputs["carrier_mass"][0])
         s_lss = inputs["s_lss"]
         delta = float(s_lss[1]-s_lss[0])
+        # direct drive?
+        direct = self.options["modeling_options"]["direct"]
+        if direct:
+            m_generator = float(inputs["generator_mass"][0])
+            s_generator = float(inputs["s_generator"][0])
+            s_mb1 = float(inputs["s_lss"][2])
+            L_1grm = s_mb1 - s_generator
         # materials
         E = float(inputs['lss_E'][0])
         # --------
@@ -2159,21 +2224,27 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         EI = E*I + 1e-6 # div by 0.0 (def), avoid by 1e-6
         # --------
         # Bearing loads (analytical) calculation: shape=(4, 72000, 11)
-        # ---- 0. Minimal
-        # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MB_Forces(
-        #     Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=True )
-        # ---- 1. more realistic (w/ GB load)
-        # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MBforces_realistic(
-        #     self.Fx,self.Fy,self.Fz,self.Mx,self.My,self.Mz,
-        #     m_carrier,delta,tilt_rad,
-        #     L_h1,L_12,flag_jac=True)
-        # ---- 2. EB-beam, for moment-reacting
-        Fmb1, Fmb2 = analytical_MBforces_EBbeam(
-            self.Fx,self.Fy,self.Fz, self.Mx,self.My,self.Mz,
-            m_carrier,delta,tilt_rad,L_h1,L_12,
-            EI,k_mb2
-        )
-        # ----- extract axial and radial forces
+        if not direct:
+            # ---- 0. Minimal
+            # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MB_Forces(
+            #     Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=True )
+            # ---- 1. more realistic (w/ GB load)
+            # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MBforces_realistic(
+            #     self.Fx,self.Fy,self.Fz,self.Mx,self.My,self.Mz,
+            #     m_carrier,delta,tilt_rad,
+            #     L_h1,L_12,flag_jac=True)
+            # ---- 2. EB-beam, for moment-reacting
+            Fmb1, Fmb2 = analytical_MBforces_EBbeam(
+                self.Fx,self.Fy,self.Fz, self.Mx,self.My,self.Mz,
+                m_carrier,delta,tilt_rad,L_h1,L_12,
+                EI,k_mb2
+            )
+        else:
+            Fmb1, Fmb2 = analytical_MBforces_DirectDrive(
+                self.Fx,self.Fy,self.Fz, self.Mx,self.My,self.Mz,
+                m_generator,tilt_rad,L_h1,L_12,L_1grm
+            )
+        # ----- extract axial and radial forces # TODO: mb1 is locating and not mb2
         F_mb1_rad = Fmb1[3, :, :]                           # shape (720000,10)
         F_mb2_ax, F_mb2_rad = Fmb2[0, :, :], Fmb2[3, :, :]  # shape (720000,10)
         # ----- equivalent loads MB2
