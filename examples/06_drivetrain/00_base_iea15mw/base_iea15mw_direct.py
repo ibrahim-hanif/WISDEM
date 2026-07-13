@@ -1,5 +1,5 @@
 #%%[markdown]
-# # Base case: IEA 15 MW Direct-Drive Monopile Turbine
+# # Base case: IEA 15 MW Direct-Drive VolturnUS Turbine
 # 
 # ### current version:
 # Drivetrain Analysis: Replica of IEA-15-MW report for reference
@@ -26,13 +26,13 @@ part_loads = True
 load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
-dir_loads = "M:\Vasudev_Gupta\outputs_mainshaft_loads"
+dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 
 # %% [markdown]
 # ### Defining results directory and files
 #%% Loading `openFAST` hub loads from a saved file
 if part_loads: # define paths
-    loc_all_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads.mat")
+    loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4w.mat")
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
 
 # ----
@@ -49,12 +49,12 @@ opts["WISDEM"]["DriveSE"]["hub"]["hub_gamma"] = 2.0
 opts["WISDEM"]["DriveSE"]["hub"]["spinner_gamma"] = 1.5
 
 opts["WISDEM"]["DriveSE"]["direct"] = True
-opts["WISDEM"]["DriveSE"]["use_gb_torque_density"] = True # False =(GB  optim, in-capabale)
+opts["WISDEM"]["DriveSE"]["gearbox_torque_density"] = 0.0 # False =(GB  optim, in-capabale)
 
 opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
 opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
 opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0  #IEC-1, 7.6.1.3, pg.55
-opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
+opts["WISDEM"]["DriveSE"]["own_hub_loads"] = True
 # used as: gamma = gamma_f * gamma_m * gamma_n (within TODO)
 
 opts["WISDEM"]["RotorSE"] = {}
@@ -66,7 +66,7 @@ opts["materials"]["n_mat"] = 4
 opts["flags"] = {}
 dogen = opts["flags"]["generator"] = False
 dohub = opts["flags"]["hub"] = True #(v)
-doMBfls = opts["flags"]["mb_fls"] = False
+doMBfls = opts["flags"]["mb_fls"] = True
 
 opts["OpenFAST"] = {}
 opts["OpenFAST"]["simulation"] = {}
@@ -80,14 +80,14 @@ else:
 opts["DLC_driver"] = {}
 opts["DLC_driver"]["DLCs"] = [{}]
 opts["DLC_driver"]["DLCs"][0]["DLC"] = "1.2"
-opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23., 25.]
-opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332 , 0.05894909, 0.03942148, 0.02472593, 0.01457773, 0.00466888]
+opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.]
+opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.0083042]
 # ---
 
 #%%
 # Initialize OpenMDAO problem
 prob = om.Problem(reports=False)
-prob.model = DrivetrainSE(modeling_options=opts)
+prob.model = DrivetrainSE_M4W(modeling_options=opts)
 # ---
 
 #%%
@@ -145,7 +145,7 @@ prob.setup()
 # Set high-level input values (that desc the turbine)
 prob.set_val("machine_rating", 15.0, units="MW")
 prob["upwind"] = True
-prob["n_blades"] = 3
+n_blades = 3
 prob["rotor_diameter"] = 240.0
 prob["D_top"] = 6.5 #tower top diameter
 prob["minimum_rpm"] = 5.0
@@ -156,15 +156,17 @@ prob["drive_height"] = 5.614
 prob["tilt"] = 6.0
 
 # Loading from rotor
-prob["F_aero_hub"] = np.array([2517580.0, -27669.0, 3204.0]).reshape((3, 1))
-prob["M_aero_hub"] = np.array([21030561.0, 7414045.0, 1450946.0]).reshape((3, 1))
+# prob["F_aero_hub"] = np.array([2517580.0, -27669.0, 3204.0]).reshape((3, 1))
+# prob["M_aero_hub"] = np.array([21030561.0, 7414045.0, 1450946.0]).reshape((3, 1))
+prob['F_aero_hub'] = np.array( [S_all['Fx_max'], S_all['Fy_max'], S_all['Fz_max']] ).reshape((3, 1))
+prob['M_aero_hub'] = np.array( [S_all['Mx_max'], S_all['My_max'], S_all['Mz_max']] ).reshape((3, 1))
 # ----
 
 # Blade properties and hub design options
 prob["hub_diameter"] = 7.94
 prob["blades_cm"] = 2.46175
-prob["blade_mass"] = 65250.0
-prob["blades_mass"] = 3 * prob["blade_mass"]
+blade_mass = 65250.0
+prob["blades_mass"] = n_blades * blade_mass
 prob["blades_I"] = np.r_[3.48453857e+08, 1.74226928e+08, 1.74226928e+08, np.zeros(3)]
 prob["pitch_system.BRFM"] = 26648449.0
 prob["pitch_system_scaling_factor"] = 0.75
@@ -186,6 +188,11 @@ prob["bear1.bearing_type"] = "TRB2"
 prob["bear2.bearing_type"] = "SRB"
 prob["bear1.D_shaft"] = 2.2 / 2
 prob["bear2.D_shaft"] = 2.2 / 2
+prob["bear1.mb_e"] = 0.4 # from 0.3-0.4 
+prob["bear2.mb_e"] = 0.4
+# prob["bear2.mb_k"] = 0.0 #3e10
+if doMBfls:
+    prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 # - init condn for some design vars
 myones = np.ones(2)
 prob["L_h1"] = 1.0
@@ -201,7 +208,9 @@ prob["generator_mass_user"] = 371.592 * 1e3
 
 prob["access_diameter"] = 2.0
 
-prob["bedplate_wall_thickness"] = 0.05 * np.ones(4)
+prob["bedplate_wall_thickness"] = 0.0925 * np.ones(4)
+
+prob["yaw_system_mass_user"] = 100e3
 
 prob["shaft_deflection_allowable"] = 1e-4
 prob["shaft_angle_allowable"] = 1e-3
@@ -256,8 +265,12 @@ print(" - Annual energy production:     77.4 GWh")
 print(" - Bedplate mass:                70,329 kg")
 print(" ---------------------------------------------------")
 
+#%% Print the results
+print("F_aero_hub:")
+print(" ", prob["F_aero_hub"] )
+print("M_aero_hub:")
+print(" ", prob["M_aero_hub"], "\n" )
 
-#%% Print out the objective, design variables and constraints
 print("Masses of drivetrain components")
 print("")
 print(" - lss mass:", prob["lss_mass"][0] )
@@ -268,11 +281,15 @@ print(" - bedplate mass: ", prob["bedplate_mass"][0] )
 print(" - misc. components: ", (prob["hvac_mass"][0]+prob["platform_mass"][0]+prob["cover_mass"][0]) )
 print(" - yaw system mass: ", prob["yaw_mass"][0] )
 print(" - nacelle_mass:", prob["nacelle_mass"][0] )
+
+if doMBfls:
+    print("\nconstr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
 print("")
-print("constr_lss_vonmises:", prob["constr_lss_vonmises"].flatten())
-print("constr_bedplate_vonmises:", prob["constr_bedplate_vonmises"].flatten())
-print("constr_mb1_defl:", prob["constr_mb1_defl"])
-print("constr_mb2_defl:", prob["constr_mb2_defl"])
+print("--- constr_ max ---")
+print("- lss: ", np.max(prob["constr_lss_vonmises"]) )
+print("- bedplate: ", np.max(prob["constr_bedplate_vonmises"]) )
+print("- defl mb1: ", np.max(prob["constr_mb1_defl"]) )
+print("- defl mb2: ", np.max(prob["constr_mb2_defl"]) )
 print("constr_shaft_deflection:", prob["constr_shaft_deflection"])
 print("constr_shaft_angle:", prob["constr_shaft_angle"])
 print("constr_stator_deflection:", prob["constr_stator_deflection"])
