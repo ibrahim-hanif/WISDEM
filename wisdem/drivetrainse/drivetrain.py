@@ -306,7 +306,8 @@ class DrivetrainSE_M4W( om.Group ):
     Internal Progress
     _________________
     - DONE : implement final version into drivetrain.py
-    - TODO : add modules for 'direct' (DD) and 'dogen'
+    - DONE : add modules for 'direct' (DD) and test (with base_iea15mw_direct.py)
+    - TODO : add modules for 'dogen'
     - DONE : add a flag for mb_fls
     """
     def initialize(self):
@@ -321,10 +322,7 @@ class DrivetrainSE_M4W( om.Group ):
 
         n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
         direct = opt_drivese["direct"]
-        if direct:
-            gearbox_torque_density = 0.0
-        else:
-            gearbox_torque_density = opt_drivese["gearbox_torque_density"]
+        gearbox_torque_density = opt_drivese["gearbox_torque_density"]
 
         dogen = self.options["modeling_options"]["flags"]["generator"]
         n_pc = self.options["modeling_options"]["WISDEM"]["RotorSE"]["n_pc"]
@@ -361,17 +359,21 @@ class DrivetrainSE_M4W( om.Group ):
             )
 
         # Layout (just discretization of DT and each compn, output 's_drive', etc.)
-        #if not direct:
-        self.add_subsystem(
-            'layout', lay.GearedLayout(),
-                promotes=["*"]
-            )
+        # Layout and mass for the big items
+        if direct:
+            self.add_subsystem("layout", lay.DirectLayout(), promotes=["*"])
+        else:
+            self.add_subsystem("layout", lay.GearedLayout(), promotes=["*"])
         
         # All smaller components (from `dc`; empirical no load analysis)
         # - required by `Hub_Rotor_LSS_Frame`
         # 0. Main Bearings
         self.add_subsystem("bear1", dc.MainBearing_withDerivatives())
         self.add_subsystem("bear2", dc.MainBearing_withDerivatives())
+        # -connecting = DirectLayout -to- bear(1,2)
+        if direct:
+            self.connect("D_bearing1", "bear1.D_bearing")
+            self.connect("D_bearing2", "bear2.D_bearing")
         # -connecting = GearedLayout -to- bear(1,2) (NEW) (PR #718)
         self.connect("D_shaft_mb1", "bear1.D_shaft") #DONE: impl later
         self.connect("D_shaft_mb2", "bear2.D_shaft") #DONE: impl later
@@ -439,10 +441,15 @@ class DrivetrainSE_M4W( om.Group ):
             self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
 
         # HSS
-        self.add_subsystem(
-            "hss", ds.HSS_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
-            promotes=["*"]
+        if direct:
+            self.add_subsystem(
+                "nose", ds.Nose_Stator_Bedplate_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs), promotes=["*"]
             )
+        else:
+            self.add_subsystem(
+                "hss", ds.HSS_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
+                promotes=["*"]
+                )
 
         # Final tallying (mass summation)
         self.add_subsystem(
@@ -470,10 +477,12 @@ class DrivetrainSE_M4W( om.Group ):
             )
         
         # Bedplate_IBeam_Frame:
-        self.add_subsystem(
-            "bed", ds.Bedplate_IBeam_Frame(modeling_options=opt_drivese, n_dlcs=n_dlcs),
-                promotes=["*"]
-            )
+        if not direct:
+            self.add_subsystem(
+                "bed", ds.Bedplate_IBeam_Frame(
+                    modeling_options=opt_drivese, n_dlcs=n_dlcs
+                    ), promotes=["*"]
+                )
         # -connecting = bear(1,2) -to- Bedplate_*
         self.connect("bear1.mb_mass", "mb1_mass")
         # self.connect("bear1.mb_cm", "mb1_cm")
