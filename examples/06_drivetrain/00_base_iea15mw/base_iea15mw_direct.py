@@ -184,8 +184,8 @@ prob["spinner_gust_ws"] = 70.0
 # ----
 
 # Drivetrain configuration and sizing inputs
-prob["bear1.bearing_type"] = "TRB2"
-prob["bear2.bearing_type"] = "SRB"
+prob["bear1.bearing_type"] = "CARB" # iea15 report: TRB2; latest wisdem: CARB
+prob["bear2.bearing_type"] = "SRB"  
 prob["bear1.D_shaft"] = 2.2 / 2
 prob["bear2.D_shaft"] = 2.2 / 2
 prob["bear1.mb_e"] = 0.4 # from 0.3-0.4 
@@ -236,7 +236,7 @@ prob["spinner_material"] = "glass_uni"
 prob["material_names"] = ["steel", "steel_drive", "cast_iron", "glass_uni"]
 # ----
 # %%[markdown]
-# ### Print inputs and outputs to the model `Problemm`
+# ### Print inputs and outputs to the model `Problem`
 
 print("\n=== All needed inputs to the model ===\n")
 # for name, meta in prob.model.list_inputs(out_stream=None, val=False):
@@ -275,7 +275,9 @@ print("Masses of drivetrain components")
 print("")
 print(" - lss mass:", prob["lss_mass"][0] )
 print(" - nose-turret mass:", prob["nose_mass"][0] )
-print(f" - mb masses: mb1 = {prob["mb1_mass"][0]}, mb2 = {prob["mb2_mass"][0]}")
+mb1_mass = prob["mb1_mass"][0]
+mb2_mass = prob["mb2_mass"][0]
+print(f" - mb masses = {mb1_mass+mb2_mass}; mb1 = {mb1_mass}, mb2 = {mb2_mass}")
 print(" - generator mass:", prob["generator_mass"][0] )
 print(" - bedplate mass: ", prob["bedplate_mass"][0] )
 print(" - misc. components: ", (prob["hvac_mass"][0]+prob["platform_mass"][0]+prob["cover_mass"][0]) )
