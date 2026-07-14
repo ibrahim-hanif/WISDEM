@@ -1918,7 +1918,7 @@ def analytical_MBforces_EBbeam(
 # ---------------
 
 # ---------------
-def analytical_MBforces_DirectDrive(
+def analytical_MBforces_DirectDrive_MB1_locating(
         Fx,Fy,Fz, Mx,My,Mz, m_generator,tilt,
         L_h1,L_12,L_1grm
     ):
@@ -1935,7 +1935,8 @@ def analytical_MBforces_DirectDrive(
 
     Internal Progress
     _______
-    - TODO : implement and test
+    - DONE : implement and test
+    - TODO : implement for MB2 locating and test
     - TODO : moment reacting for TRB2 as MB1 (as per iea15mw report); cf. _EBbeam func above
     """
     # === sanity check and init ===
@@ -1966,6 +1967,36 @@ def analytical_MBforces_DirectDrive(
     F_mb2 = np.stack([F_mb2_ax, F_mb2_y, F_mb2_z, F_mb2_rad])
 
     return F_mb1, F_mb2
+# ---------------
+
+# ---------------
+def equivalent_bearing_loads_P( F_mb, e,X1,Y1,X2,Y2 ):
+    """
+    Equivalent main bearing loads: `P = X F_r + Y F_a` for an axially locating bearing
+
+    Inputs
+    _______
+    F_mb : array[ 4, shape(F*) ]
+        All forces on the (axial) main bearing
+        F* : float array[ # of time steps , # of wind speeds ], [N]
+        Forces (aero) on the hub center/main shaft input; for FLS, shape=(72e3,10)
+
+    Outputs
+    _______
+    P_mb : array[ shape(F*) ]
+        Equivalent loads on the bearing
+
+    """
+
+    F_mb_ax, F_mb_rad = F_mb[0, :, :], F_mb[3, :, :]  # shape (72000,10)
+    # ----- equivalent loads MB2
+    ratio = F_mb_ax / F_mb_rad # DONE: removed max, coz F_mb2_rad is pos always (sqrt)
+    light = np.abs(ratio) <= e
+    P_mb = np.zeros_like(F_mb_rad)
+    P_mb[light] = X1 * F_mb_rad[light] + Y1 * F_mb_ax[light]
+    P_mb[~light] = X2 * F_mb_rad[~light] + Y2 * F_mb_ax[~light]
+    
+    return P_mb, light
 # ---------------
 
 # ---------------
@@ -2239,23 +2270,17 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
                 EI,k_mb2
             )
         else:
-            Fmb1, Fmb2 = analytical_MBforces_DirectDrive(
+            Fmb1, Fmb2 = analytical_MBforces_DirectDrive_MB1_locating(
                 self.Fx,self.Fy,self.Fz, self.Mx,self.My,self.Mz,
                 m_generator,tilt_rad,L_h1,L_12,L_1grm
             )
-        # ----- extract axial and radial forces # TODO: mb1 is locating and not mb2
+        # ----- extract axial and radial forces
         F_mb1_rad = Fmb1[3, :, :]                           # shape (720000,10)
-        F_mb2_ax, F_mb2_rad = Fmb2[0, :, :], Fmb2[3, :, :]  # shape (720000,10)
         # ----- equivalent loads MB2
-        ratio = F_mb2_ax / F_mb2_rad # DONE: removed max, coz F_mb2_rad is pos always (sqrt)
-        light = np.abs(ratio) <= e; self.light = light
-        P_mb2 = np.zeros_like(F_mb2_rad)
-        P_mb2[light] = X1 * F_mb2_rad[light] + Y1 * F_mb2_ax[light]
-        P_mb2[~light] = X2 * F_mb2_rad[~light] + Y2 * F_mb2_ax[~light]
-        self.P_mb2 = P_mb2
-        # --- trying smooth approximation for optim ---
-        # P_mb2 = X2 * F_mb2_rad + Y2 * F_mb2_ax # step 2
-        # P_mb2 = F_mb2_rad # step 1
+        P_mb2, light = equivalent_bearing_loads_P(
+            Fmb2, e,X1,Y1,X2,Y2
+        )
+        self.P_mb2, self.light = P_mb2, light
         # ----- equivalent loads MB1
         P_mb1 = F_mb1_rad # (= radial loads coz radial bearing CRB)
         self.P_mb1 = P_mb1
