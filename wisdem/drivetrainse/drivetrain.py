@@ -331,7 +331,7 @@ class DrivetrainSE_M4W( om.Group ):
         
         # print flag information (debugging)
         print("=== Problem 'DrivetrainSE_M4W' setting up ===")
-        print(f"flag info: doMBfls={doMBfls}, gearbox_torque_density={gearbox_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
+        print(f"flag info: doMBfls={doMBfls}, direct={direct}, gearbox_torque_density={gearbox_torque_density}, flag_hub={flag_hub}, dogen={dogen}")
 
         # self.set_input_defaults("machine_rating", units="kW")
         #self.set_input_defaults("hvac_mass_coeff", 0.025, units="kg/kW/m")
@@ -421,13 +421,21 @@ class DrivetrainSE_M4W( om.Group ):
         
         # FLS MBs (Analytical)
         if doMBfls:
+            promote_inputs_for_MBfls = [
+                "L_h1","L_12",
+                "rated_rpm","lifetime",
+                "carrier_mass","tilt","s_lss","lss_E",
+                "D_shaft_mb2","Tshaft_mb2", #(PR #718)
+                "s_generator","generator_mass"
+                ] 
+            
             self.add_subsystem(
                 "mb_fls", ds.Analytical_FLS_Bearing_Life(
                     modeling_options=opt_drivese,
                     openfast_options=opt_openfast,
                     dlc_options=opt_DLC
                     ),
-                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss","lss_E","D_shaft_mb2","Tshaft_mb2","s_generator","generator_mass"], #(PR #718)
+                promotes_inputs=promote_inputs_for_MBfls,
                 promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
             )
             # -connecting = bear(1,2) -to- Analy_*
