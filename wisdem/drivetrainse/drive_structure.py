@@ -2204,11 +2204,10 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input('rated_rpm', val=0.0, desc='Nominal/rated rotational speed', units='rpm')
         self.add_input('lifetime', val=25.0, desc='Wind turbine design life')
         # - 4. drivetrain
-        self.add_input("carrier_mass", 0.0, units="kg")
+        self.add_input("point_mass", 0.0, units="kg")
         self.add_input("tilt", 0.0, units="deg")
         self.add_input("s_lss", val=np.zeros(5), units="m")
         self.add_input("s_generator", val=0.0, units="m")
-        self.add_input("generator_mass", val=0.0, units="kg")
         # - 5. material properties
         self.add_input("lss_E", val=0.0, units="Pa")
         # ---- Outputs ----
@@ -2235,16 +2234,26 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         n0 = inputs['rated_rpm'] + 1e-6 # div by 0.0 (def), avoid by 1e-6
         # drivetrain
         tilt_rad = float(np.deg2rad(inputs["tilt"][0]))
-        m_carrier = float(inputs["carrier_mass"][0])
         s_lss = inputs["s_lss"]
-        delta = float(s_lss[1]-s_lss[0])
+        
         # direct drive?
         direct = self.options["modeling_options"]["direct"]
         if direct:
-            m_generator = float(inputs["generator_mass"][0])
+            # mass
+            m_point = float(inputs["point_mass"][0]) # generator
+            # point of mass action
+            s_mb2 = float(s_lss[0])
             s_generator = float(inputs["s_generator"][0])
-            s_mb1 = float(inputs["s_lss"][2])
-            L_1grm = s_mb1 - s_generator
+            # lever arm; dist from mb2 (+ve towards hub)
+            delta = s_mb2 - s_generator # L_1grm
+        else:
+            # mass
+            m_point = float(inputs["point_mass"][0]) # carrier
+            # point of mass action
+            s_mb2 = s_lss[1]
+            s_carrier = s_lss[0]
+            # lever arm; dist from mb2 (+ve towards hub)
+            delta = float(s_mb2-s_carrier)
         # materials
         E = float(inputs['lss_E'][0])
         # --------
@@ -2254,26 +2263,20 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         EI = E*I + 1e-6 # div by 0.0 (def), avoid by 1e-6
         # --------
         # Bearing loads (analytical) calculation: shape=(4, 72000, 11)
-        if not direct:
-            # ---- 0. Minimal
-            # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MB_Forces(
-            #     Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=True )
-            # ---- 1. more realistic (w/ GB load)
-            # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MBforces_realistic(
-            #     self.Fx,self.Fy,self.Fz,self.Mx,self.My,self.Mz,
-            #     m_carrier,delta,tilt_rad,
-            #     L_h1,L_12,flag_jac=True)
-            # ---- 2. EB-beam, for moment-reacting
-            Fmb1, Fmb2 = analytical_MBforces_EBbeam(
-                self.Fx,self.Fy,self.Fz, self.Mx,self.My,self.Mz,
-                m_carrier,delta,tilt_rad,L_h1,L_12,
-                EI,k_mb2
-            )
-        else:
-            Fmb1, Fmb2 = analytical_MBforces_DirectDrive_MB1_locating(
-                self.Fx,self.Fy,self.Fz, self.Mx,self.My,self.Mz,
-                m_generator,tilt_rad,L_h1,L_12,L_1grm
-            )
+        # ---- 0. Minimal
+        # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MB_Forces(
+        #     Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=True )
+        # ---- 1. more realistic (w/ GB load)
+        # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MBforces_realistic(
+        #     self.Fx,self.Fy,self.Fz,self.Mx,self.My,self.Mz,
+        #     m_carrier,delta,tilt_rad,
+        #     L_h1,L_12,flag_jac=True)
+        # ---- 2. EB-beam, for moment-reacting
+        Fmb1, Fmb2 = analytical_MBforces_EBbeam(
+            self.Fx,self.Fy,self.Fz, self.Mx,self.My,self.Mz,
+            m_point,delta,tilt_rad,L_h1,L_12,
+            EI,k_mb2
+        )
         # ----- extract axial and radial forces
         F_mb1_rad = Fmb1[3, :, :]                           # shape (720000,10)
         # ----- equivalent loads MB2

@@ -424,9 +424,9 @@ class DrivetrainSE_M4W( om.Group ):
             promote_inputs_for_MBfls = [
                 "L_h1","L_12",
                 "rated_rpm","lifetime",
-                "carrier_mass","tilt","s_lss","lss_E",
+                "tilt","s_lss","lss_E",
                 "D_shaft_mb2","Tshaft_mb2", #(PR #718)
-                "s_generator","generator_mass"
+                "s_generator"
                 ] 
             
             self.add_subsystem(
@@ -447,6 +447,11 @@ class DrivetrainSE_M4W( om.Group ):
             self.connect("bear2.mb_k", "mb_fls.k_mb2") # ---
             self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
             self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
+            # -connecting = layout -to- Analy_*
+            if direct:
+                self.connect("generator_mass", "mb_fls.point_mass")
+            else:
+                self.connect("carrier_mass", "mb_fls.point_mass")
 
         # HSS
         if direct:
@@ -608,13 +613,21 @@ class MBSA( om.Group ):
         
         # FLS MBs (Analytical)
         if doMBfls:
+            promote_inputs_for_MBfls = [
+                "L_h1","L_12",
+                "rated_rpm","lifetime",
+                "tilt","s_lss","lss_E",
+                "D_shaft_mb2","Tshaft_mb2", #(PR #718)
+                "s_generator"
+                ] 
+            
             self.add_subsystem(
                 "mb_fls", ds.Analytical_FLS_Bearing_Life(
                     modeling_options=opt_drivese,
                     openfast_options=opt_openfast,
                     dlc_options=opt_DLC
                     ),
-                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss","lss_E","D_shaft_mb2","Tshaft_mb2"],
+                promotes_inputs=promote_inputs_for_MBfls,
                 promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
             )
             # -connecting = bear(1,2) -to- Analy_*
@@ -626,6 +639,11 @@ class MBSA( om.Group ):
             self.connect("bear2.mb_k", "mb_fls.k_mb2") # ---
             self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
             self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
+            # -connecting = layout -to- Analy_*
+            if direct:
+                self.connect("generator_mass", "mb_fls.point_mass")
+            else:
+                self.connect("carrier_mass", "mb_fls.point_mass")
 
 
         # # Final tallying (mass summation)
