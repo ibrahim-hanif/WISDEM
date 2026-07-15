@@ -306,9 +306,9 @@ class DrivetrainSE_M4W( om.Group ):
     Internal Progress
     _________________
     - DONE : implement final version into drivetrain.py
-    - DONE : add modules for 'direct' (DD) and test (with base_iea15mw_direct.py)
-    - TODO : add modules for 'dogen'
     - DONE : add a flag for mb_fls
+    - DONE : add modules for 'direct' (DD) and test (with base_iea15mw_direct.py)
+    - DONE : add modules for 'dogen'
     """
     def initialize(self):
         self.options.declare("modeling_options")
@@ -398,11 +398,31 @@ class DrivetrainSE_M4W( om.Group ):
             "rpm", dc.RPM_Input(n_pc=n_pc),
             promotes=["*"]
             )
-        # - TODO: add M4W gen data / `if dogen:`
-        self.add_subsystem(
-            "gensimp", dc.GeneratorSimple(direct_drive=direct, n_pc=n_pc),
-            promotes=["*"]
+        
+        if dogen: #(v) copied from DrivetrainSE
+            gentype = self.options["modeling_options"]["WISDEM"]["DriveSE"]["generator"]["type"]
+            self.add_subsystem(
+                "generator",
+                Generator(design=gentype, n_pc=n_pc),
+                promotes=[
+                    "generator_mass_user",
+                    "generator_mass",
+                    "generator_cost",
+                    "generator_I",
+                    "machine_rating",
+                    "generator_efficiency",
+                    "rated_torque",
+                    ("rotor_mass", "generator_rotor_mass"),
+                    ("rotor_I", "generator_rotor_I"),
+                    ("stator_mass", "generator_stator_mass"),
+                    ("stator_I", "generator_stator_I"),
+                ],
             )
+        else:
+            self.add_subsystem(
+                "gensimp", dc.GeneratorSimple(direct_drive=direct, n_pc=n_pc),
+                promotes=["*"]
+                )
 
         # Hub_Rotor_LSS_Frame:
         self.add_subsystem(
@@ -528,6 +548,26 @@ class DrivetrainSE_M4W( om.Group ):
             self.connect("spinner_rho", "spinner.composite_rho")
             self.connect("spinner_Xt", "spinner.composite_Xt")
             self.connect("spinner_mat_cost", "spinner.composite_cost")
+
+        if dogen: #(v) detailed generator design, copied from DrivetrainSE
+            self.connect("generator.R_out", "R_generator")
+            self.connect("bedplate_E", "generator.E")
+            self.connect("bedplate_G", "generator.G")
+
+            if direct:
+                self.connect("lss_rpm", "generator.shaft_rpm")
+                self.connect("torq_deflection", "generator.y_sh")
+                self.connect("torq_angle", "generator.theta_sh")
+                self.connect("stator_deflection", "generator.y_bd")
+                self.connect("stator_angle", "generator.theta_bd")
+
+                self.linear_solver = lbgs = om.LinearBlockGS()
+                self.nonlinear_solver = nlbgs = om.NonlinearBlockGS()
+                nlbgs.options["maxiter"] = 3
+                nlbgs.options["atol"] = nlbgs.options["atol"] = 1e-2
+                nlbgs.options["iprint"] = 0
+            else:
+                self.connect("hss_rpm", "generator.shaft_rpm")
 # ----------
 
 # ----------
