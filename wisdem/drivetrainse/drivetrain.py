@@ -523,3 +523,126 @@ class DrivetrainSE_M4W( om.Group ):
             self.connect("spinner_rho", "spinner.composite_rho")
             self.connect("spinner_Xt", "spinner.composite_Xt")
             self.connect("spinner_mat_cost", "spinner.composite_cost")
+# ----------
+
+# ----------
+class MBSA( om.Group ):
+    """
+    Group containing components for optimization of the main-bearings-shaft assembly (MBSA) of the drivetrain, including the low-speed shaft (LSS) and two main bearings.
+    """
+    def initialize(self):
+        self.options.declare("modeling_options")
+
+    def setup(self):
+        opt_drivese = self.options["modeling_options"]["WISDEM"]["DriveSE"]
+        # OpenFAST: containing 1. simulation DT and 2. MS loads dir
+        opt_openfast = self.options["modeling_options"]["OpenFAST"]
+        # DLC: only 1 used '[0]': containing "wind_speed" and "probabilities"
+        opt_DLC = self.options["modeling_options"]["DLC_driver"]["DLCs"][0]
+
+        n_dlcs = self.options["modeling_options"]["WISDEM"]["n_dlc"]
+        direct = opt_drivese["direct"]
+        if direct:
+            gearbox_torque_density = 0.0
+        else:
+            gearbox_torque_density = opt_drivese["gearbox_torque_density"]
+            
+        dogen = self.options["modeling_options"]["flags"]["generator"]
+        n_pc = self.options["modeling_options"]["WISDEM"]["RotorSE"]["n_pc"]
+        flag_hub = self.options["modeling_options"]["flags"]["hub"]
+        doMBfls = self.options["modeling_options"]["flags"]["mb_fls"]
+
+        # print flag information
+        print("=== Problem 'LSS_layout' setting up ===")
+        print(f"flag info: doMBfls={doMBfls}, gearbox_torque_density={gearbox_torque_density}, dogen={dogen}, flag_hub={flag_hub}, direct={direct}")
+
+        # self.set_input_defaults("machine_rating", units="kW")
+        #self.set_input_defaults("hvac_mass_coeff", 0.025, units="kg/kW/m")
+
+        # Materials prep
+        self.add_subsystem(
+            "mat",
+            DriveMaterials(direct=direct, n_mat=self.options["modeling_options"]["materials"]["n_mat"]),
+                promotes=["*"]
+            )
+        # - for 'layout' component: need = lss_rho, bedplate_rho, hss_rho 
+
+        # Before the layout, need to do these first
+        # 1. hub system (perf hub system optimization)
+        if flag_hub: # bypass rn, TODO later
+            self.add_subsystem(
+                "hub", Hub_System(modeling_options=opt_drivese["hub"]),
+                    promotes=["*"]
+                )
+        
+        # # 2. gearbox
+        self.add_subsystem(
+            "gear", Gearbox(direct_drive=direct, gearbox_torque_density=gearbox_torque_density),
+                promotes=["*"]
+            )
+
+        # Layout (just discretization of DT and each compn, output 's_drive', etc.)
+        #if not direct:
+        self.add_subsystem(
+            'layout', lay.GearedLayout(),
+                promotes=["*"]
+            )
+        
+        # Main Bearings
+        self.add_subsystem("bear1", dc.MainBearing_withDerivatives())
+        self.add_subsystem("bear2", dc.MainBearing_withDerivatives())
+        # -connecting = GearedLayout -to- bear(1,2) (NEW) # (PR #718)
+        self.connect("D_shaft_mb1", "bear1.D_shaft") #DONE: impl later
+        self.connect("D_shaft_mb2", "bear2.D_shaft") #DONE: impl later
+        
+        # Hub_Rotor_LSS_Frame:
+        self.add_subsystem(
+            "lss", ds.Hub_Rotor_LSS_Frame(n_dlcs=n_dlcs, modeling_options=opt_drivese),
+                promotes=["*"]
+            )
+        # -connecting = bear(1,2) -to- Hub_Rotor_LSS_Frame (NEW)
+        self.connect("bear1.face_width", "mb1_face_width") # mb_fw(s) shifted from GearedLayout to Hub_* to avoid cycle
+        self.connect("bear2.face_width", "mb2_face_width")
+        self.connect("bear1.mb_Reactions", "mb1_Reactions")
+        self.connect("bear2.mb_Reactions", "mb2_Reactions")
+        
+        # FLS MBs (Analytical)
+        if doMBfls:
+            self.add_subsystem(
+                "mb_fls", ds.Analytical_FLS_Bearing_Life(
+                    modeling_options=opt_drivese,
+                    openfast_options=opt_openfast,
+                    dlc_options=opt_DLC
+                    ),
+                promotes_inputs=["L_h1","L_12", "rated_rpm","lifetime","carrier_mass","tilt","s_lss","lss_E","D_shaft_mb2","Tshaft_mb2"],
+                promotes_outputs=["constr_L10_mb1","constr_L10_mb2"]
+            )
+            # -connecting = bear(1,2) -to- Analy_*
+            self.connect("bear2.mb_p", "mb_fls.p_mb") # same for both MBs ---
+            self.connect("bear2.mb_X1", "mb_fls.X1_mb")
+            self.connect("bear2.mb_Y1", "mb_fls.Y1_mb")
+            self.connect("bear2.mb_X2", "mb_fls.X2_mb")
+            self.connect("bear2.mb_Y2", "mb_fls.Y2_mb")
+            self.connect("bear2.mb_k", "mb_fls.k_mb2") # ---
+            self.connect("bear1.mb_Cr", "mb_fls.Cr_mb1")
+            self.connect("bear2.mb_Cr", "mb_fls.Cr_mb2")
+
+
+        # # Final tallying (mass summation)
+        self.add_subsystem(
+            "misc", dc.MiscNacelleComponents(direct_drive=direct),
+            promotes=["*"]
+            )
+        self.add_subsystem(
+            "nac", dc.NacelleSystemAdder(direct_drive=direct),
+            promotes=["*"]
+            )
+        # self.add_subsystem("rna", dc.RNA_Adder(), promotes=["*"])
+        # -connecting = bear(1,2) -to- NacelleSystemAdder
+        self.connect("bear1.mb_mass", "mb1_mass")
+        # self.connect("bear1.mb_cm", "mb1_cm")
+        self.connect("bear1.mb_I", "mb1_I")
+        self.connect("bear2.mb_mass", "mb2_mass")
+        # self.connect("bear2.mb_cm", "mb2_cm")
+        self.connect("bear2.mb_I", "mb2_I")
+# ----------
