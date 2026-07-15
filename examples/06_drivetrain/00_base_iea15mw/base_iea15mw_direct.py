@@ -205,6 +205,7 @@ prob["nose_wall_thickness"] = 0.1 * myones #* 2
 
 prob["L_generator"] = 2.17  # core length
 prob["generator_mass_user"] = 371.592 * 1e3
+prob["generator_radius_user"] = 5.08 # air gap radius
 
 prob["access_diameter"] = 2.0
 
