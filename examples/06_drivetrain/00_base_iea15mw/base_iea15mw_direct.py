@@ -13,13 +13,15 @@ import os
 import numpy as np
 import openmdao.api as om
 
-from wisdem.commonse.fileIO import save_data
+from wisdem.commonse.fileIO import save_data, load_data
 from wisdem.drivetrainse.drivetrain import DrivetrainSE, DrivetrainSE_M4W
 from wisdem.commonse.utilities import load_all_mat_to_dict
 
 #%%
-opt_flag = False
-save_new_prob = False
+opt_flag = True
+opt_hub = False # (def: False) if to optimize hub, its Compn incl if dohub
+flag_save_new_data = False
+load_from_saved_data = True
 
 # Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -27,6 +29,14 @@ load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
+
+# - results main dir
+results_dir = "results"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+results_path = os.path.join(script_dir, results_dir)
+os.makedirs(results_path, exist_ok=True)
+
+loc_save_data = os.path.join(results_path, "m4w_base_case_DT")
 
 # %% [markdown]
 # ### Defining results directory and files
@@ -105,7 +115,7 @@ if opt_flag:
     prob.model.add_objective("nacelle_mass", scaler=1e-6) #scale to order 1 for better convergence behaviour
 
     # Add design variables, in this case the drivetrain diameters and wall thicknesses
-    prob.model.add_design_var("hub_diameter", lower=3.0, upper=15.0)
+    if opt_hub: prob.model.add_design_var("hub_diameter", lower=3.0, upper=15.0)
     prob.model.add_design_var("L_12", lower=0.1, upper=5.0)
     prob.model.add_design_var("L_h1", lower=0.1, upper=5.0)
     prob.model.add_design_var("lss_diameter", lower=0.5, upper=6.0)
@@ -123,10 +133,13 @@ if opt_flag:
     prob.model.add_constraint("constr_mb2_defl", upper=1.0)
     prob.model.add_constraint("constr_shaft_deflection", upper=1.0)
     prob.model.add_constraint("constr_shaft_angle", upper=1.0)
-    prob.model.add_constraint("constr_stator_deflection", upper=1.0)
+    # prob.model.add_constraint("constr_stator_deflection", upper=1.0) #TODO: add
     prob.model.add_constraint("constr_stator_angle", upper=1.0)
+    if doMBfls:
+        prob.model.add_constraint("constr_L10_mb1", lower=1.0)
+        prob.model.add_constraint("constr_L10_mb2", lower=1.0)
     # 3. hub dia to accom. blades' root radius 
-    prob.model.add_constraint("constr_hub_diameter", lower=0.0)
+    if opt_hub: prob.model.add_constraint("constr_hub_diameter", lower=0.0)
     # 4. target overhand and hub height
     prob.model.add_constraint("constr_length", lower=0.0)
     prob.model.add_constraint("constr_height", lower=0.0)
@@ -188,10 +201,10 @@ prob["bear1.bearing_type"] = "CARB" # iea15 report: TRB2; latest wisdem: CARB
 prob["bear2.bearing_type"] = "SRB"  
 prob["bear1.D_shaft"] = 2.2 / 2
 prob["bear2.D_shaft"] = 2.2 / 2
-prob["bear1.mb_e"] = 0.4 # from 0.3-0.4 
-prob["bear2.mb_e"] = 0.4
-# prob["bear2.mb_k"] = 0.0 #3e10
 if doMBfls:
+    prob["bear1.mb_e"] = 0.4 # from 0.3-0.4 
+    prob["bear2.mb_e"] = 0.4
+    # prob["bear2.mb_k"] = 0.0 #3e10
     prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
 # - init condn for some design vars
 myones = np.ones(2)
@@ -211,12 +224,12 @@ prob["access_diameter"] = 2.0
 
 prob["bedplate_wall_thickness"] = 0.0925 * np.ones(4)
 
-prob["yaw_system_mass_user"] = 100e3
+prob["yaw_system_mass_user"] = 0.0 #100e3
 
 prob["shaft_deflection_allowable"] = 1e-4
 prob["shaft_angle_allowable"] = 1e-3
-prob["stator_deflection_allowable"] = 1e-4
-prob["stator_angle_allowable"] = 1e-3
+prob["stator_deflection_allowable"] = 1e-2 #(def: 1e-4 m; 1e-2)
+prob["stator_angle_allowable"] = 1e-1 #(def: 1e-3 deg; 1e-1)
 # ----
 
 # Material properties (4 materials defined, cf. "n_mat"=4)
@@ -236,7 +249,13 @@ prob["hub_material"] = "cast_iron"
 prob["spinner_material"] = "glass_uni"
 prob["material_names"] = ["steel", "steel_drive", "cast_iron", "glass_uni"]
 # ----
-# %%[markdown]
+
+#%% overwrite variables from saved data
+if load_from_saved_data:
+    print(" loading prob vars from saved csv")
+    prob = load_data( loc_save_data+".csv", prob )
+
+# %%
 # ### Print inputs and outputs to the model `Problem`
 
 print("\n=== All needed inputs to the model ===\n")
@@ -256,17 +275,21 @@ if opt_flag:
     prob.run_driver()
 else:
     prob.run_model()
-if save_new_prob: save_data("base_iea15mw_direct", prob)
 # ----
 
-#%% Results to match
+#%%
+if flag_save_new_data: save_data(loc_save_data, prob)
+
+#%%
+# Results to match
 print(" ---------- Results to match, from report ----------")
 print(" - Rotor nacelle assembly mass:  1,017 t")
 print(" - Annual energy production:     77.4 GWh")
 print(" - Bedplate mass:                70,329 kg")
 print(" ---------------------------------------------------")
 
-#%% Print the results
+#%%
+# Print the results
 print("F_aero_hub:")
 print(" ", prob["F_aero_hub"] )
 print("M_aero_hub:")
