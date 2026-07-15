@@ -21,7 +21,7 @@
 # 2. IEA 15MW=baseline
 # 3. Task2.1
 
-# %% [markdown]
+#%%
 # imports
 import os
 import numpy as np
@@ -33,7 +33,7 @@ import time
 import pandas as pd
 
 # %%
-from wisdem.drivetrainse.drivetrain import DriveMaterials
+from wisdem.drivetrainse.drivetrain import DriveMaterials, MBSA
 
 from wisdem.drivetrainse.hub import Hub_System
 from wisdem.drivetrainse.gearbox import Gearbox
@@ -361,7 +361,7 @@ class LSS_layout( om.Group ):
 prob = om.Problem(reports=False)
 
 # Define the model
-prob.model = LSS_layout(modeling_options=opts) # an instance of the LSS_layout problem defined above
+prob.model = MBSA(modeling_options=opts) # an instance of the LSS_layout problem defined above
 
 # %%[markdown]
 # ### Optimization / DOE setup
