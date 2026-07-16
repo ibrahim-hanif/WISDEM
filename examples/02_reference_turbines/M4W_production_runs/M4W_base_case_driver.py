@@ -3,17 +3,12 @@
 # purpose: copy of `iea15mw_driver.py` to test M4W modifications
 # 
 # ### current version:
-# mainly 'support structure' optimization with a (given) drivetrain/RNA (result of 03_)
-#
+# 1. Drivetrain optimization for the (given, SIMA) hub loads
 # - objective: (1) `nacelle_mass` minimization (`NacelleSystemAdder`)
+# 2. Tower optimization with a (given) drivetrain/RNA (result of 03_)
+# - objective: (1) `turbine_mass` minimization
 #
 # ### TODO:
-# - adapt the modified DrivetrainSE code to work with `yaml` files ...
-# -- DONE: mb*_e added to geomtry iA
-# -- TODO: DLC data used for MB FLS, code into yaml (cf. WEIS schema) -- ref `notion` for notes.   
-# - add optim params (copied from `03_DT_layout.py`)
-# -- DVs: (4) `L_h1, L_12, lss_diameter, lss_wall_thickness`
-# -- constraints: (5) lss stresses, deflections (linear, angle), DT dims, L10 MBs FLS
 # - geared TLP
 
 #%%
@@ -25,8 +20,15 @@ import matplotlib.pyplot as plt
 from wisdem.commonse.utilities import load_all_mat_to_dict
 
 #%%
+# ---- turbine geo
 wt_m4w = False # turbine to analyse: True = m4w / False = iea15mw
-flag_GBO = False
+
+# ---- optimization
+opt_flag_DT = True
+opt_flag_tower = False
+
+# ---- load from saved?
+flag_load_from_saved_01_DT = True
 
 flag_plot = True
 verbose = False
@@ -39,30 +41,39 @@ dir_02_ref_turbines = os.path.dirname(mydir)  # get path to 02_reference_turbine
 
 # ---- wind turbine geometry
 fname_wt_m4w = mydir + os.sep + "M4W-15-VolturnUS-WT.yaml"
-fname_wt_iea15mw = dir_02_ref_turbines + os.sep + "IEA-15-240-RWT_VolturnUS-S.yaml"
+fname_wt_iea15mw = mydir + os.sep + "IEA-15-VolturnUS-report.yaml"
 if wt_m4w:
       fname_wt_input = fname_wt_m4w
       direct = False
 else:
       fname_wt_input = fname_wt_iea15mw
       direct = True
+      # ---- 01_DT
+      if flag_load_from_saved_01_DT:
+            fname_wt_input = os.path.join(
+                  mydir, "outputs", "01_Drivetrain", "iea15_optim.yaml")
+            print(" ---- loaded from saved geo yaml for 01_Drivetrain ---- ")
 
 # ---- modelling options
 fname_modeling_options = mydir + os.sep + "modeling_options.yaml"
 # ---- analysis/optimization options
-if flag_GBO:
+if opt_flag_DT:
       fname_analysis_options = mydir + os.sep + "analysis_options_DTopt.yaml"
+      print(" ---- 01_Drivetrain optimization on-going ---- ")
 else:
       fname_analysis_options = mydir + os.sep + "analysis_options_NOopt.yaml"
+      print(" ---- Analysis (no optimization) on-going ---- ")
 
-# others
+# ---- hub loads
+dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
+loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
+
+# ---- others
 loc_n2 = os.path.join(mydir+os.sep+"outputs", "n2.html")
 
 
 #%% Loads from hub: overwrite values TODO: rotorse overwrites it at run
 if flag_override_hub_loads:
-      dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
-      loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
       S_all,_ = load_all_mat_to_dict(loc_all_loads_mat_file)
 
       F_aero_hub =np.array( [S_all['Fx_max'], S_all['Fy_max'], S_all['Fz_max']] ).reshape((3, 1))
@@ -79,13 +90,7 @@ wt_opt, analysis_options, opt_options = run_wisdem(
     fname_wt_input, fname_modeling_options, fname_analysis_options,
     overridden_values=overrides
 )
-# TODO
-# 1. overwrite hub loads from saved (ULS) file?
-# 2. check iea report for tower util plots... not mentioned?
-# 3. ! ~ full DT optimization takes toooo LOOOONG !
-# - do full DT optim using 03_
-# - restrict to some DT DVs? take vals from 03_
-# - check gradients wrt. each DV -- bad scaling?
+
 # %%[markdown]
 # # _____ Post-processing _____
 

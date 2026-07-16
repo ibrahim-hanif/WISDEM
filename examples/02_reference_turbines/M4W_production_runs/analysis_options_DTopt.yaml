@@ -2,11 +2,11 @@
 fname_input_analysis: analysis_options_DTopt.yaml
 
 general: #(v) TODO: change?
-    folder_output: outputs
-    fname_output: M4Wturb_optim
+    folder_output: outputs//01_Drivetrain
+    fname_output: iea15_optim
 
 design_variables:
-    drivetrain:
+    drivetrain: # cf. 06_drivetrain / base_
         # ---- LSS ----
         distance_hub_mb:
             flag: True
@@ -15,41 +15,29 @@ design_variables:
         distance_mb_mb:
             flag: True
             lower_bound: 0.1
-            upper_bound: 8.0
+            upper_bound: 5.0
         lss_diameter:
             flag: True
-            lower_bound: 1.0
-            upper_bound: 5.0
+            lower_bound: 0.5
+            upper_bound: 6.0
         lss_wall_thickness:
             flag: True
             lower_bound: 4e-3
-            upper_bound: 1.0
-        # ---- HSS ----
-        hss_length:                 # TODO: absent in analy_opts schema!
-            flag: True
-            lower_bound: 1.0
-            upper_bound: 5.0
-        hss_diameter:
+            upper_bound: 5e-1
+        # ---- nose ----
+        nose_diameter:
             flag: True
             lower_bound: 0.5
-            upper_bound: 5.0
-        hss_wall_thickness:
+            upper_bound: 6.0
+        nose_wall_thickness:
             flag: True
             lower_bound: 4e-3
-            upper_bound: 0.2
+            upper_bound: 5e-1
         # ---- bedplate ----
-        bedplate_web_thickness:
+        bedplate_wall_thickness:
             flag: True
-            lower_bound: 5e-3
-            upper_bound: 1.0
-        bedplate_flange_thickness:
-            flag: True
-            lower_bound: 5e-3
-            upper_bound: 1.0
-        bedplate_flange_width:
-            flag: True
-            lower_bound: 0.01
-            upper_bound: 3.0
+            lower_bound: 4e-3
+            upper_bound: 5e-1
 
 constraints:
     drivetrain:
@@ -64,27 +52,30 @@ constraints:
             flag: True
         shaft_angle:
             flag: True
-        # ---- HSS ----
-        hss: # von mises
-            flag: True
         # ---- bedplate ----
         bedplate:
             flag: True
         stator_angle:
             flag: True
+        stator_deflection:
+            flag: False
         # ---- overall nacelle ----
         height:
             flag: True
         length:
             flag: True
+        ecc:
+            flag: True
+        access:
+            flag: True
 
     #(v) ---- NEW! MB FLS constraints ----
     user: # DONE: checked with runWISDEM -> gc_PoseOptimization, line 1325
-        - name: "drivese.constr_Lh1_MB1fw"
-          lower_bound: [0.0]
+        # - name: "drivese.constr_Lh1_MB1fw"
+        #   lower_bound: [0.0]
         #   ref: 1e1
-        - name: "drivese.constr_L12_MBsFW"
-          lower_bound: [0.0]
+        # - name: "drivese.constr_L12_MBsFW"
+        #   lower_bound: [0.0]
         #   ref: 1e0
         - name: "drivese.constr_L10_mb1" # ---- MB FLS only when mb_e > 0.0 in geometry yaml file ----
           lower_bound: [1.0]
@@ -96,4 +87,5 @@ merit_figure: "nacelle_mass"
 driver:
     optimization:
         flag: True
+        max_iter: 100
         debug_print: True

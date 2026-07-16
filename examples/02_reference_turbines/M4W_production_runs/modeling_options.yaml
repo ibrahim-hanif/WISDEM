@@ -105,16 +105,16 @@ WISDEM:
 Environment:
     air_density: 1.225
     air_dyn_viscosity: 1.81e-05
-    weib_shape_parameter: 2.0
+    weib_shape_parameter: 1.97 # shape or 'b'
     air_speed_sound: 340.0
-    shear_exp: 0.12
+    shear_exp: 0.08
     water_density: 1025.0
     water_dyn_viscosity: 0.0013351
     soil_shear_modulus: 140000000.0
     soil_poisson: 0.4
-    water_depth: 30.0
-    significant_wave_height: 4.52
-    significant_wave_period: 9.45
+    water_depth: 265.0
+    significant_wave_height: 8.384 # NTM DLC 5.1 at highest wind speed (from sima)
+    significant_wave_period: 10.113 # same as above
 
 #(v) -------------- NEW! TODO: MB FLS options --------------
 # ref to WEIS schema
@@ -130,5 +130,5 @@ OpenFAST:
 DLC_driver: #(v) https://weis.readthedocs.io/en/latest/dlc_generator.html#design-load-cases-in-weis
     DLCs:
         - DLC: "1.2"
-          wind_speed: [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.] # DONE: mean_wind_speed
+          wind_speed: [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.] # TODO: update with new sima data
           probabilities: [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.0083042] # DONE: probab
