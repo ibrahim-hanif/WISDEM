@@ -6,6 +6,10 @@
 # 
 # references
 # 1. IEA 15MW report
+#
+# TODO
+# 1. update wind speeds and probs, wrt sima data, + use wisdem's Weibull func?
+# 2. use latest sima hub loads
 
 #%%
 # Import needed libraries
@@ -28,7 +32,7 @@ part_loads = True
 load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
-dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
+dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads" # TODO: sima loads
 
 # - results main dir
 results_dir = "results"
@@ -90,7 +94,7 @@ else:
 opts["DLC_driver"] = {}
 opts["DLC_driver"]["DLCs"] = [{}]
 opts["DLC_driver"]["DLCs"][0]["DLC"] = "1.2"
-opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.]
+opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.] # TODO: update 
 opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.0083042]
 # ---
 
