@@ -24,11 +24,11 @@ from wisdem.commonse.utilities import load_all_mat_to_dict
 wt_m4w = False # turbine to analyse: True = m4w / False = iea15mw
 
 # ---- optimization
-opt_flag_DT = True
+opt_flag_DT = False
 opt_flag_tower = False
 
 # ---- load from saved?
-flag_load_from_saved_01_DT = True
+flag_load_from_saved_01_DT = False
 
 flag_plot = True
 verbose = False
