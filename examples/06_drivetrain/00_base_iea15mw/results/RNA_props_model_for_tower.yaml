@@ -1,0 +1,45 @@
+geometry_options:
+    drivetrain:
+        outer_shape:
+            uptilt: 6.0
+            distance_tt_hub: 5.614
+            distance_hub_mb: 0.1
+            distance_mb_mb: 4.139999999999999
+            overhang: 11.35
+            cd: 0.5
+        gearbox:
+            gear_ratio: 1.0
+            efficiency: 1.0
+        lss:
+            diameter: [6.0, 5.920203990610087]
+            wall_thickness: [0.12965741031029832, 0.12257906309177163]
+            material: steel_drive
+        hss: {}
+        nose:
+            diameter: [0.13699792842878433, 0.11279704904452548]
+        bedplate:
+            wall_thickness: 0.02380104746647531
+            material: steel
+        other_components:
+            mb1Type: CARB
+            mb2Type: SRB
+            mb1_e: 0.4
+            mb2_e: 0.4
+            uptower: true
+            converter_mass: 0.0
+        generator:
+            mass: 371592.0
+            length: 2.17
+            radius: 5.08
+            rpm_efficiency:
+                grid: '[0.0, 1.0]'
+                values: [0.9191458531216932, 0.90094]
+modeling_options:
+    Loading:
+        mass: 1075374.3318897346
+        center_of_mass: [-6.716169313137532, -0.08758653122627978, 4.685931518420349]
+        moment_of_inertia: [381537581.2382528, 271856011.0895695, 249033353.28785568, 509.6280135893612, 20745226.803448938, 169090.88759215688]
+        loads:
+           -  force: [4787210.4201774355, 1369707.6350512507, -5387587.558236625]
+              moment: [-16377394.524712931, 103741843.60548006, 88106034.19182415]
+              velocity: 11.0
