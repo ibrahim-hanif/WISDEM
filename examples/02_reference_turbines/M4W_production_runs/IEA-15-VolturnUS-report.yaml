@@ -8,7 +8,7 @@ assembly:
     rotor_orientation: Upwind
     number_of_blades: 3
     hub_height: 150.0 #(v) TODO 2.5m add
-    rotor_diameter: 240 #(v) def: 241.35064632
+    rotor_diameter: 241.35064632 #(v) latest: 241.35064632; report=240
     rated_power: 15000000.0
     lifetime: 25.0
 components:
@@ -639,7 +639,7 @@ components:
         hub_material: cast_iron
         spinner_material: glass_uni
         cd: 0.5
-    drivetrain: #(v) from report iea15mw
+    drivetrain: #(v) untouched
         outer_shape:
             uptilt: 6.0
             distance_tt_hub: 5.614
