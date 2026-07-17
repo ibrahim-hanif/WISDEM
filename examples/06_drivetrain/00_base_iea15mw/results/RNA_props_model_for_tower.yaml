@@ -3,22 +3,25 @@ geometry_options:
         outer_shape:
             uptilt: 6.0
             distance_tt_hub: 5.614
-            distance_hub_mb: 0.1
-            distance_mb_mb: 4.139999999999999
-            overhang: 11.35
+            distance_hub_mb: 0.10000000000000021
+            distance_mb_mb: 4.1
+            overhang: 12.0313
             cd: 0.5
         gearbox:
             gear_ratio: 1.0
             efficiency: 1.0
         lss:
-            diameter: [6.0, 5.920203990610087]
-            wall_thickness: [0.12965741031029832, 0.12257906309177163]
+            diameter: [5.999999999999985, 6.0]
+            wall_thickness: [0.1269531088853922, 0.12468315327490374]
             material: steel_drive
         hss: {}
         nose:
-            diameter: [0.13699792842878433, 0.11279704904452548]
+            diameter: [5.246093782229204, 2.2356777987827052]
+            wall_thickness: [0.12397510512970458, 0.1178388993913515]
         bedplate:
-            wall_thickness: 0.02380104746647531
+            wall_thickness:
+                grid: [0.0, 1.0]
+                values: [0.02351508683616057, 0.035661748903168866]
             material: steel
         other_components:
             mb1Type: CARB
@@ -26,20 +29,20 @@ geometry_options:
             mb1_e: 0.4
             mb2_e: 0.4
             uptower: true
-            converter_mass: 0.0
+            converter_mass: 11983.85
         generator:
-            mass: 371592.0
-            length: 2.17
-            radius: 5.08
+            mass: 368839.0
+            length: 2.15
+            radius: 5.309
             rpm_efficiency:
-                grid: '[0.0, 1.0]'
+                grid: [0.0, 1.0]
                 values: [0.9191458531216932, 0.90094]
 modeling_options:
     Loading:
-        mass: 1075374.3318897346
-        center_of_mass: [-6.716169313137532, -0.08758653122627978, 4.685931518420349]
-        moment_of_inertia: [381537581.2382528, 271856011.0895695, 249033353.28785568, 509.6280135893612, 20745226.803448938, 169090.88759215688]
+        mass: 1077567.3897234348
+        center_of_mass: [-7.226505880342633, -0.08758360887995793, 4.6824620546658196]
+        moment_of_inertia: [381937852.742649, 280697072.51617163, 257932598.2305986, 586.0756174249691, 23507466.45533193, 170368.88060049637]
         loads:
-           -  force: [4787210.4201774355, 1369707.6350512507, -5387587.558236625]
-              moment: [-16377394.524712931, 103741843.60548006, 88106034.19182415]
+           -  force: [4787210.420075049, 1369707.6350513618, -5344440.957785175]
+              moment: [-16279029.485322276, 101411213.11356895, 87179142.85118742]
               velocity: 11.0

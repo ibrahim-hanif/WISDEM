@@ -6,6 +6,7 @@
 # 
 # references
 # 1. IEA 15MW report
+# 2. NOTE: all dimensions are from the latest iea15mw wisdem-weis windIO
 #
 # TODO
 # 1. update wind speeds and probs, wrt sima data, + use wisdem's Weibull func?
@@ -153,8 +154,8 @@ if opt_flag:
     prob.model.add_constraint("constr_ecc", lower=0.0)
     prob.model.add_constraint("L_lss", lower=0.1)
     prob.model.add_constraint("L_nose", lower=0.1)
-    # prob.model.add_constraint("constr_Lh1_MB1fw", lower=0.0)#, ref=1e1)
-    # prob.model.add_constraint("constr_L12_MBsFW", lower=0.0)#, ref=1e0)
+    # prob.model.add_constraint("constr_Lh1_MB1fw", lower=0.0)#, ref=1e1) # TODO: cant incl in optim, fails
+    # prob.model.add_constraint("constr_L12_MBsFW", lower=0.0)#, ref=1e0) # TODO: same as above
     # 5. maintainance access
     prob.model.add_constraint("constr_access", lower=0.0)
     # ---
@@ -193,8 +194,8 @@ prob["blades_I"] = np.r_[3.48453857e+08, 1.74226928e+08, 1.74226928e+08, np.zero
 prob["pitch_system.BRFM"] = 26648449.0
 prob["pitch_system_scaling_factor"] = 0.75
 prob["blade_root_diameter"] = 5.20
-prob["flange_t2shell_t"] = 4.0
-prob["flange_OD2hub_D"] = 0.5
+prob["flange_t2shell_t"] = 6.0
+prob["flange_OD2hub_D"] = 0.6
 prob["flange_ID2flange_OD"] = 0.8 # ? ----+ down: TODO
 prob["hub_in2out_circ"] = 1.2
 prob["hub_stress_concentration"] = 3.0
@@ -208,8 +209,8 @@ prob["spinner_gust_ws"] = 70.0
 # Drivetrain configuration and sizing inputs
 prob["bear1.bearing_type"] = "CARB" # iea15 report: TRB2; latest wisdem: CARB
 prob["bear2.bearing_type"] = "SRB"  
-prob["bear1.D_shaft"] = 2.2 / 2
-prob["bear2.D_shaft"] = 2.2 / 2
+prob["bear1.D_shaft"] = 2.2
+prob["bear2.D_shaft"] = 2.2
 if doMBfls:
     prob["bear1.mb_e"] = 0.4 # from 0.3-0.4 
     prob["bear2.mb_e"] = 0.4
@@ -225,15 +226,15 @@ prob["lss_wall_thickness"] = 0.1 * myones #* 2
 prob["nose_diameter"] = 2.2 * myones #* 2
 prob["nose_wall_thickness"] = 0.1 * myones #* 2
 
-prob["L_generator"] = 2.17  # core length
-prob["generator_mass_user"] = 371.592 * 1e3
-prob["generator_radius_user"] = 5.08 # air gap radius
+prob["L_generator"] = 2.15  # core length
+prob["generator_mass_user"] = 368839.0
+prob["generator_radius_user"] = 5.309 # air gap radius
 
 prob["access_diameter"] = 2.0
 
-prob["bedplate_wall_thickness"] = 0.0925 * np.ones(4)
+prob["bedplate_wall_thickness"] = 0.05 * np.ones(4) # same mass (as report): use 0.0925
 
-prob["yaw_system_mass_user"] = 0.0 #100e3
+prob["yaw_system_mass_user"] = 0.0 # report = 100e3
 
 prob["shaft_deflection_allowable"] = 1e-4
 prob["shaft_angle_allowable"] = 1e-3
