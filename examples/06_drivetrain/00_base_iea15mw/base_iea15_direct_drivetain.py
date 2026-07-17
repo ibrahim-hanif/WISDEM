@@ -186,12 +186,13 @@ prob['M_aero_hub'] = np.array( [S_all['Mx_max'], S_all['My_max'], S_all['Mz_max'
 # ----
 
 # Blade properties and hub design options
+# --- NOTE: copied from M4W_base_case_driver's NOoptim csv
 prob["hub_diameter"] = 7.94
-prob["blades_cm"] = 2.46175
-blade_mass = 65250.0
+prob["blades_cm"] = 2.1853055315151138
+blade_mass = 68233.0936092383
 prob["blades_mass"] = n_blades * blade_mass
-prob["blades_I"] = np.r_[3.48453857e+08, 1.74226928e+08, 1.74226928e+08, np.zeros(3)]
-prob["pitch_system.BRFM"] = 26648449.0
+prob["blades_I"] = np.r_[348506332.76071006, 174253166.38035503, 174253166.38035503, 0.0, 0.0, 0.0]
+prob["pitch_system.BRFM"] = 117585772.28432259
 prob["pitch_system_scaling_factor"] = 0.75
 prob["blade_root_diameter"] = 5.20
 prob["flange_t2shell_t"] = 6.0
