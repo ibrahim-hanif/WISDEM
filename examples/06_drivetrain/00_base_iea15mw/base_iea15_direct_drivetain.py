@@ -16,22 +16,22 @@
 import os
 import numpy as np
 import openmdao.api as om
+import time
 
 from wisdem.commonse.fileIO import save_data, load_data
 from wisdem.drivetrainse.drivetrain import DrivetrainSE, DrivetrainSE_M4W
 from wisdem.commonse.utilities import load_all_mat_to_dict
+import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 
 #%%
 opt_flag = True
 opt_hub = False # (def: False) if to optimize hub, its Compn incl if dohub
 flag_save_new_data = False
 load_from_saved_data = True
+flag_save_RNAprops4tower = True
 
 # Loading `openFAST` hub loads from a saved file
 part_loads = True 
-load_fls_loads = False
-# False: full loads (72e4,10) (200 Hz sampled, 60mins)
-# True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads" # TODO: sima loads
 
 # - results main dir
@@ -41,6 +41,9 @@ results_path = os.path.join(script_dir, results_dir)
 os.makedirs(results_path, exist_ok=True)
 
 loc_save_data = os.path.join(results_path, "m4w_base_case_DT")
+if flag_save_RNAprops4tower:
+    loc_save_RNAprops4tower = os.path.join(
+        results_path, "RNA_props_model_for_tower.yaml")
 
 # %% [markdown]
 # ### Defining results directory and files
@@ -62,7 +65,7 @@ opts["WISDEM"]["DriveSE"]["hub"] = {}
 opts["WISDEM"]["DriveSE"]["hub"]["hub_gamma"] = 2.0
 opts["WISDEM"]["DriveSE"]["hub"]["spinner_gamma"] = 1.5
 
-opts["WISDEM"]["DriveSE"]["direct"] = True
+direct = opts["WISDEM"]["DriveSE"]["direct"] = True
 opts["WISDEM"]["DriveSE"]["gearbox_torque_density"] = 0.0 # False =(GB  optim, in-capabale)
 
 opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
@@ -150,6 +153,8 @@ if opt_flag:
     prob.model.add_constraint("constr_ecc", lower=0.0)
     prob.model.add_constraint("L_lss", lower=0.1)
     prob.model.add_constraint("L_nose", lower=0.1)
+    # prob.model.add_constraint("constr_Lh1_MB1fw", lower=0.0)#, ref=1e1)
+    # prob.model.add_constraint("constr_L12_MBsFW", lower=0.0)#, ref=1e0)
     # 5. maintainance access
     prob.model.add_constraint("constr_access", lower=0.0)
     # ---
@@ -163,12 +168,12 @@ prob.setup()
 prob.set_val("machine_rating", 15.0, units="MW")
 prob["upwind"] = True
 n_blades = 3
-prob["rotor_diameter"] = 240.0
+prob["rotor_diameter"] = 241.35064632 # latest: 241.35064632; old: 240.0
 prob["D_top"] = 6.5 #tower top diameter
 prob["minimum_rpm"] = 5.0
 prob["rated_rpm"] = 7.56
 prob["rated_torque"] = 21.3 * 1e6 # 19947034.78543754
-prob["overhang"] = 11.35
+prob["overhang"] = 12.0313 # 11.35
 prob["drive_height"] = 5.614
 prob["tilt"] = 6.0
 
@@ -274,11 +279,21 @@ prob.model.list_outputs();
 
 #%%
 # Run the analysis or optimization
+# ---- time it ;)
+t0 = time.time()
+
 if opt_flag:
-    prob.model.approx_totals()
+    # Run GBO or DOE
+    prob.model.approx_totals() # TODO.
     prob.run_driver()
+    status_optim = prob.driver.get_exit_status()
 else:
     prob.run_model()
+    status_optim = 'ANALYSIS'
+
+# ---- time it ;)
+t1 = time.time()
+print(" - ",status_optim,": WISDEM run completed in,", (t1-t0)/60, "minutes")
 # ----
 
 #%%
@@ -299,6 +314,37 @@ print(" ", prob["F_aero_hub"] )
 print("M_aero_hub:")
 print(" ", prob["M_aero_hub"], "\n" )
 
+print("LSS desvars:")
+print(" ", prob["L_h1"], prob["L_12"], prob["lss_diameter"], prob["lss_wall_thickness"] )
+print("Bedplate wall thickness:")
+print(" ", prob["bedplate_wall_thickness"])
+print(" ")
+print("F_mb*:")
+print(" ", prob["F_mb1"], prob["F_mb2"] )
+print("M_mb*:")
+print(" ", prob["M_mb1"], prob["M_mb2"] )
+
+print("--- constr_ max ---")
+if doMBfls:
+    print("\n- constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
+print("- lss: ", np.max(prob["constr_lss_vonmises"]) )
+print("- bedplate: ", np.max(prob["constr_bedplate_vonmises"]) )
+print("- defl mb1: ", np.max(prob["constr_mb1_defl"]) )
+print("- defl mb2: ", np.max(prob["constr_mb2_defl"]) )
+print("- constr_Lh1_MB1fw: ", prob["constr_Lh1_MB1fw"] )
+print("- constr_L12_MBsFW: ", prob["constr_L12_MBsFW"] )
+
+print("- constr_shaft_deflection:", prob["constr_shaft_deflection"])
+print("- constr_shaft_angle:", prob["constr_shaft_angle"])
+print("- constr_stator_deflection:", prob["constr_stator_deflection"])
+print("- constr_stator_angle:", prob["constr_stator_angle"])
+print("- constr_hub_diameter:", prob["constr_hub_diameter"])
+print("- constr_length:", prob["constr_length"])
+print("- constr_height:", prob["constr_height"])
+print("- constr_access:", prob["constr_access"])
+print("- constr_ecc:", prob["constr_ecc"])
+
+#
 print("Masses of drivetrain components")
 print("")
 print(" - lss mass:", prob["lss_mass"][0] )
@@ -306,28 +352,28 @@ print(" - nose-turret mass:", prob["nose_mass"][0] )
 mb1_mass = prob["mb1_mass"][0]
 mb2_mass = prob["mb2_mass"][0]
 print(f" - mb masses = {mb1_mass+mb2_mass}; mb1 = {mb1_mass}, mb2 = {mb2_mass}")
+print(f" - MSA mass: {prob["msa_mass"]}")
 print(" - generator mass:", prob["generator_mass"][0] )
 print(" - bedplate mass: ", prob["bedplate_mass"][0] )
 print(" - misc. components: ", (prob["hvac_mass"][0]+prob["platform_mass"][0]+prob["cover_mass"][0]) )
 print(" - yaw system mass: ", prob["yaw_mass"][0] )
 print(" - nacelle_mass:", prob["nacelle_mass"][0] )
+print(f" - nacelle cm: {prob["nacelle_cm"]}")
 
-if doMBfls:
-    print("\nconstr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
-print("")
-print("--- constr_ max ---")
-print("- lss: ", np.max(prob["constr_lss_vonmises"]) )
-print("- bedplate: ", np.max(prob["constr_bedplate_vonmises"]) )
-print("- defl mb1: ", np.max(prob["constr_mb1_defl"]) )
-print("- defl mb2: ", np.max(prob["constr_mb2_defl"]) )
-print("constr_shaft_deflection:", prob["constr_shaft_deflection"])
-print("constr_shaft_angle:", prob["constr_shaft_angle"])
-print("constr_stator_deflection:", prob["constr_stator_deflection"])
-print("constr_stator_angle:", prob["constr_stator_angle"])
-print("constr_hub_diameter:", prob["constr_hub_diameter"])
-print("constr_length:", prob["constr_length"])
-print("constr_height:", prob["constr_height"])
-print("constr_access:", prob["constr_access"])
-print("constr_ecc:", prob["constr_ecc"])
-# ---
+print("\n--- RNA properties ---")
+print(f" - RNA mass: {prob["rna_mass"]}") # drivese.rna_mass
+print(f" - RNA cm: {prob["rna_cm"]}") # drivese.rna_cm
+print(f" - RNA MoI: {prob["rna_I_TT"]}") # drivese.rna_I_TT
+#
+print("\nTower-top / drivetrain bedplate base loads:")
+print(" - base_F: ", prob['base_F']) # drivese.base_F
+print(" - base_M: ", prob['base_M']) # drivese.base_M
+# -----------------------------------------------------------------------
+
+# %%
+# Save rna properties into `yaml` file for next tower optimization
+if flag_save_RNAprops4tower:
+    utilsDT.write_yaml_of_drivetrain_properties( prob, loc_save_RNAprops4tower, direct=True )
+# ===============================================================
+
 # %%
