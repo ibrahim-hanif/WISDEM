@@ -17,7 +17,8 @@ flag_plot = True
 save_new_plot = False
 verbose = False
 
-flag_opt_GBO = False
+opt_flag = False
+opt_mbsa = False
 flag_scaling_show_browser = False
 
 flag_override_own_hub_loads = True # TODO
@@ -39,19 +40,30 @@ fname_wt_input = dir_02_rwt_m4w +os.sep + "M4W-15-VolturnUS-WT.yaml"
 # fname_wt_input = dir_m4w_run + os.sep + "outputs//test_m4w.yaml"
 
 # ---- modelling options
-fname_model_opts_m4w = dir_m4w_run+os.sep+ "modeling_options.yaml"
+if opt_mbsa:
+     fname_model_opts_m4w = dir_m4w_run+os.sep+ "modelOpts_MBSA.yaml"
+else:
+     fname_model_opts_m4w = dir_m4w_run+os.sep+ "modeling_options.yaml"
 
 fname_modeling_options = fname_model_opts_m4w
 
 # ---- analysis/optimization options
-if flag_opt_GBO:
+if opt_flag:
      fname_analysis_options = dir_m4w_run + os.sep + "analysis_options.yaml"
+     print(" ---- FOWT optimization ---- ")
+elif opt_mbsa:
+     fname_analysis_options = dir_m4w_run + os.sep + "analysisOpts_MBSA.yaml"
+     print(" ---- MBSA optimization ---- ")
 else:
      fname_analysis_options = dir_m4w_run + os.sep + "analysis_options_NOopt.yaml"
+     print(" ---- Analysis (No optimization) ---- ")
 
 ## File Management (outputs)
 loc_scaling_report = os.path.join(dir_m4w_run,
       'outputs', 'scaling_report.html')
+if opt_mbsa:
+     loc_scaling_report = os.path.join(dir_m4w_run,
+      'outputs', 'scaling_report_MBSA.html')
 
 #%% Overwrite values ?
 overrides = {}

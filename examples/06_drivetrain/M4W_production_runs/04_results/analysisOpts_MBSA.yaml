@@ -1,0 +1,59 @@
+# Generic analysis options where nothing is run
+fname_input_analysis: analysisOpts_MBSA.yaml
+
+general: #(v) TODO: change?
+    folder_output: 04_results//outputs
+    fname_output: mbsa_optim
+
+design_variables:
+    drivetrain: # cf. 06_drivetrain / base_
+        # ---- LSS ----
+        distance_hub_mb:
+            flag: True
+            lower_bound: 0.1
+            upper_bound: 5.0
+        distance_mb_mb:
+            flag: True
+            lower_bound: 0.1
+            upper_bound: 5.0
+        lss_diameter:
+            flag: True
+            lower_bound: 0.5
+            upper_bound: 6.0
+        lss_wall_thickness:
+            flag: True
+            lower_bound: 4e-3
+            upper_bound: 5e-1
+
+constraints:
+    drivetrain:
+        # ---- LSS ----
+        lss: # von mises
+            flag: True
+        shaft_deflection:
+            flag: True
+        shaft_angle:
+            flag: True
+
+    #(v) ---- NEW! MB FLS constraints ----
+    user: # DONE: checked with runWISDEM -> gc_PoseOptimization, line 1325
+        - name: "drivese.constr_Lh1_MB1fw"
+          lower_bound: [0.0]
+        #   ref: 1e1
+        - name: "drivese.constr_L12_MBsFW"
+          lower_bound: [0.0]
+        #   ref: 1e0
+        - name: "drivese.constr_L10_mb1" # ---- MB FLS only when mb_e > 0.0 in geometry yaml file ----
+          lower_bound: [1.0]
+        - name: "drivese.constr_L10_mb2"
+          lower_bound: [1.0]
+
+merit_figure_user:
+        - name: "drivese.msa_mass"
+          ref: 1e6
+
+driver:
+    optimization:
+        flag: True
+        max_iter: 20 # test=2, full=20
+        debug_print: True
