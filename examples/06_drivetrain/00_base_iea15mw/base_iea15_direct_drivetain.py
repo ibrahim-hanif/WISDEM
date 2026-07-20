@@ -21,10 +21,16 @@ import time
 
 from wisdem.commonse.fileIO import save_data, load_data
 from wisdem.drivetrainse.drivetrain import DrivetrainSE, DrivetrainSE_M4W
-from wisdem.commonse.utilities import load_all_mat_to_dict
+from wisdem.commonse.utilities import load_all_mat_to_dict, pdf_norm_int_using_cdf
 import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 
 #%%
+# ### Define flags
+suffix = "_old_loads"
+# information
+# 1. '_old_loads':  old hub loads from felix' openfast (wrong) model
+# 2. '_sima_loads': sima loads from seraj's sima (correct) model
+
 opt_flag = True
 opt_hub = False # (def: False) if to optimize hub, its Compn incl if dohub
 flag_save_new_data = False
@@ -33,7 +39,10 @@ flag_save_RNAprops4tower = True
 
 # Loading `openFAST` hub loads from a saved file
 part_loads = True 
-dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads" # TODO: sima loads
+dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
+loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4w.mat")
+if suffix == "_sima_loads":
+    loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
 
 # - results main dir
 results_dir = "results"
@@ -41,18 +50,20 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 results_path = os.path.join(script_dir, results_dir)
 os.makedirs(results_path, exist_ok=True)
 
-loc_save_data = os.path.join(results_path, "m4w_base_case_DT")
+loc_save_data = os.path.join(results_path, "m4w_base_case_DT"+suffix)
 if flag_save_RNAprops4tower:
     loc_save_RNAprops4tower = os.path.join(
-        results_path, "RNA_props_model_for_tower.yaml")
+        results_path, "RNA_props_model_for_tower"+suffix+".yaml")
 
 # %% [markdown]
 # ### Defining results directory and files
 #%% Loading `openFAST` hub loads from a saved file
 if part_loads: # define paths
-    loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4w.mat")
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
 
+# Wind speed and probabilies: auto parse loads dict
+ws = S_all["mean_wind_speed"][0,:].tolist()
+pdf_ws = pdf_norm_int_using_cdf(ws).tolist()
 # ----
 #%%
 # Set input options (modeling options dictionary)
@@ -98,8 +109,8 @@ else:
 opts["DLC_driver"] = {}
 opts["DLC_driver"]["DLCs"] = [{}]
 opts["DLC_driver"]["DLCs"][0]["DLC"] = "1.2"
-opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.] # TODO: update 
-opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.0083042]
+opts["DLC_driver"]["DLCs"][0]["wind_speed"] = ws
+opts["DLC_driver"]["DLCs"][0]["probabilities"] = pdf_ws
 # ---
 
 #%%
@@ -125,12 +136,12 @@ if opt_flag:
     # Add design variables, in this case the drivetrain diameters and wall thicknesses
     if opt_hub: prob.model.add_design_var("hub_diameter", lower=3.0, upper=15.0)
     prob.model.add_design_var("L_12", lower=0.1, upper=5.0)
-    prob.model.add_design_var("L_h1", lower=0.1, upper=5.0)
+    prob.model.add_design_var("L_h1", lower=0.1, upper=8.0)
     prob.model.add_design_var("lss_diameter", lower=0.5, upper=6.0)
-    prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
+    prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=1.0, ref=1e-2)
     prob.model.add_design_var("nose_diameter", lower=0.5, upper=6.0)
-    prob.model.add_design_var("nose_wall_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
-    prob.model.add_design_var("bedplate_wall_thickness", lower=4e-3, upper=5e-1, ref=1e-2)
+    prob.model.add_design_var("nose_wall_thickness", lower=4e-3, upper=1.0, ref=1e-2)
+    prob.model.add_design_var("bedplate_wall_thickness", lower=4e-3, upper=1.0, ref=1e-2)
 
     # Add constraints on the tower design
     # 1. von Mises stress util
@@ -164,6 +175,10 @@ if opt_flag:
 # Set up the OpenMDAO problem
 prob.setup()
 # ----
+#%% overwrite variables from saved data
+if load_from_saved_data:
+    print(" loading prob vars from saved csv")
+    prob = load_data( loc_save_data+".csv", prob )
 #%%
 # Set high-level input values (that desc the turbine)
 prob.set_val("machine_rating", 15.0, units="MW")
@@ -261,11 +276,6 @@ prob["spinner_material"] = "glass_uni"
 prob["material_names"] = ["steel", "steel_drive", "cast_iron", "glass_uni"]
 # ----
 
-#%% overwrite variables from saved data
-if load_from_saved_data:
-    print(" loading prob vars from saved csv")
-    prob = load_data( loc_save_data+".csv", prob )
-
 # %%
 # ### Print inputs and outputs to the model `Problem`
 
@@ -326,9 +336,9 @@ print(" ", prob["F_mb1"], prob["F_mb2"] )
 print("M_mb*:")
 print(" ", prob["M_mb1"], prob["M_mb2"] )
 
-print("--- constr_ max ---")
+print("\n--- constr_ max ---")
 if doMBfls:
-    print("\n- constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
+    print("- constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
 print("- lss: ", np.max(prob["constr_lss_vonmises"]) )
 print("- bedplate: ", np.max(prob["constr_bedplate_vonmises"]) )
 print("- defl mb1: ", np.max(prob["constr_mb1_defl"]) )
@@ -347,8 +357,8 @@ print("- constr_access:", prob["constr_access"])
 print("- constr_ecc:", prob["constr_ecc"])
 
 #
-print("Masses of drivetrain components")
 print("")
+print("Masses of drivetrain components")
 print(" - lss mass:", prob["lss_mass"][0] )
 print(" - nose-turret mass:", prob["nose_mass"][0] )
 mb1_mass = prob["mb1_mass"][0]
@@ -379,3 +389,4 @@ if flag_save_RNAprops4tower:
 # ===============================================================
 
 # %%
+# TODO: change nacelle mass compr plot to read saved csv for iea15
