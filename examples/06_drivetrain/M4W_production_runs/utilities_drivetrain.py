@@ -8,9 +8,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-from my_util_tools.util_funcs import loc_clr_scheme_m4w, read_color_scheme
-
+from Drive4Wind.post_processing.color_schemes import loc_clr_scheme_m4w, read_color_scheme
 clrs_m4w = read_color_scheme( loc_clr_scheme_m4w )
+
+from wisdem.commonse.fileIO import var_df2dict
 
 # ==========
 def read_df_to_prob( this_case, prob ):
@@ -223,7 +224,10 @@ def write_yaml_of_drivetrain_properties( prob, loc_save_RNAprops4tower ):
 # ==========
 
 # ==========
-def plot_drivetrain_mass_comparison( prob, loc_save_img=None ):
+def plot_drivetrain_mass_comparison( 
+        csv_m4w, csv_iea,
+        m4w_label='Made4Wind', iea_label='IEA 15MW',
+        flag_WTnamespace=False, loc_save_img=None ):
     """
     plot drivetrain or nacelle mass breakdown comparison between
     IEA 15 MW report and M4W results
@@ -232,6 +236,10 @@ def plot_drivetrain_mass_comparison( prob, loc_save_img=None ):
     ______
     prob : OpenMDAO problem
         to extract M4W masses for comparison
+    flag_WTnamespace : Boolean
+        whether to use the complete wind-turbine (WT) namespace for problem variables or not
+        False (default): prob["lss_mass"]
+        True: prob["drivese.lss_mass"]
     
     Outputs
     _______
@@ -243,6 +251,8 @@ def plot_drivetrain_mass_comparison( prob, loc_save_img=None ):
     1. DONE : copy from 03_ and test
     2. TODO : automate beyond only-DT to complete WT optim (use drivese.* as full namespace of variables)
     """
+    if flag_WTnamespace: prefix="drivese."
+    else: prefix=""
     # --------------------------------------------------
     # Data (example values, replace with your real ones)
     # --------------------------------------------------
@@ -262,35 +272,46 @@ def plot_drivetrain_mass_comparison( prob, loc_save_img=None ):
     ]
     len_compns = len(components)
 
+    dict_iea = var_df2dict( csv_iea )
+    dict_m4w = var_df2dict( csv_m4w )
+
     # Masses in tonnes [t]
     mass_IEA = {
-        "Main shaft":       15.734,
-        "Turret nose":      11.394,
-        "Main bearings":    7.894, # 2.230 + 5.664
-        "Gearbox":          0.0,
+        "Main shaft":       dict_iea[prefix+"lss_mass"][0] / 1e3,
+        "Turret nose":      dict_iea[prefix+"nose_mass"][0] / 1e3,
+        "Main bearings":    2.0*dict_iea[prefix+"mean_bearing_mass"][0] / 1e3,
+        "Gearbox":          dict_iea[prefix+"gearbox_mass"][0] / 1e3,
         "High-speed shaft": 0.0,
-        "Brake":            25.6560,        # wisdem empirical
-        "Generator":        371.592,
-        "Converter":        30.0, # (wisdem empirical=11.98385 ; M4W data_collect indar=30.0)
-        "Transformer":      25.0, # (wisdem empirical=30.6350 ; M4W data_collect indar=25.0)
-        "Misc. components": 50.0,
-        "Bedplate":         70.329,
-        "Yaw system":       100.0,
+        "Brake":            dict_iea[prefix+"brake_mass"][0] / 1e3,
+        "Generator":        dict_iea[prefix+"generator_mass"][0] / 1e3,
+        "Converter":        dict_iea[prefix+"converter_mass"][0] / 1e3,
+        "Transformer":      dict_iea[prefix+"transformer_mass"][0] / 1e3,
+        "Misc. components": (
+                            dict_iea[prefix+"hvac_mass"][0]+
+                            dict_iea[prefix+"platform_mass"][0]+
+                            dict_iea[prefix+"cover_mass"][0]
+                            ) / 1e3,
+        "Bedplate":         dict_iea[prefix+"bedplate_mass"][0] / 1e3,
+        "Yaw system":       dict_iea[prefix+"yaw_mass"][0] / 1e3,
     }
 
     mass_M4W = {
-        "Main shaft":       prob["lss_mass"][0] / 1e3,
+        "Main shaft":       dict_m4w[prefix+"lss_mass"][0] / 1e3,
         "Turret nose":      0.0,
-        "Main bearings":    2.0*prob["mean_bearing_mass"][0] / 1e3,
-        "Gearbox":          prob["gearbox_mass"][0] / 1e3,
-        "High-speed shaft": prob["hss_mass"][0] / 1e3,
-        "Brake":            prob["brake_mass"][0] / 1e3,
-        "Generator":        prob["generator_mass"][0] / 1e3,
-        "Converter":        prob["converter_mass"][0] / 1e3,
-        "Transformer":      prob["transformer_mass"][0] / 1e3,
-        "Misc. components": (prob["hvac_mass"][0]+prob["platform_mass"][0]+prob["cover_mass"][0]) / 1e3,
-        "Bedplate":         prob["bedplate_mass"][0] / 1e3,
-        "Yaw system":       prob["yaw_mass"][0] / 1e3,
+        "Main bearings":    2.0*dict_m4w[prefix+"mean_bearing_mass"][0] / 1e3,
+        "Gearbox":          dict_m4w[prefix+"gearbox_mass"][0] / 1e3,
+        "High-speed shaft": dict_m4w[prefix+"hss_mass"][0] / 1e3,
+        "Brake":            dict_m4w[prefix+"brake_mass"][0] / 1e3,
+        "Generator":        dict_m4w[prefix+"generator_mass"][0] / 1e3,
+        "Converter":        dict_m4w[prefix+"converter_mass"][0] / 1e3,
+        "Transformer":      dict_m4w[prefix+"transformer_mass"][0] / 1e3,
+        "Misc. components": (
+                            dict_m4w[prefix+"hvac_mass"][0]+
+                            dict_m4w[prefix+"platform_mass"][0]+
+                            dict_m4w[prefix+"cover_mass"][0]
+                            ) / 1e3,
+        "Bedplate":         dict_m4w[prefix+"bedplate_mass"][0] / 1e3,
+        "Yaw system":       dict_m4w[prefix+"yaw_mass"][0] / 1e3,
     }
 
     total_IEA = sum(mass_IEA.values())
@@ -335,7 +356,7 @@ def plot_drivetrain_mass_comparison( prob, loc_save_img=None ):
     fig, ax = plt.subplots(figsize=(14, 14))
 
     x = np.array([0, 1])
-    labels = ["IEA 15 MW", "MADE4WIND 15 MW"]
+    labels = [iea_label, m4w_label]
     bar_width = 0.45
 
     # --- Stacking ---
