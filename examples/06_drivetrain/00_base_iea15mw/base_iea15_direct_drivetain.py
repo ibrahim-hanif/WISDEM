@@ -18,6 +18,7 @@ import os
 import numpy as np
 import openmdao.api as om
 import time
+import matplotlib.pyplot as plt
 
 from wisdem.commonse.fileIO import save_data, load_data
 from wisdem.drivetrainse.drivetrain import DrivetrainSE, DrivetrainSE_M4W
@@ -31,11 +32,15 @@ suffix = "_old_loads"
 # 1. '_old_loads':  old hub loads from felix' openfast (wrong) model
 # 2. '_sima_loads': sima loads from seraj's sima (correct) model
 
-opt_flag = True
+opt_flag = False
 opt_hub = False # (def: False) if to optimize hub, its Compn incl if dohub
 flag_save_new_data = False
 load_from_saved_data = True
-flag_save_RNAprops4tower = True
+flag_save_RNAprops4tower = False
+
+# post-processing results
+plot_cases = True
+save_new_plot = False #NOTE: saved, not changing now (commented)
 
 # Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -387,6 +392,16 @@ print(" - base_M: ", prob['base_M']) # drivese.base_M
 if flag_save_RNAprops4tower:
     utilsDT.write_yaml_of_drivetrain_properties( prob, loc_save_RNAprops4tower, direct=True )
 # ===============================================================
-
+#%%
+if plot_cases:
+    # save plot loc
+    loc_save_img = None
+    if save_new_plot:
+        loc_save_img = os.path.join( results_path,
+                        "compare_mass"+suffix+".pdf" )
+    # plot via func
+    utilsDT.plot_drivetrain_mass_comparison(
+        loc_save_data+".csv", os.path.join(results_path, "iea_report_DT.csv"),
+        m4w_label="IEA 15MW (UN)", iea_label="IEA 15MW (report)",
+        flag_WTnamespace=False, loc_save_img=loc_save_img )
 # %%
-# TODO: change nacelle mass compr plot to read saved csv for iea15
