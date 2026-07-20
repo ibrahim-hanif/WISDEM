@@ -49,7 +49,7 @@ import wisdem.drivetrainse.drive_components as dc
 
 import wisdem.drivetrainse.drive_structure as ds
 
-from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict
+from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, pdf_norm_int_using_cdf
 from wisdem.commonse.fileIO import save_data, load_data, get_variable_list, var_df2dict
 # import the utilities_drivetrain module as utilsDT
 import Drive4Wind.utilities.utilities_drivetrain as utilsDT
@@ -58,10 +58,11 @@ import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 # ### Define flags
 suffix = "_m4w_flip"
 # information
-# 1. '_m4w_flip': np.flip on D and t of lss in GearedLayout
+# 1. '_m4w_flip':   np.flip on D and t of lss in GearedLayout
 # 2. '_m4w_noflip': no np.flip on D and t of lss in GearedLayout
-# 3. '_m4w': no flip as well (same as 2. above)
+# 3. '_m4w':        no flip as well (same as 2. above)
 # 4. '_m4w_noMBfls'
+# 5. '_m4w_sima':   sima loads
 
 # pre-processing; Loading `openFAST` hub loads from a saved file
 part_loads = True 
@@ -69,9 +70,12 @@ load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
+loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4w.mat")
+if suffix == "_m4w_sima":
+    loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
 
 # Optimization flags
-flag_opt_GBO = False     # GBO: gradient based optimizer
+flag_opt_GBO = True     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 flag_debug_print = True
@@ -101,7 +105,7 @@ else: maxIter = maxIter_req
 param_for_study = "LDD"     # "MB" (types) / "LDD" (MS' L_*)
 meth_Peq = "DEL".lower()    # "LRD" or "DEL"
 
-# %% [markdown]
+# %%
 # ### Defining results directory and files
 # - results main dir
 results_dir = "03_results"
@@ -143,7 +147,6 @@ flag_load_from_DOEcsv = False
 
 #%% Loading `openFAST` hub loads from a saved file
 if part_loads: # define paths
-    loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4w.mat")
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
 
 else: # define paths
@@ -153,6 +156,10 @@ else: # define paths
         Snew, keys_new = mainshaft_loads_from_mat_to_dict(
             loc_FLS_loads_mat_file, loc_ULS_loads_mat_file)
 
+# Wind speed and probabilies: auto parse loads dict
+ws = S_all["mean_wind_speed"][0,:].tolist()
+pdf_ws = pdf_norm_int_using_cdf(ws).tolist()
+# ----
 # %% [markdown]
 # ### Defining options (`modelling_options`), flags
 
@@ -185,7 +192,7 @@ opts["materials"]["n_mat"] = 4
 
 opts["flags"] = {}
 dogen = opts["flags"]["generator"] = False
-dohub = opts["flags"]["hub"] = False
+dohub = opts["flags"]["hub"] = True
 doMBfls = opts["flags"]["mb_fls"] = True
 
 opts["OpenFAST"] = {}
@@ -200,10 +207,10 @@ else:
 opts["DLC_driver"] = {}
 opts["DLC_driver"]["DLCs"] = [{}]
 opts["DLC_driver"]["DLCs"][0]["DLC"] = "1.2"
-opts["DLC_driver"]["DLCs"][0]["wind_speed"] = [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.]
-opts["DLC_driver"]["DLCs"][0]["probabilities"] = [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.0083042]
+opts["DLC_driver"]["DLCs"][0]["wind_speed"] = ws
+opts["DLC_driver"]["DLCs"][0]["probabilities"] = pdf_ws
 
-# %% [markdown]
+#%%
 # ### Setup the problem
 # Define the problem
 prob = om.Problem(reports=False)
@@ -338,7 +345,7 @@ if make_xdsm:
     )
 # -----
 
-# %%[markdown]
+# %%
 # ###
 # Print objectives, design variables, and constraints in a concise readable form
 
@@ -358,14 +365,18 @@ prob.model.list_outputs();
 #
 # #### `NOTE`: if loading from saved data (`.csv`), variables below will be overwritten
 # check the flag `load_from_saved_data`
+#%% overwrite variables from saved data
+if load_from_saved_data:
+    print(" loading prob vars from saved csv")
+    prob = load_data( loc_save_data+".csv", prob )
 #%%
 # 1. High-level Inputs
 # - TODO: check windIO (02_ref WTs) data and change below
 prob.set_val("machine_rating", 15.0, units="MW")
-prob["rotor_diameter"] = 240.0 # TODO: ref.1 = 240, geo_schema = 241.35064632
-prob["rated_torque"] = 19483628.137720454 # 21.03*1e6 [Nm] ref.2, tab.5-4
+prob["rotor_diameter"] = 241.35064632 # TODO: ref.1 = 240, geo_schema = 241.35064632
+prob["rated_torque"] = 21.3 * 1e6 # 21.03*1e6 [Nm] ref.2, tab.5-4
 prob["minimum_rpm"] = 5.0 # needed by RPM_Input
-rated_rpm = prob["rated_rpm"] = 7.55846382468687 #7.56
+rated_rpm = prob["rated_rpm"] = 7.56 #7.56; 7.55846382468687
 if doMBfls:
     prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
 
@@ -416,7 +427,7 @@ if load_fls_loads:
 # TODO: update using pCrunch's rainflow
 # ---
 
-# %% [markdown]
+# %%
 # 2. Blade properties and hub design options
 # - cf. `opts["flags"]["hub"]`
 
@@ -426,12 +437,12 @@ if load_fls_loads:
 # (new) updated using runWISDEM with orig def blades, hub in geo yaml
 
 if True: #NOTE: True with `Hub_*`
-    blade_mass = 65250 # from ref.2, tab. ES-2 (= made4wind specs also)
+    blade_mass = 68233.0936092383 # from ref.2, tab. ES-2 (= made4wind specs also)
     n_blades = 3 
     # ---- updated using runWISDEM with orig def blades, hub
-    prob["blades_mass"] = 203480.8003090195 #n_blades * blade_mass
-    prob["blades_cm"] = 2.450999236350028
-    prob["blades_I"] = np.r_[342920565.8181109, 171460282.90905544, 171460282.90905544, 0.0, 0.0, 0.0]
+    prob["blades_mass"] = n_blades * blade_mass
+    prob["blades_cm"] = 2.1853055315151138
+    prob["blades_I"] = np.r_[348506332.76071006, 174253166.38035503, 174253166.38035503, 0.0, 0.0, 0.0]
 
     # if run HUB module within DrivetrainSE
     if dohub:
@@ -446,13 +457,11 @@ if True: #NOTE: True with `Hub_*`
         prob["spin_hole_incr"] = 1.2
         prob["blade_root_diameter"] = 5.2
 
-        prob["n_blades"] = 3
-        prob["blade_mass"] = 65252.0
+        prob["n_blades"] = n_blades
+        prob["blade_mass"] = blade_mass
         prob["blades_mass"] = prob["n_blades"] * prob["blade_mass"]
-        prob["blades_cm"] = 2.46175
-        prob["blades_I"] = np.r_[3.48453857e+08, 1.74226928e+08, 1.74226928e+08, np.zeros(3)]
 
-        prob["pitch_system.BRFM"] = 26648449.0
+        prob["pitch_system.BRFM"] = 117585772.28432259
         prob["pitch_system_scaling_factor"] = 0.75
 
         prob["spinner_gust_ws"] = 70.0
@@ -464,7 +473,7 @@ if True: #NOTE: True with `Hub_*`
 
 # TODO: cm & I (hub_system_ & blades_) will change with DVs (L in lss)
 
-# %% [markdown]
+# %%
 # 3. Drivetrain configuration and sizing inputs
 prob['moo_weight'] = 0.5
 
@@ -581,7 +590,7 @@ prob["shaft_angle_allowable"] = 1e-3
 prob["stator_deflection_allowable"] = 1e-2 #(def: 1e-4 m; 1e-2)
 prob["stator_angle_allowable"] = 1e-1 #(def: 1e-3 deg; 1e-1)
 
-# %% [markdown]
+# %%
 # 4. Material properties (discrete_inputs to `DriveMaterials`)
 
 # DriveMaterials inputs
@@ -602,11 +611,6 @@ prob["spinner_material"] = "glass_uni"
 prob["material_names"] = ["steel", "steel_drive", "cast_iron", "glass_uni"]
 # ---
 
-#%% overwrite variables from saved data
-if load_from_saved_data:
-    print(" loading prob vars from saved csv")
-    prob = load_data( loc_save_data+".csv", prob )
-
 #%% load DOE case ( GR = 49 ) ?
 if flag_load_from_DOEcsv:
     import pandas as pd
@@ -614,7 +618,7 @@ if flag_load_from_DOEcsv:
     this_case = cases.loc[1]
     prob = utilsDT.read_df_to_prob( this_case, prob )
 
-#%%[markdown]
+#%%
 # ### Final check before running
 print("\n=== Final input check ===\n")
 prob.model.list_inputs();
