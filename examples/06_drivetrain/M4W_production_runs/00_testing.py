@@ -31,7 +31,7 @@ import wisdem.drivetrainse.drive_components as dc
 
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, pdf_norm_int_using_cdf, bin_counting_of_load, compute_LRD, compute_LRD_matrix_vectorized
 from wisdem.commonse.fileIO import var_df2dict
-import utilities_drivetrain as utilsDT
+from Drive4Wind.utilities import utilities_drivetrain as utilsDT
 
 #%%
 # paths / locations
@@ -61,6 +61,8 @@ load_fls_loads = False
 
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
+loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
+
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_new.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
@@ -79,9 +81,11 @@ else: # define paths
 
 # %%
 # Define plotting options
-from my_util_tools import analyseWTLoads, util_funcs, funcs_errors
-loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
-clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
+from Drive4Wind.post_processing import analyseWTLoads, color_schemes
+from Drive4Wind.utilities import funcs_errors
+
+loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
+clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
 
 params_plot_rc = {
         "font.size": 24,
@@ -98,6 +102,22 @@ loc_hub_loads_stats = os.path.join(dir_loads, "hub_loads_M4W_stats.pdf")
 analyseWTLoads.plot_ms_load_statistics(
     S_all,clrs_m4w["Turquoise"],clrs_m4w["Aqua"], (15,15)
     ) 
+
+# %%
+# wind speed probability
+ws_full = S_all['mean_wind_speed']; n_w = ws_full.shape[1]
+ws = ws_full[0,:n_w]
+ws = np.append(ws_full,25.0)
+# ws pdf computation
+coeff_weibull = (1.95, 11.6)
+pdf_ws = pdf_norm_int_using_cdf( ws, coeff_weibull )
+pdf_ws_full = pdf_norm_int_using_cdf( ws_full, coeff_weibull )
+# print to screen
+print(f"ws = {ws}" )
+print(f"pdf_ws = {pdf_ws}; sum={np.sum(pdf_ws)}" )
+
+print(f"\nws_full = {ws_full}" )
+print(f"pdf_ws_full = {pdf_ws_full}; sum={np.sum(pdf_ws_full)}" )
 
 #%%
 # define `modelling_options`
@@ -236,22 +256,12 @@ Fmb1_real, Fmb2_real = ds.analytical_MBforces_realistic(
 # P_* computation
 P = Fmb1[3,:,:]
 n_t, n_w = P.shape[0], P.shape[1]
-ws_full = S_all['mean_wind_speed']; ws = ws_full[0,:n_w]
 time = S_all['Time'][:n_t,0]; dt = 0.05
 omega = S_all['rot_speed'][:n_t,:n_w]
 p = 10/3
 
 dP_dLh1 = dFmb1dLh1[3,:,:]
 dP_dL12 = dFmb1dL12[3,:,:]
-
-# %%
-ws = np.append(ws_full,25.0)
-# ws pdf computation
-coeff_weibull = (1.95, 11.6)
-pdf_ws = pdf_norm_int_using_cdf( ws, coeff_weibull )
-pdf_ws_full = pdf_norm_int_using_cdf( ws, coeff_weibull )
-print(f"pdf_ws = {pdf_ws}; sum={np.sum(pdf_ws)}" )
-print(f"pdf_ws_full = {pdf_ws_full}; sum={np.sum(pdf_ws_full)}" )
 
 #%%
 # P_eq (LDD, LRD, DEL) computation
