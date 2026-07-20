@@ -680,10 +680,21 @@ print("- defl mb1: ", np.max(prob["constr_mb1_defl"]) )
 print("- defl mb2: ", np.max(prob["constr_mb2_defl"]) )
 
 #
-print("\n--- obj: masses ---")
-print(f"MSA mass: {prob["msa_mass"]}")
-print(f"nacelle mass: {prob["nacelle_mass"]}")
-print(f"nacelle cm: {prob["nacelle_cm"]}")
+print("")
+print("Masses of drivetrain components")
+print(" - lss mass:", prob["lss_mass"][0] )
+print(" - hss mass:", prob["hss_mass"][0] )
+mb1_mass = prob["mb1_mass"][0]
+mb2_mass = prob["mb2_mass"][0]
+print(f" - mb masses = {mb1_mass+mb2_mass}; mb1 = {mb1_mass}, mb2 = {mb2_mass}")
+print(f" - MSA mass: {prob["msa_mass"]}")
+print(" - generator mass:", prob["generator_mass"][0] )
+print(" - bedplate mass: ", prob["bedplate_mass"][0] )
+print(" - brake mass: ", prob["brake_mass"][0] )
+print(" - misc. components: ", (prob["hvac_mass"][0]+prob["platform_mass"][0]+prob["cover_mass"][0]) )
+print(" - yaw system mass: ", prob["yaw_mass"][0] )
+print(" = nacelle_mass:", prob["nacelle_mass"][0] )
+print(f" - nacelle cm: {prob["nacelle_cm"]}")
 
 print("\n--- RNA properties ---")
 print(f"RNA mass: {prob["rna_mass"]}") # drivese.rna_mass
