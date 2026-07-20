@@ -28,7 +28,7 @@
 # 2. IEA 15MW=baseline
 # 3. Task2.1
 
-# %% [markdown]
+# %%
 # imports
 import os
 import numpy as np
@@ -75,7 +75,7 @@ if suffix == "_m4w_sima":
     loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
 
 # Optimization flags
-flag_opt_GBO = True     # GBO: gradient based optimizer
+flag_opt_GBO = False     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 flag_debug_print = True
@@ -730,14 +730,18 @@ if flag_save_new_data: save_data(loc_save_data, prob)
 # ### Drivetrain mass comparison (IEA and M4W)
 #%%
 if plot_cases:
+    csv_iea15_UN = os.path.join( script_dir,
+        "..\\00_base_iea15mw\\results\\m4w_base_case_DT_old_loads.csv")
     # save plot loc
     loc_save_img = None
     if save_new_plot:
         loc_save_img = os.path.join( results_path,
                         "compare_mass"+suffix+".png" )
     # plot via func
-    utilsDT.plot_drivetrain_mass_comparison(prob, loc_save_img,
-        m4w_label="Made4Wind", iea_label="IEA 15MW")
+    utilsDT.plot_drivetrain_mass_comparison(
+        loc_save_data+".csv", csv_iea15_UN,
+        m4w_label="Made4Wind (UN)", iea_label="IEA 15MW (UN)",
+        flag_WTnamespace=False, loc_save_img=loc_save_img )
 
 #%%
 # Save rna properties into `yaml` file for next tower optimization
