@@ -55,5 +55,6 @@ merit_figure_user:
 driver:
     optimization:
         flag: True
-        max_iter: 20 # test=2, full=20
+        max_iter: 30 # test=2, full=20
+        tol: 1e-6
         debug_print: True
