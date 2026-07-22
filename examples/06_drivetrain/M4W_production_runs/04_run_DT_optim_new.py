@@ -82,6 +82,18 @@ if flag_override_own_hub_loads:
       # override
       overrides['drivese.F_aero_hub'] = F_aero_hub
       overrides['drivese.M_aero_hub'] = M_aero_hub
+      # from rotorse or blade
+      overrides["drivese.spinner_gust_ws"] = 70.0
+      overrides["drivese.rated_rpm"] = 7.56
+      overrides["drivese.rated_torque"] = 21.3E6
+      overrides["drivese.pitch_system.BRFM"] = 117585772.28432259
+      overrides["drivese.blade_root_diameter"] = 5.2
+      overrides["drivese.blades_cm"] = 2.1853055315151138
+      overrides["drivese.blade_mass"] = 68233.0936092383
+      overrides["drivese.blades_mass"] = 68233.0936092383*3
+      overrides["drivese.blades_I"] = np.r_[348506332.76071006, 174253166.38035503, 174253166.38035503, 0.0, 0.0, 0.0]
+      # towerse
+      overrides["drivese.D_top"] = 6.5
 
 elif flag_override_tower_init:
       overrides['towerse.tower_outer_diameter'] = np.ones((1,20))*15
