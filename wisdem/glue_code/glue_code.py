@@ -323,7 +323,6 @@ class WT_RNTA(om.Group):
             self.connect("hub.pitch_system_mass_user", "drivese.pitch_system_mass_user")
             self.connect("hub.hub_shell_mass_user", "drivese.hub_shell_mass_user")
             self.connect("hub.spinner_mass_user", "drivese.spinner_mass_user")
-            self.connect("rotorse.wt_class.V_extreme50", "drivese.spinner_gust_ws")
             self.connect("hub.hub_system_mass_user", "drivese.hub_system_mass_user")
             self.connect("hub.hub_system_cm_user", "drivese.hub_system_cm_user")
             self.connect("hub.hub_system_I_user", "drivese.hub_system_I_user")
@@ -341,30 +340,33 @@ class WT_RNTA(om.Group):
             # self.connect('drivetrain.above_yaw_I_user', 'drivese.above_yaw_I_user')
 
             self.connect("configuration.n_blades", "drivese.n_blades")
-
-            self.connect("blade.high_level_blade_props.rotor_diameter", "drivese.rotor_diameter")
             self.connect("configuration.upwind", "drivese.upwind")
-            self.connect("control.minOmega", "drivese.minimum_rpm")
-            self.connect("rotorse.rp.powercurve.rated_Omega", "drivese.rated_rpm")
-            self.connect("rotorse.rp.powercurve.rated_Q", "drivese.rated_torque")
             self.connect("configuration.rated_power", "drivese.machine_rating")
             if modeling_options["flags"]["tower"]:
                 self.connect("tower.diameter", "drivese.D_top", src_indices=[-1]) #(v) TODO: why D_top (important for driveSE) depends on tower? what if user wants to only analyse driveSE (+rotorSE)?
-            
-            if 'own_hub_loads' in modeling_options["WISDEM"]["DriveSE"]: #(v) user hub loads override those from rotorSE
+
+            #(v) ----
+            # rotorse, blade override: hub loads, rotor props
+            if 'own_hub_loads' in modeling_options["WISDEM"]["DriveSE"]:
                 flag_own_hub_loads = modeling_options["WISDEM"]["DriveSE"]['own_hub_loads']
             else: flag_own_hub_loads = False
             if not flag_own_hub_loads:
-                self.connect("rotorse.rs.aero_hub_loads.Fhub", "drivese.F_aero_hub") #(v) TODO: check and learn usage (coz these loads MUCH lower than ours)
+                self.connect("rotorse.rs.aero_hub_loads.Fhub", "drivese.F_aero_hub")
                 self.connect("rotorse.rs.aero_hub_loads.Mhub", "drivese.M_aero_hub")
-            self.connect("rotorse.rs.frame.root_M", "drivese.pitch_system.BRFM", src_indices=[1])
-
-            self.connect("blade.pa.chord_param", "drivese.blade_root_diameter", src_indices=[0])
-            self.connect("rotorse.rs.curvature.blades_cg_hubcc", "drivese.blades_cm")
-            self.connect("rotorse.blade_mass", "drivese.blade_mass")
-            self.connect("rotorse.mass_all_blades", "drivese.blades_mass")
-            self.connect("rotorse.I_all_blades", "drivese.blades_I")
-
+                self.connect("rotorse.wt_class.V_extreme50", "drivese.spinner_gust_ws")
+                self.connect("blade.high_level_blade_props.rotor_diameter", "drivese.rotor_diameter")
+                self.connect("rotorse.rp.powercurve.rated_Omega", "drivese.rated_rpm")
+                self.connect("rotorse.rp.powercurve.rated_Q", "drivese.rated_torque")
+                self.connect("rotorse.rs.frame.root_M", "drivese.pitch_system.BRFM", src_indices=[1])
+                self.connect("blade.pa.chord_param", "drivese.blade_root_diameter", src_indices=[0])
+                self.connect("rotorse.rs.curvature.blades_cg_hubcc", "drivese.blades_cm")
+                self.connect("rotorse.blade_mass", "drivese.blade_mass")
+                self.connect("rotorse.mass_all_blades", "drivese.blades_mass")
+                self.connect("rotorse.I_all_blades", "drivese.blades_I")
+            else:
+                self.connect("configuration.rotor_diameter_user", "drivese.rotor_diameter")
+            self.connect("control.minOmega", "drivese.minimum_rpm")
+            #(v) ----
             self.connect("drivetrain.distance_hub_mb", "drivese.L_h1")
             self.connect("drivetrain.distance_mb_mb", "drivese.L_12")
             self.connect("generator.L_generator", "drivese.L_generator")
