@@ -350,9 +350,8 @@ class WT_RNTA(om.Group):
             if 'own_hub_loads' in modeling_options["WISDEM"]["DriveSE"]:
                 flag_own_hub_loads = modeling_options["WISDEM"]["DriveSE"]['own_hub_loads']
             else: flag_own_hub_loads = False
-            if not flag_own_hub_loads:
-                self.connect("rotorse.rs.aero_hub_loads.Fhub", "drivese.F_aero_hub")
-                self.connect("rotorse.rs.aero_hub_loads.Mhub", "drivese.M_aero_hub")
+
+            if modeling_options["flags"]["blade"]:
                 self.connect("rotorse.wt_class.V_extreme50", "drivese.spinner_gust_ws")
                 self.connect("blade.high_level_blade_props.rotor_diameter", "drivese.rotor_diameter")
                 self.connect("rotorse.rp.powercurve.rated_Omega", "drivese.rated_rpm")
@@ -363,8 +362,12 @@ class WT_RNTA(om.Group):
                 self.connect("rotorse.blade_mass", "drivese.blade_mass")
                 self.connect("rotorse.mass_all_blades", "drivese.blades_mass")
                 self.connect("rotorse.I_all_blades", "drivese.blades_I")
-            else:
+                if not flag_own_hub_loads:
+                    self.connect("rotorse.rs.aero_hub_loads.Fhub", "drivese.F_aero_hub")
+                    self.connect("rotorse.rs.aero_hub_loads.Mhub", "drivese.M_aero_hub")
+            else: # MUST be user defined
                 self.connect("configuration.rotor_diameter_user", "drivese.rotor_diameter")
+
             self.connect("control.minOmega", "drivese.minimum_rpm")
             #(v) ----
             self.connect("drivetrain.distance_hub_mb", "drivese.L_h1")
