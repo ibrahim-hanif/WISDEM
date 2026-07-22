@@ -3,12 +3,12 @@ General:
     verbosity: True  # When set to True, the code prints to screen many infos
 WISDEM:
     RotorSE:
-        flag: True # TODO: change src to allow False with DT true
+        flag: True # DONE: change src to allow False with DT true
         spar_cap_ss: Spar_Cap_SS # Name in the yaml of the spar cap laminate on the suction side
         spar_cap_ps: Spar_Cap_PS # Name in the yaml of the spar cap laminate on the pressure side
         te_ss: TE_reinforcement_SS # Name in the yaml of the trailing edge reinforcement on the suction side
         te_ps: TE_reinforcement_PS # Name in the yaml of the trailing edge reinforcement on the pressure side
-        gust_std: 15.0 # def:3.0, max:15.0 (in schema) | (used in rotor_power.py, line 108)
+        # gust_std: 15.0 # TODO def:3.0, max:15.0 (in schema) | (used in rotor_power.py, line 108)
     DriveSE:
         flag: True
         gamma_f: 1.35    # Safety factor for loads
@@ -116,13 +116,13 @@ Environment:
     significant_wave_height: 8.384 # NTM DLC 5.1 at highest wind speed (from sima)
     significant_wave_period: 10.113 # same as above
 
-#(v) -------------- NEW! TODO: MB FLS options --------------
+#(v) -------------- NEW! DONE: MB FLS options --------------
 # ref to WEIS schema
 # - inputs needed:
 # -- loads (F*, M*), omega (rot_speed)
 # -- mean_wind_speed, time step, probabilities
 
-OpenFAST: 
+OpenFAST: # TODO: use sima loads, change ws and pdf_ws accord.
     simulation:
         DT: 0.05 # DONE: time step (for integration)
     openfast_dir: 'M:\\Vasudev_Gupta\\outputs_mainshaft_loads\\hub_loads_M4w.mat' # DONE: loads dir

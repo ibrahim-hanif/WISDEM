@@ -9,7 +9,9 @@
 # - objective: (1) `turbine_mass` minimization
 #
 # ### TODO:
-# - geared TLP
+# For a final base case - before any drivetrain optim - following must be completed:
+# - 1. geo yaml: inc hub height by 2.5m, adjust tower, floater (pt.2)
+# - 2. geo yaml: TLP <- finish raft, weis model then input here insha'Allah
 
 #%%
 import os
