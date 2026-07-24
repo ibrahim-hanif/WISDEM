@@ -36,6 +36,7 @@ flag_load_from_saved_01_DT = False
 flag_plot = True
 verbose = False
 flag_override_hub_loads = True # TODO: not working; make a flag in model_opts which removes connections
+save_new_plot = True
 
 #%%
 ## File management
@@ -266,6 +267,9 @@ if flag_plot:
     plt.xlabel("utilization")
     plt.ylabel("height along tower (m)")
     plt.tight_layout()
+    if save_new_plot:
+          loc_save_img = os.path.join(mydir+os.sep+"outputs", "util_tower.png")
+          plt.savefig(loc_save_img)
     plt.show()
 
 #%%
