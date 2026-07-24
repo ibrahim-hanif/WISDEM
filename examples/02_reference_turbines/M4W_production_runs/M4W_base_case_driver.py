@@ -1,8 +1,9 @@
 # %% [markdown]
-# # _Wind Turbine optimization_ (IEA 15MW; full `WISDEM`)
+# # _Wind Turbine optimization_ (Made4Wind 15MW Base-case; full `WISDEM`)
 # purpose: copy of `iea15mw_driver.py` to test M4W modifications
 # 
 # ### current version:
+# 0. Base case `wisdem-weis` definition, Alhamdolillah
 # 1. Drivetrain optimization for the (given, SIMA) hub loads
 # - objective: (1) `nacelle_mass` minimization (`NacelleSystemAdder`)
 # 2. Tower optimization with a (given) drivetrain/RNA (result of 03_)
@@ -10,8 +11,8 @@
 #
 # ### TODO:
 # For a final base case - before any drivetrain optim - following must be completed:
-# - 1. geo yaml: inc hub height by 2.5m, adjust tower, floater (pt.2)
-# - 2. geo yaml: TLP <- finish raft, weis model then input here insha'Allah
+# - 1. DONE: geo yaml: inc hub height by 2.5m, adjust tower, floater (pt.2)
+# - 2. DONE: geo yaml: TLP <- finish raft, weis model then input here insha'Allah
 
 #%%
 import os
@@ -23,7 +24,7 @@ from wisdem.commonse.utilities import load_all_mat_to_dict
 
 #%%
 # ---- turbine geo
-wt_m4w = False # turbine to analyse: True = m4w / False = iea15mw
+wt_innovative = False # turbine to analyse: True = m4w / False = iea15mw
 
 # ---- optimization
 opt_flag_DT = False
@@ -42,13 +43,13 @@ mydir = os.path.dirname(os.path.abspath(__file__))  # get path to this file
 dir_02_ref_turbines = os.path.dirname(mydir)  # get path to 02_reference_turbines
 
 # ---- wind turbine geometry
-fname_wt_m4w = mydir + os.sep + "M4W-15-VolturnUS-WT.yaml"
-fname_wt_iea15mw = mydir + os.sep + "IEA-15-VolturnUS-report.yaml"
-if wt_m4w:
-      fname_wt_input = fname_wt_m4w
+fname_wt_innovative = mydir + os.sep + "M4W-15-VolturnUS-WT.yaml"
+fname_wt_basecase = mydir + os.sep + "M4W-15-TLP-base_case.yaml"
+if wt_innovative:
+      fname_wt_input = fname_wt_innovative
       direct = False
 else:
-      fname_wt_input = fname_wt_iea15mw
+      fname_wt_input = fname_wt_basecase
       direct = True
       # ---- 01_DT
       if flag_load_from_saved_01_DT:
@@ -113,6 +114,12 @@ print("1P (blade period) freq ranges:")
 print(" ", freq_range_1P, " Hz" )
 print("3P (blade passing) freq ranges:")
 print(" ", freq_range_3P, " Hz \n" )
+freq_tower = wt_opt["towerse.tower.structural_frequencies"] # towerse.tower OR floatingse.structural_frequencies
+print("Tower fore-aft/side-side freq range:")
+print(" ", freq_tower[0:2], " Hz" )
+freq_floater = wt_opt["floatingse.structural_frequencies"] # towerse.tower OR floatingse.structural_frequencies
+print("Floater freq range:")
+print(" ", freq_floater[0:2], " Hz \n" )
 
 print("LSS desvars:")
 print(" ", wt_opt["drivese.L_h1"], wt_opt["drivese.L_12"], wt_opt["drivese.lss_diameter"], wt_opt["drivese.lss_wall_thickness"] )
@@ -260,5 +267,15 @@ if flag_plot:
     plt.ylabel("height along tower (m)")
     plt.tight_layout()
     plt.show()
+
+#%%
+# Visualize with mayavi, which can be difficult to install
+if flag_plot:
+      try:
+            import wisdem.floatingse.visualize as viz
+            vizobj = viz.Visualize(wt_opt)
+            vizobj.draw_spar()
+      except:
+            pass
 
 # %%
