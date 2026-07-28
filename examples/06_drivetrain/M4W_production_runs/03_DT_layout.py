@@ -113,6 +113,14 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 results_path = os.path.join(script_dir, results_dir)
 os.makedirs(results_path, exist_ok=True)
 
+# base case turbine csv
+basecaseCSVpath = os.path.join(
+    os.path.dirname(os.path.dirname(script_dir)),
+    "02_reference_turbines","M4W_production_runs","outputs",
+    "basecase_NOoptim.csv")
+basecaseDF = pd.read_csv(basecaseCSVpath)
+basecaseDict = var_df2dict(basecaseDF)
+
 # - used within optimization
 loc_record_doe = os.path.join(results_path, "DOE_recorded.sql")
 loc_n2 = os.path.join(results_path, "n2.html")
@@ -156,59 +164,15 @@ else: # define paths
         Snew, keys_new = mainshaft_loads_from_mat_to_dict(
             loc_FLS_loads_mat_file, loc_ULS_loads_mat_file)
 
-# Wind speed and probabilies: auto parse loads dict
-ws = S_all["mean_wind_speed"][0,:].tolist()
-pdf_ws = pdf_norm_int_using_cdf(ws).tolist()
-# ----
-# %% [markdown]
-# ### Defining options (`modelling_options`), flags
-
+# %%
 # define `modelling_options`
-opts = {}
+# TODO: probabs check with wind site
+from utilities_drivetrain import define_modeling_options_dict_for_drivetrainSE as defModelOpts
+opts = defModelOpts(loc_all_loads_mat_file)
 
-opts["WISDEM"] = {}
-opts["WISDEM"]["n_dlc"] = 1
-opts["WISDEM"]["DriveSE"] = {}
-# NOTE "hub": 'Hub_System' component are NOT included in the 'DrivetrainSE_M4W' component 
-opts["WISDEM"]["DriveSE"]["hub"] = {}
-opts["WISDEM"]["DriveSE"]["hub"]["hub_gamma"] = 2.0
-opts["WISDEM"]["DriveSE"]["hub"]["spinner_gamma"] = 1.5
-
-opts["WISDEM"]["DriveSE"]["direct"] = False
-opts["WISDEM"]["DriveSE"]["gearbox_torque_density"] = 0.0 # False =(GB  optim, in-capabale)
-
-opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.35 #IEC-1, 7.6.2.2a, pg.57
-opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.3  #IEC-1, 7.6.2.4, pg.59
-opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0  #IEC-1, 7.6.1.3, pg.55
-opts["WISDEM"]["DriveSE"]["own_hub_loads"] = True
-# opts["WISDEM"]["DriveSE"]["nBins"] = 100    #used by (new) Analytical_FLS_Bearing_Life; =Number of bins for histogram MB FLS
-# used as: gamma = gamma_f * gamma_m * gamma_n (within TODO)
-
-opts["WISDEM"]["RotorSE"] = {}
-opts["WISDEM"]["RotorSE"]["n_pc"] = 2 #cf. RPM_Input in drive_components.py
-            # `n_pc`: Number of wind speeds to compute the power curve
-opts["materials"] = {}
-opts["materials"]["n_mat"] = 4
-
-opts["flags"] = {}
-dogen = opts["flags"]["generator"] = False
-dohub = opts["flags"]["hub"] = True
-doMBfls = opts["flags"]["mb_fls"] = True
-
-opts["OpenFAST"] = {}
-opts["OpenFAST"]["simulation"] = {}
-opts["OpenFAST"]["simulation"]["DT"] = 0.05
-# dir(ectory) where MS loads are stored .csv (?)
-if part_loads:
-    opts["OpenFAST"]["openfast_dir"] = loc_all_loads_mat_file
-else:
-    ValueError('Full loads not defined in openfast_dir<-OpenFAST<-modelling_options. Please define it first. jazakumAllahu khayr.')
-
-opts["DLC_driver"] = {}
-opts["DLC_driver"]["DLCs"] = [{}]
-opts["DLC_driver"]["DLCs"][0]["DLC"] = "1.2"
-opts["DLC_driver"]["DLCs"][0]["wind_speed"] = ws
-opts["DLC_driver"]["DLCs"][0]["probabilities"] = pdf_ws
+doMBfls = opts["flags"]["mb_fls"]
+dohub = opts["flags"]["hub"]
+dogen = opts["flags"]["generator"]
 
 #%%
 # ### Setup the problem
@@ -218,7 +182,7 @@ prob = om.Problem(reports=False)
 # Define the model
 prob.model = DrivetrainSE_M4W(modeling_options=opts) # an instance of the DrivetrainSE_M4W problem defined above
 
-# %%[markdown]
+# %%
 # ### Optimization / DOE setup
 # If performing optimization, set up the optimizer and settings
 
@@ -372,19 +336,21 @@ if load_from_saved_data:
 #%%
 # 1. High-level Inputs
 # - TODO: check windIO (02_ref WTs) data and change below
-prob.set_val("machine_rating", 15.0, units="MW")
-prob["rotor_diameter"] = 241.35064632 # TODO: ref.1 = 240, geo_schema = 241.35064632
-prob["rated_torque"] = 21.3 * 1e6 # 21.03*1e6 [Nm] ref.2, tab.5-4
-prob["minimum_rpm"] = 5.0 # needed by RPM_Input
-rated_rpm = prob["rated_rpm"] = 7.56 #7.56; 7.55846382468687
+# ==== 1. High-level Inputs ====
+machine_rating = float(basecaseDict["drivese.machine_rating"])
+prob.set_val("machine_rating",machine_rating,"kW")
+D_rotor = prob["rotor_diameter"] = float(basecaseDict["drivese.rotor_diameter"])
+prob["rated_torque"] = float(basecaseDict["drivese.rated_torque"]) # 21.3 * 1e6 # Nm
+# prob["minimum_rpm"] = 5
+rated_rpm = prob["rated_rpm"] = float(basecaseDict["drivese.rated_rpm"]) #7.56
 if doMBfls:
-    prob["lifetime"] = 25.0 #design life in years ('lifetime' from WEIS, WindIO)
+    prob["lifetime"] = float(basecaseDict["drivese.lifetime"]) #design life in years ('lifetime' from WEIS, WindIO)
 
 prob["upwind"] = True
-prob["D_top"] = 6.5 #tower top diameter
-prob["hub_diameter"] = 7.94
-prob["overhang"] = 12.0313 #ref.2 = 11.35 ; geo_schema = 12.0313 
-prob["tilt"] = 6.0 #[deg] ref.3
+prob["D_top"] = float(basecaseDict["drivese.D_top"]) #tower top diameter
+prob["hub_diameter"] = float(basecaseDict["drivese.hub_diameter"])
+prob["overhang"] = float(basecaseDict["drivese.overhang"]) #ref.2
+prob["tilt"] = float(basecaseDict["drivese.tilt"]) #[deg] ref.3
 
 #%%[markdown]
 # Loading `openFAST` hub loads from a saved file
@@ -437,39 +403,40 @@ if load_fls_loads:
 # (new) updated using runWISDEM with orig def blades, hub in geo yaml
 
 if True: #NOTE: True with `Hub_*`
-    blade_mass = 68233.0936092383 # from ref.2, tab. ES-2 (= made4wind specs also)
-    n_blades = 3 
     # ---- updated using runWISDEM with orig def blades, hub
-    prob["blades_mass"] = n_blades * blade_mass
-    prob["blades_cm"] = 2.1853055315151138
-    prob["blades_I"] = np.r_[348506332.76071006, 174253166.38035503, 174253166.38035503, 0.0, 0.0, 0.0]
+    blade_mass = float(basecaseDict["drivese.blade_mass"]) #65250 # from ref.2, tab. ES-2 (= made4wind specs also)
+    n_blades = 3
+    prob["blades_mass"] = float(basecaseDict["drivese.blades_mass"]) #n_blades * blade_mass
+    prob["blades_cm"] = float(basecaseDict["drivese.blades_cm"])
+    prob["blades_I"] = eval(basecaseDict["drivese.blades_I"])
 
     # if run HUB module within DrivetrainSE
     if dohub:
-        prob["flange_t2shell_t"] = 6.0      # ---- flange MS data ----
-        prob["flange_OD2hub_D"] = 0.6
-        prob["flange_ID2flange_OD"] = 0.8   # ----
-        prob["hub_in2out_circ"] = 1.2
-        prob["hub_stress_concentration"] = 3.0
-        prob["n_front_brackets"] = 5
-        prob["n_rear_brackets"] = 5
-        prob["clearance_hub_spinner"] = 0.5
-        prob["spin_hole_incr"] = 1.2
-        prob["blade_root_diameter"] = 5.2
-
         prob["n_blades"] = n_blades
         prob["blade_mass"] = blade_mass
-        prob["blades_mass"] = prob["n_blades"] * prob["blade_mass"]
 
-        prob["pitch_system.BRFM"] = 117585772.28432259
-        prob["pitch_system_scaling_factor"] = 0.75
+        lstHub = ["flange_t2shell_t",
+                  "flange_OD2hub_D",
+                  "flange_ID2flange_OD",
+                  "hub_in2out_circ",
+                  "hub_stress_concentration",
+                  "n_front_brackets",
+                  "n_rear_brackets",
+                  "clearance_hub_spinner",
+                  "spin_hole_incr",
+                  "blade_root_diameter",
 
-        prob["spinner_gust_ws"] = 70.0
+                  "pitch_system.BRFM",
+                  "pitch_system_scaling_factor",
+
+                  "spinner_gust_ws"]
+        for name in lstHub:
+            prob[name] = float(basecaseDict["drivese."+name]) 
 
     else:
-        prob["hub_system_mass"] = 73159.79852195602 # 190e3; from ref.2, tab. 5-1
-        prob["hub_system_cm"] = 3.3540146237827924
-        prob["hub_system_I"] = np.array([[1034603.1363701161, 649319.8931695414, 649319.8931695414, 0.0, 0.0, 0.0]]) # TODO check
+        prob["hub_system_mass"] = float(basecaseDict["drivese.hub_system_mass"]) # 190e3; from ref.2, tab. 5-1
+        prob["hub_system_cm"] = float(basecaseDict["drivese.hub_system_cm"])
+        prob["hub_system_I"] = eval(basecaseDict["drivese.hub_system_I"])
 
 # TODO: cm & I (hub_system_ & blades_) will change with DVs (L in lss)
 
@@ -563,19 +530,7 @@ prob["converter_mass_user"] = (3*1e3*15)/8 # 5,625 [kg]
 # overall dims (est. very preliminary): TODO
 H_converter, W_converter, L_converter = 2.4, 0.8, 4.2 # [m]
 
-# 'drive_height' : derive from the high-level inputs
-# - needed by layout.py (line 123)
-# - (def: 5.614 for 15MW DD)
-def calc_drive_height(prob):
-    L_fl = 0.358 #ref.2: Hub flange length 
-    L2n = 0.9 #ref.2: Distance of downwind bearing from bedplate flange
-    L_lss = prob["L_h1"]+prob["L_12"]+L2n
-    H_nose = 4.875 #ref.2: Nose height (from tower top to bottom of bedplate flange)
-    drive_height = H_nose + ( np.sin(np.deg2rad(prob["tilt"]))*( (prob["hub_diameter"]*np.sqrt(3/4))+L_fl+L_lss ) )
-    print( f'    Calculated drive height: {drive_height} m' ) #5.95522 m
-    return drive_height
-# prob["drive_height"] = calc_drive_height(prob) #(output= 5.95522 m)
-prob["drive_height"] = 5.614 # (def: 5.614 for 15MW DD)
+prob["drive_height"] = float(basecaseDict["drivese.drive_height"])
 
 # bedplate: Hub:_Rotor_LSS_Frame, Bedplate_IBeam_Frame inputs
 # --- below vals from ONLY bedplate optim (desvars, constr) for nacelle mass min
@@ -628,16 +583,14 @@ om.n2(prob, outfile=loc_n2, show_browser=True);
 # ### Run: Optimization / DOE / Analysis
 # `_driver` (optimization) / `_model` (analysis)
 #%%
+# ---- time it ;)
+t0 = time.time()
+
 if (flag_opt_GBO or flag_DOE): # and not flag_study_parametric:
-    # ---- time it ;)
-    t0 = time.time()
     # Run GBO or DOE
     prob.model.approx_totals() # TODO.
     prob.run_driver()
-    # ---- time it ;)
-    t1 = time.time()
     status_optim = prob.driver.get_exit_status()
-    print(" - ",status_optim,": WISDEM run completed in,", (t1-t0)/60, "minutes")
 
 elif flag_opt_GFO:
     # Run the GFO
@@ -646,6 +599,11 @@ elif flag_opt_GFO:
 else:
     # Run the analysis (also when `flag_study_param` True)
     prob.run_model()
+    status_optim = 'ANALYSIS'
+
+# ---- time it ;)
+t1 = time.time()
+print(" - ",status_optim,": WISDEM run completed in,", (t1-t0)/60, "minutes")
 
 # %%[markdown]
 # # _____ Post-processing _____
