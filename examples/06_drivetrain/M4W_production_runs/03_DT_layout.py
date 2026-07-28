@@ -341,12 +341,12 @@ machine_rating = float(basecaseDict["drivese.machine_rating"])
 prob.set_val("machine_rating",machine_rating,"kW")
 D_rotor = prob["rotor_diameter"] = float(basecaseDict["drivese.rotor_diameter"])
 prob["rated_torque"] = float(basecaseDict["drivese.rated_torque"]) # 21.3 * 1e6 # Nm
-# prob["minimum_rpm"] = 5
+prob["minimum_rpm"] = float(basecaseDict["drivese.minimum_rpm"])
 rated_rpm = prob["rated_rpm"] = float(basecaseDict["drivese.rated_rpm"]) #7.56
 if doMBfls:
     prob["lifetime"] = float(basecaseDict["drivese.lifetime"]) #design life in years ('lifetime' from WEIS, WindIO)
 
-prob["upwind"] = True
+prob["upwind"] = bool(basecaseDict["drivese.upwind"])
 prob["D_top"] = float(basecaseDict["drivese.D_top"]) #tower top diameter
 prob["hub_diameter"] = float(basecaseDict["drivese.hub_diameter"])
 prob["overhang"] = float(basecaseDict["drivese.overhang"]) #ref.2
