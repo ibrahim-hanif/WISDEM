@@ -1395,7 +1395,7 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
                  ),
     }
 
-    housing_factor = 1 #+ 80.0/27.0
+    housing_factor = 1 + 80.0/27.0
     kN_to_N = 1e3
 
     # ------------------------------------------------------------
