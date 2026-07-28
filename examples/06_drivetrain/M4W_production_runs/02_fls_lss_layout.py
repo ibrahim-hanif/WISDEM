@@ -451,7 +451,8 @@ prob.model.list_outputs();
 if not flag_load_from_data:
     print(" user defined prob vars")
     # ==== 1. High-level Inputs ====
-    prob["machine_rating"] = float(basecaseDict["drivese.machine_rating"])*1e3
+    machine_rating = float(basecaseDict["drivese.machine_rating"])
+    prob.set_val("machine_rating",machine_rating,"kW")
     D_rotor = prob["rotor_diameter"] = float(basecaseDict["drivese.rotor_diameter"])
     prob["rated_torque"] = float(basecaseDict["drivese.rated_torque"]) # 21.3 * 1e6 # Nm
     # prob["minimum_rpm"] = 5
