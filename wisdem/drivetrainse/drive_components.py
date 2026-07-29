@@ -1355,7 +1355,7 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
     # width = a*D + b
     # mass  = k*D^n
     # Cr    = c*D^m
-    # k_tor = K*Cr*D = K*c*D^(m+1); K=457.502, from k_torsional=(3e10-6e8) for D_shaft=3.40678 for TRB2
+    # k_tilt = kc+D^ke # tilting stiffness: k_yy=k_zz=k
     # ----
     # NOTE: `BEARINGS` dict not inside self, but stored at class/module level:
     # - coz static data (same for all components, independent of inputs/outputs)
@@ -1367,31 +1367,31 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
         "CARB":
             dict(a=0.4299, b=0.0382, k=3682.8, n=2.7676, c=16676, m=1.4746,
                  max_ang=np.deg2rad(0.5), reactions=[0,1,1,0,0,0],
-                 coeff_torsional=0.0
+                 kc=0.0,ke=0.0
                  ),
 
         "CRB":
             dict(a=0.157,  b=0.0849, k=1070.8, n=1.8278, c=4526.5, m=0.9556,
                  max_ang=np.deg2rad(4/60), reactions=[0,1,1,0,0,0],
-                 coeff_torsional=0.0
+                 kc=0.0,ke=0.0
                  ),
 
         "SRB":
             dict(a=0.2463, b=0.185, k=2688.3,  n=1.8877, c=13878, m=1.0796,
                  max_ang=0.078, reactions=[1,1,1,0,0,0],
-                 coeff_torsional=0.0
+                 kc=0.0,ke=0.0
                  ),
 
         "TRB":
             dict(a=0.1499, b=0.0,    k=543.01, n=1.9043, c=1993.8, m=0.318,
                  max_ang=np.deg2rad(3/60), reactions=[1,1,1,0,1,1],
-                 coeff_torsional=457.502
+                 kc=0.82580,ke=2.9687
                  ),
 
         "TRB2":
             dict(a=0.1541, b=0.2087, k=1442.6, n=1.8932, c=6579.9, m=0.8592,
                  max_ang=np.deg2rad((0.06+0.02)/2), reactions=[1,1,1,0,1,1],
-                 coeff_torsional=457.502
+                 kc=0.82580,ke=2.9687
                  ),
     }
 
@@ -1416,6 +1416,7 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
         a, b = data["a"], data["b"]         # face width
         k, n = data["k"], data["n"]         # mass
         c, m = data["c"], data["m"]         # Cr
+        kc,ke= data["kc"], data["ke"]       # k_tilt
         # reactions
         FREE, RIGID = 0, 1
         mb_Reactions = np.array([FREE]*6) # ([ Rx, Ry, Rz, Rxx, Ryy, Rzz ])
@@ -1427,6 +1428,7 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
         # -----------------------------
         self.face_width = face = a * D_shaft + b
         self.Cr = Cr   = (c * (D_shaft**m)) * self.kN_to_N
+        self.k_tilt = k_tilt = kc * (D_shaft*1e3)**ke
 
         # mass
         if mass_user > 0:
@@ -1475,7 +1477,7 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
         outputs["mb_X2"] = 0.67
         outputs["mb_Y2"] = outputs["mb_X2"]/np.tan(alpha)
         outputs["mb_p"] = 10/3
-        outputs["mb_k"] = data["coeff_torsional"]*Cr*D_shaft # torsional stiffness: k_yy=k_zz=k
+        outputs["mb_k"] = k_tilt
 
     # ------------------------------------------------------------
     # compute_partials (exact)
