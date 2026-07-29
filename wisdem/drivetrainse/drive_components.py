@@ -1355,7 +1355,7 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
     # width = a*D + b
     # mass  = k*D^n
     # Cr    = c*D^m
-    # k_tilt = kc+D^ke # tilting stiffness: k_yy=k_zz=k
+    # k_tilt = kc*D^ke # tilting stiffness: k_yy=k_zz=k
     # ----
     # NOTE: `BEARINGS` dict not inside self, but stored at class/module level:
     # - coz static data (same for all components, independent of inputs/outputs)
