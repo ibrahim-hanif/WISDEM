@@ -5,11 +5,10 @@
 # ### TODO:
 # 1. `-Fz` works! why?
 
-# %% [markdown]
+# %%
 # imports
 import os
 import numpy as np
-import openmdao.api as om
 import matplotlib.pyplot as plt
 # import scipy.io as sio # --- not used in here, but within imports
 import csv
@@ -17,14 +16,7 @@ import pandas as pd
 
 # %%
 # import needed `WISDEM` modules
-# from wisdem.drivetrainse.drivetrain import DriveMaterials
-
-# from wisdem.drivetrainse.hub import Hub_System
-# from wisdem.drivetrainse.gearbox import Gearbox
-
-# import wisdem.drivetrainse.layout as lay
-
-# import wisdem.drivetrainse.drive_components as dc
+import openmdao.api as om
 
 import wisdem.drivetrainse.drive_structure as ds
 import wisdem.drivetrainse.drive_components as dc
@@ -61,7 +53,7 @@ load_fls_loads = False
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
 # TODO new
-loc_all_loads_mat_file = "C:\\SIMA_M4W_loads\\all_main_shaft_loads.mat"
+# loc_all_loads_mat_file = "C:\\SIMA_M4W_loads\\all_main_shaft_loads.mat"
 
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_new.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
@@ -205,8 +197,8 @@ else:
 # ### Define type of analysis
 #%%
 # TODO: uncomment the desired analysis type
-anaString = "MomentReactingFrame_nonAnalyBeam"; analysis = 1
-# anaString = "MomentReacting"; analysis = 2
+# anaString = "MomentReactingFrame_nonAnalyBeam"; analysis = 1
+anaString = "MomentReacting"; analysis = 2
 # anaString = "nonMomentReacting"; analysis = 3
 
 #%%[markdown]
@@ -229,6 +221,7 @@ delta = eval( var_dict['delta'] )
 m_carrier = eval( var_dict['carrier_mass'] )
 # - materials
 E_lss = eval( var_dict['lss_E'] ) # Pa = 1 N/m^2
+G_lss = eval( var_dict['lss_G'] )
 
 # %% F_* computation
 Fmb1, Fmb2, dFmb1dLh1, dFmb1dL12, dFmb2dLh1, dFmb2dL12 = ds.analytical_MB_Forces(
@@ -381,7 +374,7 @@ if analysis == 3:
 # mb2_Reactions = prob['mb2_Reactions'] = 1e9 * np.array([3.39, 5.38, 8.78, 0.0, 5.92e-1, 3.62e-1])
 # - materials
 prob['lss_E'] = E_lss
-G_lss = prob['lss_G'] = eval( var_dict['lss_G'] )
+prob['lss_G'] = G_lss
 rho_lss = prob['lss_rho'] = eval( var_dict['lss_rho'] )
 prob['lss_Xy'] = eval( var_dict['lss_Xy'] )
 # - constrs
@@ -777,4 +770,459 @@ if mb2_Reactions[-1] > 0.0:
     print(
         f"M_mb2_rad | Error: max= {np.max( err_Mmb2_rad )}; map= {mape_Mmb2_rad}"
     )
+# %%[markdown]
+# ===========================================
+# ===========================================
+#      tiliting stiffness fit for TRB2
+# ===========================================
+# ===========================================
+#%%
+bearing_rotatStiff_csv = os.path.join(
+    os.path.abspath(__file__), os.pardir,os.pardir,
+    "bearing_database", "TRB_with_rotat_stiffness.csv"
+)
+df_trb = pd.read_csv( bearing_rotatStiff_csv )
+
+# %%
+# ============================================================¨
+# ====== COPILOT for TRB_with_rotat_stiffness.csv ============
+# ============================================================
+
+#%%
+# plot the trends
+plt.figure(figsize=(8,6))
+
+plt.scatter(
+    df_trb["d"],
+    df_trb["k_yy"],
+    s=80,
+    label=r"$k_{yy}$"
+)
+
+plt.scatter(
+    df_trb["d"],
+    df_trb["k_zz"],
+    s=80,
+    label=r"$k_{zz}$"
+)
+
+plt.yscale("log")
+
+plt.xlabel("D [mm]")
+plt.ylabel(r"$k_{\theta}$"+" [Nm/rad]")
+plt.title("TRB Bearing Rotational Stiffness")
+plt.grid(True, which="both", alpha=0.3)
+plt.legend(loc="lower right")
+plt.tight_layout()
+
+# -- save plot
+loc_save_plot_bearing_rotatStiff = os.path.join(
+    os.path.dirname(os.path.abspath(bearing_rotatStiff_csv)),
+    "plot_rotat_stiff.png")
+# plt.savefig(loc_save_plot_bearing_rotatStiff) # TODO 
+# --
+plt.show()
+
+# %%
+# fit the trends to 'd' with linregress
+from scipy.stats import linregress
+
+def fit_stiffness(df):
+
+    x = np.log(df["d"])
+
+    model = {}
+
+    for col in ["k_yy", "k_zz"]:
+
+        y = np.log(df[col])
+
+        slope, intercept, r_value, _, _ = linregress(
+            x,
+            y
+        )
+
+        model[col] = {
+            "a": np.exp(intercept),
+            "b": slope,
+            "r2": r_value**2
+        }
+
+    return model
+
+def evaluate_stiffness(model, d):
+
+    return {
+        "k_yy":
+            model["k_yy"]["a"] * d**model["k_yy"]["b"],
+
+        "k_zz":
+           model["k_zz"]["a"] * d**model["k_zz"]["b"]
+    }
+
+model = fit_stiffness(df_trb)
+
+for key in ["k_yy", "k_zz"]:
+
+    a = model[key]["a"]
+    b = model[key]["b"]
+    r2 = model[key]["r2"]
+
+    print(
+        f"{key}: "
+        f"{a:.4e} * d^{b:.4f} "
+        f"(R² = {r2:.4f})"
+    )
+#%%
+# test the fit
+idx = 0
+
+row = df_trb.iloc[idx]
+
+d_test = row["d"]
+
+pred = evaluate_stiffness(
+    model,
+    d_test
+)
+
+print(f"\nd = {d_test}")
+
+for col in ["k_yy","k_zz"]:
+
+    actual = row[col]
+
+    error = (
+        100
+        * (pred[col] - actual)
+        / actual
+    )
+
+    print(
+        f"{col}: ",
+        f"actual={actual:.3e}",
+        f"pred={pred[col]:.3e}",
+        f"err={error:+.2f}"
+    )
+
+d_grid = np.linspace(
+    df_trb["d"].min(),
+    df_trb["d"].max(),
+    500
+)
+
+pred_yy = (
+    model["k_yy"]["a"]
+    * d_grid**model["k_yy"]["b"]
+)
+
+pred_zz = (
+    model["k_zz"]["a"]
+    * d_grid**model["k_zz"]["b"]
+)
+#%%
+# ===== plot the fit =====
+
+plot_yANDz_stiffnesses = False # TODO
+
+if plot_yANDz_stiffnesses:
+    clr_yy = 'tab:blue'
+    label_scat_yy = r"$k_{yy}$"+" data"
+    label_pred_yy = r"$k_{yy}$"+" fit"
+else:
+    clr_yy = 'orange'
+    label_scat_yy = 'Database'
+    label_pred_yy = "Model prediction"
+
+# plot
+plt.figure(figsize=(10,8))
+# yy
+plt.scatter(
+    df_trb["d"],
+    df_trb["k_yy"],
+    s=200,
+    color=clr_yy,
+    label = label_scat_yy
+)
+
+if plot_yANDz_stiffnesses:
+    plt.scatter(
+        df_trb["d"],
+        df_trb["k_zz"],
+        s=200,
+        c="orange",
+        label = r"$k_{zz}$"+" data"
+    )
+
+plt.plot(
+    d_grid,
+    pred_yy,
+    "-",
+    lw=5.0,
+    label = label_pred_yy
+)
+
+if plot_yANDz_stiffnesses:
+    plt.plot(
+        d_grid,
+        pred_zz,
+        "orange",
+        lw=5.0,
+        label = r"$k_{zz}$"+" fit"
+    )
+
+plt.yscale("log")
+
+if plot_yANDz_stiffnesses:
+    plt.title(
+        "Power-law fit of TRB rotational stiffness"
+    )
+else:
+    plt.title(
+        f"Power-law fit of TRB rotational stiffness \n R²={model['k_yy']['r2']:.3f}"
+    )
+
+plt.xlabel("D [mm]")
+plt.ylabel(r"$k_{\theta}$"+" [Nm/rad]")
+plt.grid(True, which="both", alpha=0.3)
+plt.legend(loc="lower right")
+plt.tight_layout()
+# -- save plot
+loc_save_plot_bearing_rotatStiff_fit = os.path.join(
+    os.path.dirname(os.path.abspath(bearing_rotatStiff_csv)),
+    "plot_fit_rotat_stiff.png")
+# plt.savefig(loc_save_plot_bearing_rotatStiff_fit) # TODO 
+# --
+plt.show()
+
+# %%
+# ==================== NEW mutli-variate ========================
+# NOTE:
+# 1. uses (d,D,B,C,C0 → k_yy), so csv needs all the first arguments
+# 2. model uses sklearn, from the 'base' environment, so much be activated
+
+import sys
+use_base = input("Are you using the 'base' venv with 'sklearn' installed? [y/N]: ")
+if use_base.strip().lower() not in ("y", "yes"):
+    print("Please activate the 'base' environment with sklearn installed and rerun.")
+    sys.exit('exit')
+
+try:
+    from sklearn.linear_model import LinearRegression
+except ImportError:
+    print("sklearn is not available. Please activate the 'base' environment with sklearn installed.")
+    sys.exit('exit')
+
+#%%
+bearing_rotatStiff_csv = os.path.join(
+    os.path.abspath(__file__), os.pardir,os.pardir,
+    "bearing_database", "TRB_with_rotat_stiffness.csv"
+)
+df_trb = pd.read_csv( bearing_rotatStiff_csv )
+
+#%%
+
+def fit_log_model(df, target):
+
+    X = np.column_stack(
+        [
+            np.log(df["d"]),
+            np.log(df["D"]),
+            np.log(df["B"]),
+            np.log(df["C_kN"]),
+            np.log(df["C0_kN"] + 1e-6),
+        ]
+    )
+
+    y = np.log(df[target])
+
+    reg = LinearRegression()
+    reg.fit(X, y)
+
+    return {
+        "intercept": reg.intercept_,
+        "coef": reg.coef_,
+        "r2": reg.score(X, y),
+        "target": target,
+    }
+
+def evaluate_model(
+    model,
+    d,
+    D,
+    B,
+    C_kN,
+    C0_kN,
+):
+
+    x = np.array(
+        [
+            np.log(d),
+            np.log(D),
+            np.log(B),
+            np.log(C_kN),
+            np.log(C0_kN + 1e-6),
+        ]
+    )
+
+    log_y = (
+        model["intercept"]
+        + np.dot(model["coef"], x)
+    )
+
+    return np.exp(log_y)
+
+def print_model(model):
+
+    c = model["coef"]
+
+    print(f"\nTarget: {model['target']}")
+    print(f"R² = {model['r2']:.5f}")
+
+    print(
+        "y = exp({:.4f}) "
+        "* d^{:.4f}"
+        "* D^{:.4f}"
+        "* B^{:.4f}"
+        "* C^{:.4f}"
+        "* C0^{:.4f}".format(
+            model["intercept"],
+            c[0],
+            c[1],
+            c[2],
+            c[3],
+            c[4],
+        )
+    )
+
+# ====== testing =======
+
+mass_model = fit_log_model(
+    df_trb,
+    "mass_kg"
+)
+print_model(mass_model)
+
+C_model = fit_log_model(
+    df_trb,
+    "C_kN"
+)
+print_model(C_model)
+
+kyy_model = fit_log_model(
+    df_trb,
+    "k_yy"
+)
+print_model(kyy_model)
+
+test_col = df_trb.iloc[0]
+evaluate_model(kyy_model,
+    d=test_col["d"],D=test_col["D"],B=test_col["B"],
+    C_kN=test_col["C_kN"],C0_kN=test_col["C0_kN"])
+
+from sklearn.model_selection import LeaveOneOut
+from sklearn.metrics import mean_absolute_percentage_error
+
+def loo_error(df, target):
+
+    loo = LeaveOneOut()
+
+    errors = []
+
+    for train, test in loo.split(df):
+
+        df_train = df.iloc[train]
+        df_test = df.iloc[test]
+
+        model = fit_log_model(
+            df_train,
+            target,
+        )
+
+        pred = evaluate_model(
+            model,
+            df_test["d"].values[0],
+            df_test["D"].values[0],
+            df_test["B"].values[0],
+            df_test["C_kN"].values[0],
+            df_test["C0_kN"].values[0],
+        )
+
+        actual = df_test[target].values[0]
+
+        errors.append(
+            abs(pred-actual)/actual
+        )
+
+    return 100*np.mean(errors)
+
+print(
+    "kyy CV error = ",
+    loo_error(df_trb,"k_yy"),
+    "%"
+)
+
+
+# %%
+# sort for plotting
+df_plot = df_trb.sort_values("d")
+
+pred = []
+
+for _, row in df_plot.iterrows():
+
+    pred.append(
+        evaluate_model(
+            kyy_model,
+            row["d"],
+            row["D"],
+            row["B"],
+            row["C_kN"],
+            row["C0_kN"],
+        )
+    )
+
+pred = np.asarray(pred)
+
+#%%
+# plot true and predictions
+
+plt.figure(figsize=(5,4))
+# actual values
+plt.scatter(
+    df_plot["d"],
+    df_plot["k_yy"],
+    s=80,
+    color='orange',
+    label="Database"
+)
+
+# fitted values
+plt.plot(
+    df_plot["d"],
+    pred,
+    "-o",
+    lw=2,
+    label="Model prediction"
+)
+
+plt.yscale("log")
+
+plt.xlabel("D [mm]")
+plt.ylabel(r"$k_{\theta}$ [Nm/rad]")
+
+plt.title(
+    f"Multivariable fit\nR²={kyy_model['r2']:.3f}"
+)
+
+plt.grid(True, which="both", alpha=0.3)
+plt.legend()
+plt.tight_layout()
+# -- save plot
+loc_plot_mb_k_theta_multivariate = os.path.join(
+    os.path.dirname(os.path.abspath(bearing_rotatStiff_csv)),
+    "plot_fit_rotat_stiff_multivariate.png")
+# plt.savefig(loc_plot_mb_k_theta_multivariate) # TODO 
+# --
+plt.show()
 # %%
