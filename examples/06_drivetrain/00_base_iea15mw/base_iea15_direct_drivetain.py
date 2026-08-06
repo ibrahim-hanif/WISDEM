@@ -377,7 +377,7 @@ if plot_cases:
     loc_save_img = None
     if save_new_plot:
         loc_save_img = os.path.join( results_path,
-                        "compare_mass"+suffix+".pdf" )
+                        "iea15DD_compare_mass"+suffix+".pdf" )
     # plot via func
     utilsDT.plot_drivetrain_mass_comparison(
         loc_save_data+".csv", os.path.join(results_path, "iea_report_DT.csv"),
