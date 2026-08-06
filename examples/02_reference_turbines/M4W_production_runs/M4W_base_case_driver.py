@@ -35,7 +35,7 @@ flag_load_from_saved_01_DT = False
 
 flag_plot = True
 verbose = False
-flag_override_hub_loads = True # TODO: not working; make a flag in model_opts which removes connections
+flag_override_hub_loads = False # TODO: not working; make a flag in model_opts which removes connections
 save_new_plot = True
 
 #%%
@@ -90,7 +90,7 @@ if flag_override_hub_loads:
 else: overrides = None
 
 #%%
-wt_opt, analysis_options, opt_options = run_wisdem(
+wt_opt, modeling_options, opt_options = run_wisdem(
     fname_wt_input, fname_modeling_options, fname_analysis_options,
     overridden_values=overrides
 )
@@ -99,13 +99,22 @@ wt_opt, analysis_options, opt_options = run_wisdem(
 # # _____ Post-processing _____
 
 # %%
-doMBfls = analysis_options["flags"]["mb_fls"]
-# Print the results
-print("F_aero_hub:")
-print(" ", wt_opt["drivese.F_aero_hub"]/1e6, " MN" )
-print("M_aero_hub:")
-print(" ", wt_opt["drivese.M_aero_hub"]/1e6, " MNm \n" )
+doMBfls = modeling_options["flags"]["mb_fls"]
+doRotorse = modeling_options["flags"]["blade"]
+doDrivese = modeling_options["flags"]["drivetrain"]
 
+# Print the results
+if doRotorse:
+      calc_Faerohub = wt_opt["rotorse.rs.aero_hub_loads.Fhub"].reshape((3,1))
+      calc_Maerohub = wt_opt["rotorse.rs.aero_hub_loads.Mhub"].reshape((3,1))
+elif doDrivese:
+      clac_Faerohub = wt_opt["drivese.F_aero_hub"]
+      calc_Maerohub = wt_opt["drivese.M_aero_hub"]
+print("F_aero_hub:")
+print(" ", calc_Faerohub/1e6, " MN" )
+print("M_aero_hub:")
+print(" ", calc_Maerohub/1e6, " MNm \n" )
+#%%
 # ---- 1P and 3P freq ranges
 rpm_min = wt_opt['drivese.minimum_rpm'][0]
 rpm_rated = wt_opt['drivese.rated_rpm'][0]
