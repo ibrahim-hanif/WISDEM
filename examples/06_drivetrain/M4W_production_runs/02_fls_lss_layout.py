@@ -50,7 +50,10 @@ from wisdem.commonse.cross_sections import Tube
 import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 # %%
 # ### Define flags
-suffix = "_m4w" # _noMBfls
+suffix = "_sima" # _noMBfls
+# 1. "_m4w"
+# 2. "_m4w_noMBfls"
+# 3. "_sima"
 
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
@@ -68,11 +71,13 @@ load_fls_loads = False
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
+if "sima" in suffix:
+    loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat"
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
 # Optimization flags
-flag_opt_GBO = False     # GBO: gradient based optimizer
+flag_opt_GBO = True     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 
