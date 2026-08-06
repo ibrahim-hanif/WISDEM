@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 import os
 import openmdao.api as om
 # main colors
-from my_util_tools import util_funcs
-loc_clr_scheme_m4w = util_funcs.loc_clr_scheme_m4w
-clrs_m4w = util_funcs.read_color_scheme(loc_clr_scheme_m4w)
+from Drive4Wind.post_processing import color_schemes
+loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
+clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
 
 results_dir = "00_results"
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -56,17 +56,20 @@ for mb in mbList:
     # input dia
     mass = np.copy( myzeros )
     Cr = np.copy( myzeros )
+    fw = np.copy( myzeros )
 
     for iDia in range(len(diaList)):
         mbProb["D_shaft"] = diaList[iDia]
         # compute
         mbProb.run_model()
         # store values
-        mass[iDia] = mbProb["mb_mass"]
-        Cr[iDia] = mbProb["mb_Cr"] * N_to_kN # N to kN
+        mass[iDia] = mbProb["mb_mass"][0]
+        Cr[iDia] = mbProb["mb_Cr"][0] * N_to_kN # N to kN
+        fw[iDia] = mbProb["face_width"][0]
     
     mbData[mb]["mass"] = mass
     mbData[mb]["Cr"] = Cr
+    mbData[mb]["width"] = fw
 
 # %% # Plotting options
 clrsList = [
@@ -160,4 +163,39 @@ prob.model.add_subsystem( 'mb', dc.MainBearing_withDerivatives(),
                          promotes=['*'])
 prob.setup()
 # %%
+k_torsional = 3e10-6e8 # Nm/rad
+
 prob['mb_e']
+prob["bearing_type"] = "TRB2"
+prob["D_shaft"] = D_shaft = 3.406783213751883 # m
+prob.run_model()
+# outputs
+mb_mass = prob["mb_mass"] # kg
+mb_fw = prob["face_width"] # m
+mb_Cr = prob["mb_Cr"] # N
+mb_k = prob["mb_k"] # Nm
+
+k_torsional / (mb_Cr*D_shaft) # coeff_torsional = 
+
+#%%
+# ----- parse
+idx = np.argmin(np.abs(diaList - D_shaft))
+mass = mbData['TRB2']['mass'][idx] # kg
+Cr = mbData['TRB2']['Cr'][idx] / N_to_kN # N
+fw = mbData['TRB2']['width'][idx] # m
+# ------------ 1
+#a=0.1541, b=0.2087, k=1442.6, n=1.8932, c=6579.9, m=0.8592
+c=6579.9
+m=0.8592
+coeff_torsional = 457.502
+# k_tor = K * D * Cr = K * c*D**(m+1)*1e3
+denom = c*D_shaft**(m+1) / N_to_kN
+k_torsional / denom # = coeff_torsional
+
+# %%
+# ------------ 2
+# k_tor = K*Cr*(B/D)**0.5 * D
+# K = 
+denom = Cr * ((fw/D_shaft)**0.5) * D_shaft
+k_torsional / denom
+# %%
