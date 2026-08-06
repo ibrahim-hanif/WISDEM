@@ -55,13 +55,15 @@ if flag_load_from_data:
 
 #%% Loading `openFAST` hub loads from a saved file
 part_loads = True 
+sima_loads = True
 load_fls_loads = False
 # False: full loads (72e4,10) (200 Hz sampled, 60mins)
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
-loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
+if sima_loads:
+    loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
 
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_new.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
@@ -97,7 +99,9 @@ params_plot_rc = {
 plt.rcParams.update( params_plot_rc )
 # %%
 # Plot hub load statistics
-loc_hub_loads_stats = os.path.join(dir_loads, "hub_loads_M4W_stats.pdf")
+loc_hub_loads_stats = os.path.join(dir_loads, "hub_loads_M4W_stats.png")
+if sima_loads:
+    loc_hub_loads_stats = os.path.join(dir_loads, "hub_loads_SIMA_stats.png")
 
 analyseWTLoads.plot_ms_load_statistics(
     S_all,clrs_m4w["Turquoise"],clrs_m4w["Aqua"], (15,15)
