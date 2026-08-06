@@ -65,8 +65,12 @@ if opt_mbsa:
      loc_scaling_report = os.path.join(dir_m4w_run,
       'outputs', 'scaling_report_MBSA.html')
 
-#%% Overwrite values ?
-overrides = {}
+#%%
+# Overwrite values ?
+loc_base_case_csv = os.path.join(dir_02_rwt_m4w,"outputs","basecase_NOoptim.csv")
+from utilities_drivetrain import parse_rotor_props_from_base_case_csv2dict
+# -- from rotor, blade, tower
+overrides = parse_rotor_props_from_base_case_csv2dict(loc_base_case_csv)
 
 # load hub loads from .mat file (from m4w ULS)
 if flag_override_own_hub_loads:
@@ -82,18 +86,6 @@ if flag_override_own_hub_loads:
       # override
       overrides['drivese.F_aero_hub'] = F_aero_hub
       overrides['drivese.M_aero_hub'] = M_aero_hub
-      # from rotorse or blade
-      overrides["drivese.spinner_gust_ws"] = 70.0
-      overrides["drivese.rated_rpm"] = 7.56
-      overrides["drivese.rated_torque"] = 21.3E6
-      overrides["drivese.pitch_system.BRFM"] = 117585772.28432259
-      overrides["drivese.blade_root_diameter"] = 5.2
-      overrides["drivese.blades_cm"] = 2.1853055315151138
-      overrides["drivese.blade_mass"] = 68233.0936092383
-      overrides["drivese.blades_mass"] = 68233.0936092383*3
-      overrides["drivese.blades_I"] = np.r_[348506332.76071006, 174253166.38035503, 174253166.38035503, 0.0, 0.0, 0.0]
-      # towerse
-      overrides["drivese.D_top"] = 6.5
 
 elif flag_override_tower_init:
       overrides['towerse.tower_outer_diameter'] = np.ones((1,20))*15
@@ -110,6 +102,8 @@ wt_opt, analysis_options, opt_options = run_wisdem(
 
 # %%
 doMBfls = analysis_options["flags"]["mb_fls"]
+doTower = analysis_options["flags"]["tower"]
+
 print("MB FLS: ", doMBfls)
 # Print the results
 print("\nF_aero_hub [M-N]:") # NOTE: overwritten with hub loads .mat input
@@ -118,17 +112,18 @@ print("M_aero_hub [M-Nm]:")
 print(" ", wt_opt["drivese.M_aero_hub"]/1e6, "\n" )
 
 # ---- 1P and 3P freq ranges
-rpm_min = wt_opt['drivese.minimum_rpm'][0]
-rpm_rated = wt_opt['drivese.rated_rpm'][0]
-freq_range_1P = np.array( [rpm_min, rpm_rated] )/60
-freq_range_3P = 3* freq_range_1P
-print("1P (blade period) freq ranges:")
-print(" ", freq_range_1P, " Hz" )
-print("3P (blade passing) freq ranges:")
-print(" ", freq_range_3P, " Hz" )
-freq_tower = wt_opt["towerse.tower.structural_frequencies"] # towerse.tower OR floatingse.structural_frequencies
-print("Tower fore-aft/side-side freq range:")
-print(" ", freq_tower[0:2], " Hz \n" )
+if doTower:
+      rpm_min = wt_opt['drivese.minimum_rpm'][0]
+      rpm_rated = wt_opt['drivese.rated_rpm'][0]
+      freq_range_1P = np.array( [rpm_min, rpm_rated] )/60
+      freq_range_3P = 3* freq_range_1P
+      print("1P (blade period) freq ranges:")
+      print(" ", freq_range_1P, " Hz" )
+      print("3P (blade passing) freq ranges:")
+      print(" ", freq_range_3P, " Hz" )
+      freq_tower = wt_opt["towerse.tower.structural_frequencies"] # towerse.tower OR floatingse.structural_frequencies
+      print("Tower fore-aft/side-side freq range:")
+      print(" ", freq_tower[0:2], " Hz \n" )
 
 # ---- drivetrain variables
 print("LSS desvars:")
@@ -154,15 +149,16 @@ print("- bedplate: ",
 print("- MB1 defl: ", wt_opt["drivese.constr_mb1_defl"] )
 print("- MB2 defl: ", wt_opt["drivese.constr_mb2_defl"], "\n" )
 
-print("- tower GL buckling: ",
-      np.max( wt_opt["towerse.post.constr_global_buckling"] )
-      )
-print("- tower Sh buckling: ",
-      np.max( wt_opt["towerse.post.constr_shell_buckling"] )
-      )
-print("- tower stress von-Mises: ",
-      np.max( wt_opt["towerse.post.constr_stress"] )
-      )
+if doTower:
+      print("- tower GL buckling: ",
+            np.max( wt_opt["towerse.post.constr_global_buckling"] )
+            )
+      print("- tower Sh buckling: ",
+            np.max( wt_opt["towerse.post.constr_shell_buckling"] )
+            )
+      print("- tower stress von-Mises: ",
+            np.max( wt_opt["towerse.post.constr_stress"] )
+            )
 
 print("\nTower-top / drivetrain bedplate base loads:")
 print(" - base_F: ", wt_opt['drivese.base_F'])
@@ -177,11 +173,12 @@ print("\n--- RNA properties ---")
 print(f"RNA mass: {wt_opt["drivese.rna_mass"]}")
 print(f"RNA cm: {wt_opt["drivese.rna_cm"]}")
 #
-print("\nTower mass: ", wt_opt['towerse.tower_mass'])
-#
-print("\nNacelle+Tower mass: ",
-      wt_opt['drivese.nacelle_mass'] + wt_opt['towerse.tower_mass']
-      )
-print("\nRNA+Tower mass: ", wt_opt['towerse.turbine_mass'])
+if doTower:
+      print("\nTower mass: ", wt_opt['towerse.tower_mass'])
+      #
+      print("\nNacelle+Tower mass: ",
+            wt_opt['drivese.nacelle_mass'] + wt_opt['towerse.tower_mass']
+            )
+      print("\nRNA+Tower mass: ", wt_opt['towerse.turbine_mass'])
 # -----------------------------------------------------------------------
 # %%
