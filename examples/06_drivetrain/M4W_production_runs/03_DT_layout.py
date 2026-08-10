@@ -56,7 +56,7 @@ import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 
 # %% [markdown]
 # ### Define flags
-suffix = "_m4w_flip"
+suffix = "_m4w_sima"
 # information
 # 1. '_m4w_flip':   np.flip on D and t of lss in GearedLayout
 # 2. '_m4w_noflip': no np.flip on D and t of lss in GearedLayout
@@ -71,7 +71,7 @@ load_fls_loads = False
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4w.mat")
-if suffix == "_m4w_sima":
+if "sima" in suffix:
     loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
 
 # Optimization flags
@@ -654,6 +654,11 @@ print(" - yaw system mass: ", prob["yaw_mass"][0] )
 print(" = nacelle_mass:", prob["nacelle_mass"][0] )
 print(f" - nacelle cm: {prob["nacelle_cm"]}")
 
+print("\n--- Above-yaw properties ---")
+print(f" mass: {prob["above_yaw_mass"]}") # drivese.rna_mass
+print(f" cm: {prob["above_yaw_cm"]}") # drivese.rna_cm
+print(f" MoI [Ixx, Iyy, Izz, Ixy, Ixz, Iyz] [t.m^2]:\n {prob["above_yaw_I_TT"]/1e3}") # drivese.rna_I_TT
+
 print("\n--- RNA properties ---")
 print(f"RNA mass: {prob["rna_mass"]}") # drivese.rna_mass
 print(f"RNA cm: {prob["rna_cm"]}") # drivese.rna_cm
@@ -688,8 +693,14 @@ if flag_save_new_data: save_data(loc_save_data, prob)
 # ### Drivetrain mass comparison (IEA and M4W)
 #%%
 if plot_cases:
-    csv_iea15_UN = os.path.join( script_dir,
-        "..\\00_base_iea15mw\\results\\m4w_base_case_DT_old_loads.csv")
+    csv_iea15_dir = os.path.join( script_dir, os.path.pardir,
+        "00_base_iea15mw","results" )
+    if "sima" in suffix:
+        csv_iea15_case = "m4w_base_case_DT_sima_loads.csv"
+    else:
+        csv_iea15_case = "m4w_base_case_DT_old_loads.csv"
+
+    csv_iea15_UN = os.path.join( csv_iea15_dir, csv_iea15_case)
     # save plot loc
     loc_save_img = None
     if save_new_plot:
