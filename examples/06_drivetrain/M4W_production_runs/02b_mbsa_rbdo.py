@@ -44,7 +44,7 @@ import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 
 # %%
 # ### Define flags
-suffix = "_m4w" # _noMBfls
+suffix = "_sima" # _noMBfls
 
 # Optimization flags
 flag_opt_GBO = False     # GBO: gradient based optimizer
@@ -66,6 +66,8 @@ load_fls_loads = False
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
+if "sima" in suffix:
+    loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
@@ -1543,3 +1545,41 @@ class ReliabiltyComponent( om.ExplicitComponent ):
         ])
 
 # %%
+# FLS uncertain class =======================
+#%%
+from wisdem.drivetrainse.drive_structure import Analytical_FLS_Bearing_Life
+
+class Analytical_FLS_Bearing_Life_RBDO(
+    Analytical_FLS_Bearing_Life
+):
+    """
+    RBDO extension of the deterministic WISDEM
+    Analytical_FLS_Bearing_Life component.
+
+    The parent performs the deterministic FLS bearing-life
+    calculation.
+
+    This subclass only provides an interface for applying
+    stochastic load factors before the parent calculation.
+    """
+
+    def initialize(self):
+        super().initialize()
+
+        self.options.declare(
+            "rbdo_load_factors",
+            default=None,
+            allow_none=True,
+        )
+
+    def setup(self):
+        super().setup()
+
+        # RBDO load multipliers
+        self.add_input("lambda_Fx", val=1.0)
+        self.add_input("lambda_Fy", val=1.0)
+        self.add_input("lambda_Fz", val=1.0)
+
+        self.add_input("lambda_Mx", val=1.0)
+        self.add_input("lambda_My", val=1.0)
+        self.add_input("lambda_Mz", val=1.0)
