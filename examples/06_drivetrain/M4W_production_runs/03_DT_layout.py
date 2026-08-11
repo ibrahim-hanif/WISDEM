@@ -63,6 +63,7 @@ suffix = "_m4w_sima"
 # 3. '_m4w':        no flip as well (same as 2. above)
 # 4. '_m4w_noMBfls'
 # 5. '_m4w_sima':   sima loads
+# 6. '_m4w_sima_noMBfls':   sima loads without MB fls
 
 # pre-processing; Loading `openFAST` hub loads from a saved file
 part_loads = True 
