@@ -10,6 +10,7 @@
 
 #%%
 import sys
+import scipy.io as sio
 
 venv_needed = 'rbdo_wisdem_env'
 
@@ -20,6 +21,7 @@ if use_base.strip().lower() not in ("y", "yes"):
 
 try:
     import openturns as ot
+    import openturns.viewer as otv
 except ImportError:
     print("openturns is not available. Please activate the "+venv_needed+" environment with openturns installed.")
     sys.exit('exit')
@@ -496,11 +498,14 @@ if record_cases:
     results_dict = get_recorder_results( loc_cases, None, True )
     print(results_dict);
 
-#%%[markdown]
+#%%
 # Driver scaling report 
-prob.driver.scaling_report(
-    outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
-);
+try:
+    prob.driver.scaling_report(
+        outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
+    );
+except:
+    pass
 #%%
 if flag_save_new_data: save_data(loc_save_data, prob)
 # ===============================================================
@@ -1081,7 +1086,8 @@ class MBSAEvaluator:
         F_aero_hub,
         M_aero_hub,
         lss_E,
-        mb2_e
+        mb2_e,
+        X_fls
     ):
 
         prob = self.prob
@@ -1091,6 +1097,7 @@ class MBSAEvaluator:
         prob.set_val("M_aero_hub", M_aero_hub)
         prob.set_val("lss_E", lss_E)
         prob.set_val("bear2.mb_e", mb2_e)
+        prob.set_val("mb_fls.X_fls", X_fls)
 
         prob.run_model()
 
@@ -1145,7 +1152,8 @@ class MBSAEvaluator:
         F_aero_hub,
         M_aero_hub,
         lss_E,
-        mb2_e
+        mb2_e,
+        X_fls
     ):
 
         key = tuple(
@@ -1154,9 +1162,10 @@ class MBSAEvaluator:
                     F_aero_hub,
                     M_aero_hub,
                     [lss_E],
-                    [mb2_e]
+                    [mb2_e],
+                    [X_fls]
                 ]),
-                8
+                9
             )
         )
 
@@ -1166,7 +1175,8 @@ class MBSAEvaluator:
             F_aero_hub,
             M_aero_hub,
             lss_E,
-            mb2_e
+            mb2_e,
+            X_fls
         )
 
         self.cache[key] = result
@@ -1195,11 +1205,14 @@ class MBSALimitState:
 
         e = X[7]
 
+        X_fls = X[8]
+
         result = self.evaluator.cached_evaluate( # TODO cached eval
             F_aero_hub=F,
             M_aero_hub=M,
             lss_E=E,
-            mb2_e=e
+            mb2_e=e,
+            X_fls=X_fls
         )
 
         return [
@@ -1223,7 +1236,7 @@ def compute_beta(
     # Define the limit state function using the MBSALimitState class
     # ----------------
     g = ot.PythonFunction(
-        inputDim=8,
+        inputDim=9,
         outputDim=1,
         func=MBSALimitState(
             evaluator,
@@ -1252,6 +1265,7 @@ def compute_beta(
         constr_info['operator'],
         constr_info['threshold']
     )
+    event.setName("deviation")
 
     # ----------------
     # Rough estimate beta beforehand to skip inactive constraints
@@ -1263,17 +1277,23 @@ def compute_beta(
     sigma = vals.std()
     if bool(np.ptp(vals) < 1.e-8) or bool(sigma < 1e-16):
         print(f"-- constraint appears deterministic: limit state constant wrt. uncertain vars: sigma={sigma}; returning safe values.")
-        return np.inf, 0.0
-
-    beta_est = (1.0-mu)/sigma
+        return np.inf, 0.0, None
+    # beta_est
+    threshold = constr_info['threshold']
+    if str(constr_info['operator']) == '<':
+        beta_est = (mu-threshold)/sigma
+    elif str(constr_info['operator']) == '>':
+        beta_est = (threshold-mu)/sigma
     if bool(beta_est > 8.0):
         print(f"-- inactive reliab constr: estimate beta {beta_est} > 8.0; returning safe values.")
-        return np.inf, 0.0
+        return np.inf, 0.0, None
 
     # ----------------
     # FORM
     # ----------------
     optimAlgo = ot.Cobyla()
+    optimAlgo.setStartingPoint( startingPoint )
+    optimAlgo.setMaximumCallsNumber( 1000 ) # TODO
     maxError = 1.e-3
     optimAlgo.setMaximumAbsoluteError(maxError)
     optimAlgo.setMaximumRelativeError(maxError)
@@ -1292,7 +1312,8 @@ def compute_beta(
 
     return (
         result.getHasoferReliabilityIndex(),
-        result.getEventProbability()
+        result.getEventProbability(),
+        result
     )
 
 # %%
@@ -1316,68 +1337,53 @@ def make_distribution_of_mbsa_inputs():
     lss_E = float(savedDataDict["lss_E"])
     mb1_e = float(savedDataDict["bear1.mb_e"])
     mb2_e = float(savedDataDict["bear2.mb_e"])
+    # Inputs: random distibutions saved
+    all_loads_dict = sio.loadmat(loc_all_loads_mat_file)
+    str_max_dist = "_max_mu_norm_sigma"
 
-    dims = 8
+    dims = 9
+
     # F_aero_hub
-    F_aero_cov = M_aero_cov = 0.2 # 10-20 %
-    F_aero_sigma = F_aero_hub * F_aero_cov
     # - 1.
-    F1 = ot.LogNormal()  # in N
-    F1.setParameter(ot.LogNormalMuSigma()(
-        [F_aero_hub[0], F_aero_sigma[0], 0.0]
-        ))
-    # F1.setDescription("Fx")
+    F1_dist = all_loads_dict["Fx"+str_max_dist]
+    F1 = F_aero_hub[0] * ot.LogNormal( F1_dist[0,0], F1_dist[0,1] ) # in N
+    F1.setDescription([r"$F_x^{ULS}$"])
     F1.setName("F_aero_hub_x")
     # - 2.
-    F2 = ot.LogNormal()  # in N
-    F2.setParameter(ot.LogNormalMuSigma()(
-        [F_aero_hub[1], F_aero_sigma[1], 0.0] # TODO
-        ))
-    # F2.setDescription("Fy")
+    F2_dist = all_loads_dict["Fy"+str_max_dist]
+    F2 = F_aero_hub[1] * ot.LogNormal( F2_dist[0,0], F2_dist[0,1] ) # in N
+    F2.setDescription([r"$F_y^{ULS}$"])
     F2.setName("F_aero_hub_y")
     # - 3.
-    F3 = ot.LogNormal()  # in N
-    F3.setParameter(ot.LogNormalMuSigma()(
-        [F_aero_hub[2], F_aero_sigma[2], 0.0] # TODO
-        ))
-    # F3.setDescription("Fz")
+    F3_dist = all_loads_dict["Fz"+str_max_dist]
+    F3 = F_aero_hub[2] * ot.LogNormal( F3_dist[0,0], F3_dist[0,1] ) # in N
+    F3.setDescription([r"$F_z^{ULS}$"])
     F3.setName("F_aero_hub_z")
 
     # M_aero_hub
-    M_aero_sigma = M_aero_hub * M_aero_cov
     # - 1.
-    M1 = ot.LogNormal()  # in N
-    M1.setParameter(ot.LogNormalMuSigma()(
-        [M_aero_hub[0], M_aero_sigma[0], 0.0] # TODO
-        ))
-    # M1.setDescription("Mx")
+    M1_dist = all_loads_dict["Mx"+str_max_dist]
+    M1 = M_aero_hub[0] * ot.LogNormal( M1_dist[0,0], M1_dist[0,1] ) # in N
+    M1.setDescription([r"$M_x^{ULS}$"])
     M1.setName("M_aero_hub_x")
     # - 2.
-    M2 = ot.LogNormal()  # in N
-    M2.setParameter(ot.LogNormalMuSigma()(
-        [M_aero_hub[1], M_aero_sigma[1], 0.0] # TODO
-        ))
-    # M2.setDescription("My")
+    M2_dist = all_loads_dict["My"+str_max_dist]
+    M2 = M_aero_hub[1] * ot.LogNormal( M2_dist[0,0], M2_dist[0,1] ) # in N
+    M2.setDescription([r"$M_y^{ULS}$"])
     M2.setName("M_aero_hub_y")
     # - 3.
-    M3 = ot.LogNormal()  # in N
-    M3.setParameter(ot.LogNormalMuSigma()(
-        [M_aero_hub[2], M_aero_sigma[2], 0.0] # TODO
-        ))
-    # M3.setDescription("Mz")
+    M3_dist = all_loads_dict["My"+str_max_dist]
+    M3 = M_aero_hub[2] * ot.LogNormal( M3_dist[0,0], M3_dist[0,1] ) # in N
+    M3.setDescription([r"$M_z^{ULS}$"])
     M3.setName("M_aero_hub_z")
 
     # # Young's modulus E (in N/m^2)
     # - 1. real
-    E = ot.LogNormal()  # in N
-    E_cov = 0.03 # 2-3 %
-    E_sigma = E_cov*lss_E
-    E.setParameter(ot.LogNormalMuSigma()(
-        [lss_E, E_sigma, 0.0] # TODO
-        ))
+    E_cov = 0.02 # 2-3 %
+    E = lss_E * ot.Normal(1, E_cov)  # in N
     # - 2. test TODO 
     # E = ot.Beta(0.9, 3.5, lss_E*0.999, lss_E*1.001)
-    E.setDescription("E")
+    E.setDescription(r"$E$")
     E.setName("Young modulus")
 
     # MB2's e (not mb1, coz its assumed only-radial reacting so no 'e' used)
@@ -1389,7 +1395,19 @@ def make_distribution_of_mbsa_inputs():
         0.26,   # typical value of e might be 0.26 (contact angle = 10 deg) to
         1.5     # 1.5 (contact angle = 45 deg) as e = 1.5*tan(alpha)
     )
+    e_mb2.setDescription([r"$e^{MB2}$"])
     e_mb2.setName("mb2_e")
+
+    # FLS loads
+    # = X_aero & X_dyn (cf. 2014_Nejad-On long term)
+    X_fls = ot.LogNormal()
+    X_fls.setParameter(
+        ot.LogNormalMuSigma()(
+            [1.0, 0.111915, 0.0] # TODO: 0.05 test
+        )
+    )
+    X_fls.setDescription([r"$X^{FLS}$"]) # TODO: rename to \xi
+    X_fls.setName("X_FLS_hub_load")
 
     # correlation matrix TODO
     # - Aerodynamic loads are highly correlated.
@@ -1402,7 +1420,7 @@ def make_distribution_of_mbsa_inputs():
         ot.NormalCopula.GetCorrelationFromSpearmanCorrelation(R)
     )
     distribution = ot.JointDistribution(
-        [F1,F2,F3, M1,M2,M3, E, e_mb2], copula
+        [F1,F2,F3, M1,M2,M3, E, e_mb2, X_fls], copula
     )
 
     # TODO testing: correlation matrix of 3
@@ -1418,35 +1436,47 @@ def make_distribution_of_mbsa_inputs():
     return distribution
 
 #%%
+# post-processing functions
+
+# Importance factors
+def draw_importance_factors( results ):
+    graph = results.drawImportanceFactors()
+    view = otv.View(graph)
+
+#%%
+# Add uncertainty to FLS hub loads # TODO
+opts["WISDEM"]["DriveSE"]["reliability"] = True
+
+#%%
 distribution = make_distribution_of_mbsa_inputs()
 evaluator = MBSAEvaluator(opts,loc_load_saved_data+".csv")
 
 #%%
-beta_vm, pf_vm = compute_beta(
+beta_vm, pf_vm, results_vm = compute_beta(
     distribution,
     evaluator,
     "constr_lss_vonmises"
 )
 
-beta_shaft_defl, pf_shaft_defl = compute_beta(
+beta_shaft_defl, pf_shaft_defl, results_shaft_defl = compute_beta(
     distribution,
     evaluator,
     "constr_shaft_deflection"
 )
 
-beta_shaft_angle, pf_shaft_angle = compute_beta(
+beta_shaft_angle, pf_shaft_angle, results_shaft_angle = compute_beta(
     distribution,
     evaluator,
     "constr_shaft_angle"
 )
 
-beta_mb1, pf_mb1 = compute_beta(
+beta_mb1, pf_mb1, results_mb1 = compute_beta(
     distribution,
     evaluator,
     "constr_L10_mb1"
 )
-
-beta_mb2, pf_mb2 = compute_beta(
+#%%
+beta_mb2, pf_mb2, results_mb2 = compute_beta(
     distribution,
     evaluator,
     "constr_L10_mb2"
