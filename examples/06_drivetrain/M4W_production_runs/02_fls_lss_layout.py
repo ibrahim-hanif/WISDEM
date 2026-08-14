@@ -564,7 +564,7 @@ if not flag_load_from_data:
     prob["bear2.bearing_type"] = "TRB2" # 2. fixed MB
     prob["bear1.mb_e"] = 0.4 # from 3.5-4.0 (TODO: find ref.)
     prob["bear2.mb_e"] = 0.4
-    prob["bear2.mb_k"] = 3.0*1e10 - 6e8
+    # prob["bear2.mb_k"] = 3.0*1e10 - 6e8 # now defined in mb, alhamdolillah
     if doMBfls:
         prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
         prob["mb_fls.k_mb2"] = prob["bear2.mb_k"]
@@ -1184,7 +1184,7 @@ if (param_for_study.lower() == "ldd") and (
             L_h1[0],
             L_12[0],
             color = clrs_m4w["Aqua"],
-            s=80,
+            s=100,
             zorder=4,
             label='Start' if i == 0 else None
         )
@@ -1271,7 +1271,7 @@ if (param_for_study.lower() == "ldd") and (
             L_12[0],
             m_msa[0],
             color = clrs_m4w["Aqua"],
-            s=100,
+            s=120,
             zorder=3,
             label='Start' if i == 0 else None
         )
@@ -1293,7 +1293,7 @@ if (param_for_study.lower() == "ldd") and (
             m_msa[-1],
             color = clrs_m4w["Dark_Blue"],
             marker='x',
-            s=120,
+            s=200,
             zorder=4,
             depthshade=False,
             label='Converged' if i == 0 else None
@@ -1316,7 +1316,7 @@ if (param_for_study.lower() == "ldd") and (
     # rotate view (via camera angles)
     # def: (30,-60), print(ax.elev, ax.azim)
     # lrd: (40,-60)
-    if meth_Peq=="lrd": ax.view_init(elev=40, azim=-60)
+    if meth_Peq=="del": ax.view_init(elev=40, azim=40)
     # plt.ion() # interactive
     # ------------------------
     # Save plot
@@ -1424,11 +1424,11 @@ fig, axs = plt.subplots(1, 2, figsize=(16, 8))
 
 # --- (0,0) absolute stacked ---
 axs[0].bar(configs, df["mb1_mass"],
-            label="MB1", color=clrs_m4w["Aqua"])
+            label="MB1" )#, color=clrs_m4w["Aqua"])
 axs[0].bar(configs, df["mb2_mass"], bottom=df["mb1_mass"],
-            label="MB2", color=clrs_m4w["Green"])
+            label="MB2" )#, color=clrs_m4w["Green"])
 axs[0].bar(configs, df["lss_mass"], bottom=df["mb1_mass"] + df["mb2_mass"],
-            label="LSS", color=clrs_m4w["Light_Red"])
+            label="LSS" )#, color=clrs_m4w["Light_Red"])
 axs[0].set_ylabel("Mass [t]")
 axs[0].set_title("Mass distribution (absolute)")
 axs[0].legend(loc="upper left")
@@ -1442,11 +1442,11 @@ mb2_norm = df["mb2_mass"] / total
 lss_norm = df["lss_mass"] / total
 
 axs[1].bar(configs, mb1_norm,
-            label="MB1", color=clrs_m4w["Aqua"])
+            label="MB1" )#, color=clrs_m4w["Aqua"])
 axs[1].bar(configs, mb2_norm, bottom=mb1_norm,
-            label="MB2", color=clrs_m4w["Green"])
+            label="MB2" )#, color=clrs_m4w["Green"])
 axs[1].bar(configs, lss_norm, bottom=mb1_norm + mb2_norm,
-            label="LSS", color=clrs_m4w["Light_Red"])
+            label="LSS" )#, color=clrs_m4w["Light_Red"])
 
 axs[1].set_ylabel("Mass fraction [-]")
 axs[1].set_title("Mass distribution (normalized)")
@@ -1505,7 +1505,7 @@ cmap = LinearSegmentedColormap.from_list(
 # Normalize so that 1.0 maps exactly to "Red"
 norm = Normalize(vmin=0.0, vmax=1.2)
 
-im = ax2.imshow(heatmap, cmap=cmap, norm=norm, aspect="auto")
+im = ax2.imshow(heatmap, norm=norm, aspect="auto" )#, cmap=cmap)
 
 
 ax2.set_xticks(range(len(configs)))
@@ -1546,10 +1546,10 @@ fig, axs = plt.subplots(2, 2, figsize=(14, 10))
 
 # Color mapping for each configuration
 colors = {
-    "CRB-TRB2": clrs_m4w["Aqua"],
-    "CARB-TRB2": clrs_m4w["Teal"],
-    "CRB-SRB": clrs_m4w["Green"],
-    "CARB-SRB": clrs_m4w["Light_Red"],
+    "CRB-TRB2": "tab:blue", #clrs_m4w["Aqua"],
+    "CARB-TRB2": "tab:orange", #clrs_m4w["Teal"],
+    "CRB-SRB": "tab:green", #clrs_m4w["Green"],
+    "CARB-SRB": "tab:red", #clrs_m4w["Light_Red"],
 }
 
 configs = df["config"]
@@ -1573,7 +1573,7 @@ titles = ["$L_{h1}$ [m]", "$L_{12}$ [m]", "$D^*$ [m]", "$t^*$ [m]"]
 # Plot loop
 for ax, data, title in zip(axs.flatten(), vars_data, titles):
     for i, cfg in enumerate(configs):
-        ax.bar(i, data.iloc[i], color=colors[cfg])
+        ax.bar(i, data.iloc[i] )#, color=colors[cfg])
     # ax.set_title(title)
     ax.set_xticks([])
     # ax.set_xticklabels(configs, rotation=30)
