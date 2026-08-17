@@ -1099,6 +1099,10 @@ class MBSAEvaluator:
         prob.set_val("bear2.mb_e", mb2_e)
         prob.set_val("mb_fls.X_fls", X_fls)
 
+        # TODO: test with diff MBs
+        prob["bear1.bearing_type"] = "CARB" # CARB or CRB
+        prob["bear2.bearing_type"] = "TRB2" # SRB or TRB2
+
         prob.run_model()
 
         outputs = {
@@ -1279,6 +1283,7 @@ def compute_beta(
         print(f"-- constraint appears deterministic: limit state constant wrt. uncertain vars: sigma={sigma}; returning safe values.")
         return np.inf, 0.0, None
     # beta_est
+    # = correct direction for a quick response-space screening estimate.
     threshold = constr_info['threshold']
     if str(constr_info['operator']) == '<':
         beta_est = (mu-threshold)/sigma
@@ -1372,7 +1377,7 @@ def make_distribution_of_mbsa_inputs():
     M2.setDescription([r"$M_y^{ULS}$"])
     M2.setName("M_aero_hub_y")
     # - 3.
-    M3_dist = all_loads_dict["My"+str_max_dist]
+    M3_dist = all_loads_dict["Mz"+str_max_dist]
     M3 = M_aero_hub[2] * ot.LogNormal( M3_dist[0,0], M3_dist[0,1] ) # in N
     M3.setDescription([r"$M_z^{ULS}$"])
     M3.setName("M_aero_hub_z")
@@ -1383,7 +1388,7 @@ def make_distribution_of_mbsa_inputs():
     E = lss_E * ot.Normal(1, E_cov)  # in N
     # - 2. test TODO 
     # E = ot.Beta(0.9, 3.5, lss_E*0.999, lss_E*1.001)
-    E.setDescription(r"$E$")
+    E.setDescription([r"$E$"])
     E.setName("Young modulus")
 
     # MB2's e (not mb1, coz its assumed only-radial reacting so no 'e' used)
@@ -1402,11 +1407,11 @@ def make_distribution_of_mbsa_inputs():
     # = X_aero & X_dyn (cf. 2014_Nejad-On long term)
     X_fls = ot.LogNormal()
     X_fls.setParameter(
-        ot.LogNormalMuSigma()(
+        ot.LogNormalMuSigma()( # NOTE: Good if physical mean = 1.0, physical std = 0.111915.
             [1.0, 0.111915, 0.0] # TODO: 0.05 test
         )
     )
-    X_fls.setDescription([r"$X^{FLS}$"]) # TODO: rename to \xi
+    X_fls.setDescription([r"$\chi^{FLS}$"]) # TODO: rename to \xi
     X_fls.setName("X_FLS_hub_load")
 
     # correlation matrix TODO
@@ -1434,14 +1439,6 @@ def make_distribution_of_mbsa_inputs():
     # )
 
     return distribution
-
-#%%
-# post-processing functions
-
-# Importance factors
-def draw_importance_factors( results ):
-    graph = results.drawImportanceFactors()
-    view = otv.View(graph)
 
 #%%
 # Add uncertainty to FLS hub loads # TODO
@@ -1475,12 +1472,56 @@ beta_mb1, pf_mb1, results_mb1 = compute_beta(
     evaluator,
     "constr_L10_mb1"
 )
-#%%
+
 beta_mb2, pf_mb2, results_mb2 = compute_beta(
     distribution,
     evaluator,
     "constr_L10_mb2"
 )
+
+#%%
+# post-processing functions
+
+# Importance factors
+def draw_importance_factors( results ):
+    graph = results.drawImportanceFactors()
+    view = otv.View(graph)
+
+def draw_beta_sensitities( results ):
+    marginalSensitivity, otherSensitivity = results.drawHasoferReliabilityIndexSensitivity()
+    marginalSensitivity.setLegends([
+        "Fx", "Fy", "Fz",
+        "Mx", "My", "Mz",
+        "E", "e", "X_fls"
+    ])
+    marginalSensitivity.setLegendPosition("bottom")
+    view = otv.View(marginalSensitivity)
+
+def draw_event_probab_sensitities( results ):
+    marginalSensitivity, otherSensitivity = results.drawEventProbabilitySensitivity()
+    marginalSensitivity.setLegends([
+            "Fx", "Fy", "Fz",
+            "Mx", "My", "Mz",
+            "E", "e", "X_fls"
+        ])
+    marginalSensitivity.setLegendPosition("bottom")
+    view = otv.View(marginalSensitivity)
+
+def draw_optim_error_history( results) :
+    # Error history
+    optimResult = results.getOptimizationResult()
+    graphErrors = optimResult.drawErrorHistory()
+    graphErrors.setLegendPosition("bottom")
+    graphErrors.setYMargin(0.0)
+    view = otv.View(graphErrors)
+
+#%%
+# post-process results from FORM
+if results_vm is not None: draw_importance_factors(results_vm)
+if results_shaft_defl is not None: draw_importance_factors(results_shaft_defl)
+if results_shaft_angle is not None: draw_importance_factors(results_shaft_angle)
+if results_mb1 is not None: draw_importance_factors(results_mb1)
+if results_mb2 is not None: draw_importance_factors(results_mb2)
 
 #%%
 class ReliabiltyComponent( om.ExplicitComponent ):
@@ -1573,43 +1614,3 @@ class ReliabiltyComponent( om.ExplicitComponent ):
             beta_mb1,
             beta_mb2
         ])
-
-# %%
-# FLS uncertain class =======================
-#%%
-from wisdem.drivetrainse.drive_structure import Analytical_FLS_Bearing_Life
-
-class Analytical_FLS_Bearing_Life_RBDO(
-    Analytical_FLS_Bearing_Life
-):
-    """
-    RBDO extension of the deterministic WISDEM
-    Analytical_FLS_Bearing_Life component.
-
-    The parent performs the deterministic FLS bearing-life
-    calculation.
-
-    This subclass only provides an interface for applying
-    stochastic load factors before the parent calculation.
-    """
-
-    def initialize(self):
-        super().initialize()
-
-        self.options.declare(
-            "rbdo_load_factors",
-            default=None,
-            allow_none=True,
-        )
-
-    def setup(self):
-        super().setup()
-
-        # RBDO load multipliers
-        self.add_input("lambda_Fx", val=1.0)
-        self.add_input("lambda_Fy", val=1.0)
-        self.add_input("lambda_Fz", val=1.0)
-
-        self.add_input("lambda_Mx", val=1.0)
-        self.add_input("lambda_My", val=1.0)
-        self.add_input("lambda_Mz", val=1.0)
