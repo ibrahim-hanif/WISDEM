@@ -2163,6 +2163,10 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         direct = opts_drivese["direct"]
         opts_openfast = self.options['openfast_options']
         opts_dlcs = self.options['dlc_options']
+        # --- Reliability: if to use uncertain factors on fls hub loads
+        doReliability = self.doReliability = False
+        if ("reliability" in opts_drivese) and opts_drivese["reliability"] == True:
+            doReliability = self.doReliability = True
         # ---- DLC loads & operational ----
         # here coz runs only once per model build
         dir_loads = self.options['openfast_options']['openfast_dir'] # directory of MS loads
@@ -2210,6 +2214,8 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input("s_generator", val=0.0, units="m")
         # - 5. material properties
         self.add_input("lss_E", val=0.0, units="Pa")
+        if doReliability:
+            self.add_input("X_fls", val=0.0, desc="Uncertainty factor, scaling all fls hub loads")
         # ---- Outputs ----
         # self.add_output("P_mb2_sum", val=0.0, units="N")# TODO: testing, then comment out
         self.add_output('L10h_mb1', val=0.0, desc='L10 life MB1', units='h')
@@ -2218,6 +2224,20 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_output('constr_L10_mb2', val=0.0, desc='Safety factor MB2')
         # self.add_output('constr_L10_mb_all', val=0.0, desc='Minimum safety factor')
         
+    def multiply_uncertainity_factors_to_hub_loads(self, X_fls):
+        """
+        returns X_fls * (F or M)_fls
+        - local variables, non-mutating self.
+        """
+        return (
+            X_fls * self.Fx,
+            X_fls * self.Fy,
+            X_fls * self.Fz,
+            X_fls * self.Mx,
+            X_fls * self.My,
+            X_fls * self.Mz,
+        )
+
     def compute(self, inputs, outputs):
         # ---- Inputs ----
         # bearings
@@ -2262,18 +2282,30 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         I = tube_mb2.Ixx
         EI = E*I + 1e-6 # div by 0.0 (def), avoid by 1e-6
         # --------
+        # Reliability
+        if self.doReliability:
+            X_fls = float(inputs["X_fls"][0])
+            print(f" -- doReliability True inside Analy_*: X_fls={X_fls}") # TODO: test
+            # print(f"  -- before *, mean Fy={np.mean(self.Fy)} and My={np.mean(self.My)}") # test
+            Fx, Fy, Fz, Mx, My, Mz = self.multiply_uncertainity_factors_to_hub_loads(
+                X_fls)
+            # print(f"  -- after *, mean Fy={np.mean(self.Fy)} and My={np.mean(self.My)}") # test
+        else:
+            Fx, Fy, Fz = self.Fx, self.Fy, self.Fz
+            Mx, My, Mz = self.Mx, self.My, self.Mz
+        # --------
         # Bearing loads (analytical) calculation: shape=(4, 72000, 11)
         # ---- 0. Minimal
         # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MB_Forces(
         #     Fx,Fy,Fz,Mx,My,Mz, L_h1,L_12, flag_jac=True )
         # ---- 1. more realistic (w/ GB load)
         # Fmb1, Fmb2, self.dFmb1_dLh1, self.dFmb1_dL12, self.dFmb2_dLh1, self.dFmb2_dL12 = analytical_MBforces_realistic(
-        #     self.Fx,self.Fy,self.Fz,self.Mx,self.My,self.Mz,
+        #     Fx,Fy,Fz, Mx,My,Mz,
         #     m_carrier,delta,tilt_rad,
         #     L_h1,L_12,flag_jac=True)
         # ---- 2. EB-beam, for moment-reacting
         Fmb1, Fmb2 = analytical_MBforces_EBbeam(
-            self.Fx,self.Fy,self.Fz, self.Mx,self.My,self.Mz,
+            Fx,Fy,Fz, Mx,My,Mz,
             m_point,delta,tilt_rad,L_h1,L_12,
             EI,k_mb2
         )
