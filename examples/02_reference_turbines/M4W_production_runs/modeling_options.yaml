@@ -125,11 +125,11 @@ Environment:
 
 OpenFAST: # TODO: use sima loads, change ws and pdf_ws accord.
     simulation:
-        DT: 0.05 # DONE: time step (for integration)
-    openfast_dir: 'M:\\Vasudev_Gupta\\outputs_mainshaft_loads\\hub_loads_M4w.mat' # DONE: loads dir
+        DT: 0.1 # DONE: time step (for integration)
+    openfast_dir: 'C://SIMA_M4W_loads//all_main_shaft_loads.mat' # DONE: loads dir
 
 DLC_driver: #(v) https://weis.readthedocs.io/en/latest/dlc_generator.html#design-load-cases-in-weis
     DLCs:
         - DLC: "1.2"
           wind_speed: [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.] # TODO: update with new sima data
-          probabilities: [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.0083042] # DONE: probab
+          probabilities: [0.123038397328881, 0.134902615470228, 0.132548692264885, 0.126769616026711, 0.107629382303839, 0.0868113522537562, 0.0657874234835837, 0.0452365052865887, 0.0269143016138007, 0.0136533110740122] # DONE: probab
