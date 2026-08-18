@@ -2285,7 +2285,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # Reliability
         if self.doReliability:
             X_fls = float(inputs["X_fls"][0])
-            print(f" -- doReliability True inside Analy_*: X_fls={X_fls}") # TODO: test
+            # print(f" -- doReliability True inside Analy_*: X_fls={X_fls}") # TODO: test
             # print(f"  -- before *, mean Fy={np.mean(self.Fy)} and My={np.mean(self.My)}") # test
             Fx, Fy, Fz, Mx, My, Mz = self.multiply_uncertainity_factors_to_hub_loads(
                 X_fls)
