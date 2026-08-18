@@ -9,12 +9,15 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import scipy.io as sio
 from Drive4Wind.post_processing.color_schemes import loc_clr_scheme_m4w, read_color_scheme
 clrs_m4w = read_color_scheme( loc_clr_scheme_m4w )
 
 from wisdem.commonse.fileIO import var_df2dict
 from wisdem.commonse.utilities import load_all_mat_to_dict, pdf_norm_int_using_cdf
+from windIO.yaml import load_yaml, write_yaml
 
+#%%
 # ==========
 def read_df_to_prob( this_case, prob ):
     """
@@ -502,12 +505,16 @@ def parse_rotor_props_from_base_case_csv2dict( loc_csv ):
         overrides[ name ] = eval( dict_wt[name] )
     return overrides
 
-def define_modeling_options_dict_for_drivetrainSE( loc_all_loads_mat_file ):
+def define_modeling_options_dict_for_drivetrainSE(
+        loc_all_loads_mat_file,
+        path_modeling_options=None):
     """
     Inputs
     _______
     loc_all_loads_mat_file : string
         path location where hub loads are saved (as an .mat file)
+    modeling_options : string
+        path to a known options file to overwrite DLC driver vals
     
     Outputs
     _______
@@ -515,13 +522,20 @@ def define_modeling_options_dict_for_drivetrainSE( loc_all_loads_mat_file ):
         modeling options for drivetrain-related MDAO
     """
     # Load hub loads
-    S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
-    # - Wind speed and probabilies: auto parse loads dict
+    S_all = sio.loadmat(loc_all_loads_mat_file)
+    # S_all, _ = load_all_mat_to_dict(loc_all_loads_mat_file)
+    # Auto parse loads dict for
+    # - Wind speeds
     ws = S_all["mean_wind_speed"][0,:].tolist()
-    pdf_ws = pdf_norm_int_using_cdf(ws).tolist()
+    # - Probabilities of the wind speeds
+    # -- 1. calculate using own function
+    pdf_ws_calc = pdf_norm_int_using_cdf(ws).tolist()
+    # -- 2. or, use seraj's vals (for consistent compr); cf. Data_collection.xlsx, tab: DLC_driver_UN
+    pdf_ws = S_all["probabilities"][0,:].tolist()
+    # - Time step
+    dt = float(round(S_all["Time"][0,1] - S_all["Time"][0,0],3))
     # ----
 
-    # ### Defining options (`modelling_options`), flags
     opts = {}
 
     opts["WISDEM"] = {}
@@ -553,9 +567,13 @@ def define_modeling_options_dict_for_drivetrainSE( loc_all_loads_mat_file ):
     dohub = opts["flags"]["hub"] = False #(v)
     doMBfls = opts["flags"]["mb_fls"] = True
 
+    # ### Defining options (`modelling_options`), flags
+    if path_modeling_options is not None:
+        opts = load_yaml(path_modeling_options)
+
     opts["OpenFAST"] = {}
     opts["OpenFAST"]["simulation"] = {}
-    opts["OpenFAST"]["simulation"]["DT"] = 0.05
+    opts["OpenFAST"]["simulation"]["DT"] = dt
     # dir(ectory) where MS loads are stored .csv (?)
     if loc_all_loads_mat_file:
         opts["OpenFAST"]["openfast_dir"] = loc_all_loads_mat_file
@@ -569,4 +587,10 @@ def define_modeling_options_dict_for_drivetrainSE( loc_all_loads_mat_file ):
     opts["DLC_driver"]["DLCs"][0]["probabilities"] = pdf_ws
     # TODO: probabs check with wind site
 
+    # ### Defining options (`modelling_options`), flags
+    if path_modeling_options is not None:
+        write_yaml(opts, path_modeling_options)
+
     return opts
+
+# %%
