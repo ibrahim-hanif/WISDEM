@@ -54,6 +54,7 @@ suffix = "_sima" # _noMBfls
 # 1. "_m4w"
 # 2. "_m4w_noMBfls"
 # 3. "_sima"
+# 4. "_sima_gfo"
 
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
@@ -363,8 +364,20 @@ if flag_opt_GBO:
 elif flag_opt_GFO:
     print("=== running GFO ===")
     # GFO: gradient free optimizer
-    prob.driver = om.SimpleGADriver()
+    # ---- Simple GA (Genetic Alg.)
+    # prob.driver = om.SimpleGADriver()
+    # ---- Evolution
     # prob.driver = om.DifferentialEvolutionDriver()
+    # prob.driver.options['max_gen'] = 400
+    # prob.driver.options['Pc'] = 0.5
+    # prob.driver.options['F'] = 0.5
+    # ---- NSGA2
+    from wisdem.optimization_drivers.nsga2_driver import NSGA2Driver
+    prob.driver = NSGA2Driver()
+    prob.driver.options["max_gen"] = 200
+    prob.driver.options["run_parallel"] = True
+    prob.driver.options["procs_per_model"] = 2 # TODO
+
     prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
     # OSError: 'lss' <class Hub_Rotor_LSS_Frame>: Error calling compute(), exception: access violation reading 0x000001CB530B5FB0
 
@@ -660,15 +673,13 @@ om.n2(prob, outfile=loc_n2, show_browser=True);
 # ### Run: Optimization / DOE / Analysis
 # `_driver` (optimization) / `_model` (analysis)
 
+t0 = time.time()
+
 if flag_opt_GBO or flag_DOE:
     # Run GBO or DOE
-    t0 = time.time()
     # main GBO
     prob.model.approx_totals() # TODO.
     prob.run_driver()
-    
-    t1 = time.time()
-    print(" - WISDEM run completed in,", t1-t0, "seconds")
 
 elif flag_opt_GFO:
     # Run the GFO
@@ -676,11 +687,10 @@ elif flag_opt_GFO:
 
 else:
     # Run the analysis
-    t0 = time.time()
-    # run
     prob.run_model()
-    t1 = time.time()
-    print(" - WISDEM run completed in,", t1-t0, "seconds")
+
+t1 = time.time()
+print(" - WISDEM run completed in,", t1-t0, "seconds")
 
 # %%[markdown]
 # # _____ Post-processing _____
@@ -1431,7 +1441,7 @@ axs[0].bar(configs, df["lss_mass"], bottom=df["mb1_mass"] + df["mb2_mass"],
             label="LSS" )#, color=clrs_m4w["Light_Red"])
 axs[0].set_ylabel("Mass [t]")
 axs[0].set_title("Mass distribution (absolute)")
-axs[0].legend(loc="upper left")
+axs[0].legend(loc="upper right")
 axs[0].set_xticklabels(configs, rotation=30)
 
 # --- (0,1) normalized stacked ---
@@ -1542,7 +1552,7 @@ plt.show()
 # ---------------------------
 # FIGURE 3: DESIGN VARIABLES COMPARISON
 # ---------------------------
-fig, axs = plt.subplots(2, 2, figsize=(14, 10))
+fig, axs = plt.subplots(2, 2, figsize=(16, 12))
 
 # Color mapping for each configuration
 colors = {
@@ -1550,6 +1560,7 @@ colors = {
     "CARB-TRB2": "tab:orange", #clrs_m4w["Teal"],
     "CRB-SRB": "tab:green", #clrs_m4w["Green"],
     "CARB-SRB": "tab:red", #clrs_m4w["Light_Red"],
+    "SRB_NL-SRB": "tab:purple", #clrs_m4w["Light_Purple"],
 }
 
 configs = df["config"]
@@ -1588,7 +1599,7 @@ labels = list(colors.keys())
 fig.legend(
     handles, labels,
     loc="upper center",
-    ncol=4,
+    ncol=5,
     bbox_to_anchor=(0.5, 0.97)   # move legend down a bit
 )
 
