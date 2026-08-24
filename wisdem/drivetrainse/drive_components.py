@@ -1382,6 +1382,12 @@ class MainBearing_withDerivatives(om.ExplicitComponent):
                  kc=0.0,ke=0.0
                  ),
 
+        "SRB_NL": # non-locating SRB
+            dict(a=0.2463, b=0.185, k=2688.3,  n=1.8877, c=13878, m=1.0796,
+                    max_ang=0.078, reactions=[0,1,1,0,0,0],
+                    kc=0.0,ke=0.0
+                    ),
+
         "TRB":
             dict(a=0.1499, b=0.0,    k=543.01, n=1.9043, c=1993.8, m=0.318,
                  max_ang=np.deg2rad(3/60), reactions=[1,1,1,0,1,1],
