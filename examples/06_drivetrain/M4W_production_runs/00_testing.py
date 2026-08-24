@@ -605,8 +605,10 @@ lst_P_diff = np.array(df_nBins["P_LDD"].tolist()) - P_DEL
 # - plot
 fig,ax = plt.subplots(figsize=(11, 4))
 ax.plot(lst_nBins, lst_P_diff,
-        marker='o', color= clrs_m4w["Aqua"])
-ax.set_ylabel(r"$ P_{LDD}-P_{DEL} $")
+        marker='o', linewidth=3, markersize=8,
+        color= clrs_m4w["Aqua"]
+        )
+ax.set_ylabel(r"$ P_{LRD}-P_{DEL} $")
 ax.set_xlabel('# Bins')
 ax.set_xticks(lst_nBins)
 ax.grid(True)
