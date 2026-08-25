@@ -929,17 +929,19 @@ if plot_yANDz_stiffnesses:
     clr_yy = 'tab:blue'
     label_scat_yy = r"$k_{yy}$"+" data"
     label_pred_yy = r"$k_{yy}$"+" fit"
+    plot_name = "plot_fit_rotat_stiff_XY" # NOTE: .png added later
 else:
     clr_yy = 'orange'
     label_scat_yy = 'Database'
     label_pred_yy = "Model prediction"
+    plot_name = "plot_fit_rotat_stiff" # NOTE: .png added later
 
 # plot
 plt.figure(figsize=(10,8))
 # yy
 plt.scatter(
-    df_trb["d"],
-    df_trb["k_yy"],
+    df_trb["d"][1:],    # TODO: saved plot with [1:] ----
+    df_trb["k_yy"][1:], # ----
     s=200,
     color=clr_yy,
     label = label_scat_yy
@@ -947,8 +949,8 @@ plt.scatter(
 
 if plot_yANDz_stiffnesses:
     plt.scatter(
-        df_trb["d"],
-        df_trb["k_zz"],
+        df_trb["d"][1:],    # TODO: saved plot with [1:] ----
+        df_trb["k_zz"][1:], # ----
         s=200,
         c="orange",
         label = r"$k_{zz}$"+" data"
@@ -990,7 +992,7 @@ plt.tight_layout()
 # -- save plot
 loc_save_plot_bearing_rotatStiff_fit = os.path.join(
     os.path.dirname(os.path.abspath(bearing_rotatStiff_csv)),
-    "plot_fit_rotat_stiff.png")
+    plot_name + ".png")
 # plt.savefig(loc_save_plot_bearing_rotatStiff_fit) # TODO 
 # --
 plt.show()
