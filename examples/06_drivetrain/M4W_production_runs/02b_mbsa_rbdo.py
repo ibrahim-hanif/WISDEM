@@ -525,9 +525,13 @@ Phi = ot.Normal(0,1) # standard normal distribution
 beta_s = np.asarray([1.28, 2.33, 3.09, 3.72, 4.26, 4.75, 5.2, 10.0])
 pf_s = np.asarray([ Phi.computeCDF(-beta_i) for beta_i in beta_s ])
 
-graph = Phi.drawCDF() #(xMin=-1.28,xMax=-5.2,logScale=True)
-graph.setLegends(['normal cdf'])
-otv.View(graph)
+graphCDF = Phi.drawCDF() #(xMin=-1.28,xMax=-5.2,logScale=True)
+graphCDF.setLegends(['normal cdf'])
+otv.View(graphCDF)
+
+graphPDF = Phi.drawPDF() #(xMin=-1.28,xMax=-5.2,logScale=True)
+graphPDF.setLegends(['normal pdf'])
+otv.View(graphPDF)
 
 #%%
 def run_MCS( event, numSamples=1e5 ):
@@ -911,43 +915,51 @@ def make_distribution_of_mbsa_inputs():
     # F_aero_hub
     # CoV = std / mean = sigma / mu
     CoV_uls = 0.01 # 0.01 test; 0.1 cf. 2021_Al-Sanad
-    X_uls = ot.LogNormal()
-    X_uls.setParameter(
-        ot.LogNormalMuSigma()(
-            [1.0, CoV_uls, 0.0]
+    def make_uls_dist( CoV ):    
+        X_uls = ot.LogNormal()
+        X_uls.setParameter(
+            ot.LogNormalMuSigma()(
+                [1.0, CoV, 0.0]
+            )
         )
-    )
+        return X_uls
+    X_uls = make_uls_dist( CoV_uls )
     # - 1.
-    F1_max = all_loads_dict["Fx"+str_max]
-    F1_dist = all_loads_dict["Fx"+str_max_dist]
-    F1 = F_aero_hub[0] * X_uls #ot.LogNormal( F1_dist[0,0], F1_dist[0,1] ) # in N
+    F1_sigma = float(all_loads_dict["Fx"+str_max_dist][0,1])
+    F1_dist = make_uls_dist( F1_sigma )
+    F1 = F_aero_hub[0] * X_uls # TODO: * _dist OR * X_uls
     F1.setDescription([r"$F_x^{ULS}$"])
     F1.setName("F_aero_hub_x")
     # - 2.
-    F2_dist = all_loads_dict["Fy"+str_max_dist]
-    F2 = F_aero_hub[1] * X_uls #ot.LogNormal( F2_dist[0,0], F2_dist[0,1] ) # in N
+    F2_sigma = float(all_loads_dict["Fy"+str_max_dist][0,1])
+    F2_dist = make_uls_dist( F2_sigma )
+    F2 = F_aero_hub[1] * X_uls # * _dist OR * X_uls
     F2.setDescription([r"$F_y^{ULS}$"])
     F2.setName("F_aero_hub_y")
     # - 3.
-    F3_dist = all_loads_dict["Fz"+str_max_dist]
-    F3 = F_aero_hub[2] * X_uls #ot.LogNormal( F3_dist[0,0], F3_dist[0,1] ) # in N
+    F3_sigma = float(all_loads_dict["Fz"+str_max_dist][0,1])
+    F3_dist = make_uls_dist( F3_sigma )
+    F3 = F_aero_hub[2] * X_uls # * _dist OR * X_uls
     F3.setDescription([r"$F_z^{ULS}$"])
     F3.setName("F_aero_hub_z")
 
     # M_aero_hub
     # - 1.
-    M1_dist = all_loads_dict["Mx"+str_max_dist]
-    M1 = M_aero_hub[0] * X_uls #ot.LogNormal( M1_dist[0,0], M1_dist[0,1] ) # in N
+    M1_sigma = float(all_loads_dict["Mx"+str_max_dist][0,1])
+    M1_dist = make_uls_dist( M1_sigma )
+    M1 = M_aero_hub[0] * X_uls # * _dist OR * X_uls
     M1.setDescription([r"$M_x^{ULS}$"])
     M1.setName("M_aero_hub_x")
     # - 2.
-    M2_dist = all_loads_dict["My"+str_max_dist]
-    M2 = M_aero_hub[1] * X_uls #ot.LogNormal( M2_dist[0,0], M2_dist[0,1] ) # in N
+    M2_sigma = float(all_loads_dict["My"+str_max_dist][0,1])
+    M2_dist = make_uls_dist( M2_sigma )
+    M2 = M_aero_hub[1] * X_uls # * _dist OR * X_uls
     M2.setDescription([r"$M_y^{ULS}$"])
     M2.setName("M_aero_hub_y")
     # - 3.
-    M3_dist = all_loads_dict["Mz"+str_max_dist]
-    M3 = M_aero_hub[2] * X_uls #ot.LogNormal( M3_dist[0,0], M3_dist[0,1] ) # in N
+    M3_sigma = float(all_loads_dict["Mz"+str_max_dist][0,1])
+    M3_dist = make_uls_dist( M3_sigma )
+    M3 = M_aero_hub[2] * X_uls # * _dist OR * X_uls
     M3.setDescription([r"$M_z^{ULS}$"])
     M3.setName("M_aero_hub_z")
 
@@ -988,8 +1000,8 @@ def make_distribution_of_mbsa_inputs():
     # - Aeroelastic simulations can estimate these.
     # - Ignoring correlation can produce very misleading reliability indices.
     R = ot.CorrelationMatrix(dims)
-    R[1,4] = 0.7 # Fy and My correlated, 0.7-0.9
-    R[2,5] = 0.7 # Fz and Mz correlated, 0.7-0.9
+    R[1,4] = 0. # Fy and My correlated, 0.7-0.9
+    R[2,5] = 0. # Fz and Mz correlated, 0.7-0.9
     copula = ot.NormalCopula(
         ot.NormalCopula.GetCorrelationFromSpearmanCorrelation(R)
     )
@@ -1344,7 +1356,7 @@ class MBSA_Evaluator:
         self.cache = {}
 
         # store constr names, operator and limits in dict
-        # - in the form of: m*g + c
+        # - in the form of: g = m * result + c
         # - with tuple (m,c) defined of each
         self.constr_info = { 
             "constr_lss_vonmises": # Greater than 1.0 is fail
@@ -1354,9 +1366,9 @@ class MBSA_Evaluator:
             "constr_shaft_angle": # Greater than 1.0 is fail
             (-1.0, 1.0),
             "constr_L10_mb1": # Less than 1.0 is fail
-            (-1.0, 1.0),
+            (1.0, -1.0),
             "constr_L10_mb2": # Less than 1.0 is fail
-            (-1.0, 1.0),
+            (1.0, -1.0),
             #
             "msa_mass":
             (1.0, 0.0)
