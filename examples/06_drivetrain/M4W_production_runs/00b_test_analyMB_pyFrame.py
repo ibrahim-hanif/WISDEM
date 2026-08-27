@@ -1015,6 +1015,10 @@ except ImportError:
     print("sklearn is not available. Please activate the 'base' environment with sklearn installed.")
     sys.exit('exit')
 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
 #%%
 bearing_rotatStiff_csv = os.path.join(
     os.path.abspath(__file__), os.pardir,os.pardir,
@@ -1028,11 +1032,11 @@ def fit_log_model(df, target):
 
     X = np.column_stack(
         [
-            np.log(df["d"]),
-            np.log(df["D"]),
-            np.log(df["B"]),
-            np.log(df["C_kN"]),
-            np.log(df["C0_kN"] + 1e-6),
+            np.log(df["d"]),            # inner diameter
+            np.log(df["D"]),            # outer diameter
+            np.log(df["B"]),            # width
+            np.log(df["C_kN"]),         # (Cr) dynamic load capacity
+            np.log(df["C0_kN"] + 1e-6), # (C0) static load capacity
         ]
     )
 
@@ -1082,12 +1086,14 @@ def print_model(model):
     print(f"R² = {model['r2']:.5f}")
 
     print(
-        "y = exp({:.4f}) "
-        "* d^{:.4f}"
-        "* D^{:.4f}"
-        "* B^{:.4f}"
-        "* C^{:.4f}"
-        "* C0^{:.4f}".format(
+        (
+            "y = exp({:.4f}) "
+            "* d^{:.4f}"
+            "* D^{:.4f}"
+            "* B^{:.4f}"
+            "* C^{:.4f}"
+            "* C0^{:.4f}"
+        ).format(
             model["intercept"],
             c[0],
             c[1],
@@ -1118,9 +1124,14 @@ kyy_model = fit_log_model(
 print_model(kyy_model)
 
 test_col = df_trb.iloc[0]
-evaluate_model(kyy_model,
-    d=test_col["d"],D=test_col["D"],B=test_col["B"],
-    C_kN=test_col["C_kN"],C0_kN=test_col["C0_kN"])
+evaluate_model(
+    kyy_model,
+    d=test_col["d"],
+    D=test_col["D"],
+    B=test_col["B"],
+    C_kN=test_col["C_kN"],
+    C0_kN=test_col["C0_kN"]
+)
 
 from sklearn.model_selection import LeaveOneOut
 from sklearn.metrics import mean_absolute_percentage_error
