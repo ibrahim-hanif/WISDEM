@@ -59,7 +59,7 @@ plot_cases = True      #NOTE: saved, not changing now (commented)
 flag_scaling_show_browser = False
 flag_save_new_data = False
 flag_load_from_data = True
-flag_load_from_02data = True
+flag_load_from_02data = False
 
 # Loading `openFAST` hub loads from a saved file
 # TODO: dont even need to do this now, coz `Load_Own_Hub_Loads` component does it internally and outputs the needed loads for the DT component. So, can just set `own_hub_loads=True` in `modelling_options` and not worry about loading the loads here in the script. JazakumAllahu khayr.
@@ -69,8 +69,9 @@ load_fls_loads = False
 # True: part loads (72e3,11) (20 Hz sampled, 60mins)
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
-if "sima" in suffix:
-    loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
+if "sima" in suffix: # NOTE: RBDO sima loads
+    loc_all_loads_mat_file = "C://SIMA_M4W_loads//rbdo_main_shaft_loads.mat"
+
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
 
@@ -110,7 +111,7 @@ loc_xdsm = os.path.join(results_path, 'xdsm_02')
 if record_cases:
     print(" ---- Recording cases using `SqliteRecorder` ---- ")
     loc_cases = os.path.join(results_path,
-        "cases_recorded_"+suffix+".sql")
+        "cases_recorded"+suffix+".sql")
     if os.path.exists( loc_cases ):
         os.remove( loc_cases )
 
@@ -907,7 +908,7 @@ def make_distribution_of_mbsa_inputs():
     mb2_e = float(savedDataDict["bear2.mb_e"])
     # Inputs: random distibutions saved
     all_loads_dict = sio.loadmat(loc_all_loads_mat_file)
-    str_max_dist = "_max_mu_norm_sigma"
+    str_max_dist = "_max_mean_std"
     str_max = "_max"
 
     dims = 9
@@ -915,51 +916,57 @@ def make_distribution_of_mbsa_inputs():
     # F_aero_hub
     # CoV = std / mean = sigma / mu
     CoV_uls = 0.01 # 0.01 test; 0.1 cf. 2021_Al-Sanad
-    def make_uls_dist( CoV ):    
+    def make_uls_dist( CoV, mu=1.0 ):    
         X_uls = ot.LogNormal()
         X_uls.setParameter(
             ot.LogNormalMuSigma()(
-                [1.0, CoV, 0.0]
+                [ mu, CoV, 0.0]
             )
         )
         return X_uls
     X_uls = make_uls_dist( CoV_uls )
     # - 1.
+    F1_mean = float(all_loads_dict["Fx"+str_max_dist][0,0])
     F1_sigma = float(all_loads_dict["Fx"+str_max_dist][0,1])
-    F1_dist = make_uls_dist( F1_sigma )
-    F1 = F_aero_hub[0] * X_uls # TODO: * _dist OR * X_uls
+    F1 = make_uls_dist( F1_sigma, F1_mean )
+    # F1 = F_aero_hub[0] * X_uls # TODO: * _dist OR * X_uls
     F1.setDescription([r"$F_x^{ULS}$"])
     F1.setName("F_aero_hub_x")
     # - 2.
+    F2_mean = float(all_loads_dict["Fy"+str_max_dist][0,0])
     F2_sigma = float(all_loads_dict["Fy"+str_max_dist][0,1])
-    F2_dist = make_uls_dist( F2_sigma )
-    F2 = F_aero_hub[1] * X_uls # * _dist OR * X_uls
+    F2 = make_uls_dist( F2_sigma, F2_mean )
+    # F2 = F_aero_hub[1] * X_uls # * _dist OR * X_uls
     F2.setDescription([r"$F_y^{ULS}$"])
     F2.setName("F_aero_hub_y")
     # - 3.
+    F3_mean = float(all_loads_dict["Fz"+str_max_dist][0,0])
     F3_sigma = float(all_loads_dict["Fz"+str_max_dist][0,1])
-    F3_dist = make_uls_dist( F3_sigma )
-    F3 = F_aero_hub[2] * X_uls # * _dist OR * X_uls
+    F3 = make_uls_dist( F3_sigma, F3_mean )
+    # F3 = F_aero_hub[2] * X_uls # * _dist OR * X_uls
     F3.setDescription([r"$F_z^{ULS}$"])
     F3.setName("F_aero_hub_z")
 
     # M_aero_hub
     # - 1.
+    M1_mean = float(all_loads_dict["Mx"+str_max_dist][0,0])
     M1_sigma = float(all_loads_dict["Mx"+str_max_dist][0,1])
-    M1_dist = make_uls_dist( M1_sigma )
-    M1 = M_aero_hub[0] * X_uls # * _dist OR * X_uls
+    M1 = make_uls_dist( M1_sigma, M1_mean )
+    # M1 = M_aero_hub[0] * X_uls # * _dist OR * X_uls
     M1.setDescription([r"$M_x^{ULS}$"])
     M1.setName("M_aero_hub_x")
     # - 2.
+    M2_mean = float(all_loads_dict["My"+str_max_dist][0,0])
     M2_sigma = float(all_loads_dict["My"+str_max_dist][0,1])
-    M2_dist = make_uls_dist( M2_sigma )
-    M2 = M_aero_hub[1] * X_uls # * _dist OR * X_uls
+    M2 = make_uls_dist( M2_sigma, M2_mean )
+    # M2 = M_aero_hub[1] * X_uls # * _dist OR * X_uls
     M2.setDescription([r"$M_y^{ULS}$"])
     M2.setName("M_aero_hub_y")
     # - 3.
+    M3_mean = float(all_loads_dict["Mz"+str_max_dist][0,0])
     M3_sigma = float(all_loads_dict["Mz"+str_max_dist][0,1])
-    M3_dist = make_uls_dist( M3_sigma )
-    M3 = M_aero_hub[2] * X_uls # * _dist OR * X_uls
+    M3 = make_uls_dist( M3_sigma, M3_mean )
+    # M3 = M_aero_hub[2] * X_uls # * _dist OR * X_uls
     M3.setDescription([r"$M_z^{ULS}$"])
     M3.setName("M_aero_hub_z")
 
@@ -1006,7 +1013,17 @@ def make_distribution_of_mbsa_inputs():
         ot.NormalCopula.GetCorrelationFromSpearmanCorrelation(R)
     )
     distribution = ot.JointDistribution(
-        [F1,F2,F3, M1,M2,M3, E, e_mb2, X_fls], copula
+        [
+            F1,
+            F2,
+            F3,
+            M1,
+            M2,
+            M3,
+            E,
+            e_mb2,
+            X_fls
+        ], copula
     )
 
     # TODO testing: correlation matrix of 3
@@ -1026,40 +1043,41 @@ distribution = make_distribution_of_mbsa_inputs()
 evaluator = MBSAEvaluator(opts,loc_load_saved_data+".csv")
 
 #%%
-beta_vm, pf_vm, results_vm = compute_beta(
-    distribution,
-    evaluator,
-    "constr_lss_vonmises"
-)
-print("VM: ", beta_vm, pf_vm)
+if False:
+    beta_vm, pf_vm, results_vm = compute_beta(
+        distribution,
+        evaluator,
+        "constr_lss_vonmises"
+    )
+    print("VM: ", beta_vm, pf_vm)
 
-beta_shaft_defl, pf_shaft_defl, results_shaft_defl = compute_beta(
-    distribution,
-    evaluator,
-    "constr_shaft_deflection"
-)
-print("shaft defl: ", beta_shaft_defl, pf_shaft_defl)
+    beta_shaft_defl, pf_shaft_defl, results_shaft_defl = compute_beta(
+        distribution,
+        evaluator,
+        "constr_shaft_deflection"
+    )
+    print("shaft defl: ", beta_shaft_defl, pf_shaft_defl)
 
-beta_shaft_angle, pf_shaft_angle, results_shaft_angle = compute_beta(
-    distribution,
-    evaluator,
-    "constr_shaft_angle"
-)
-print("shaft ang: ", beta_shaft_angle, pf_shaft_angle)
+    beta_shaft_angle, pf_shaft_angle, results_shaft_angle = compute_beta(
+        distribution,
+        evaluator,
+        "constr_shaft_angle"
+    )
+    print("shaft ang: ", beta_shaft_angle, pf_shaft_angle)
 
-beta_mb1, pf_mb1, results_mb1 = compute_beta(
-    distribution,
-    evaluator,
-    "constr_L10_mb1"
-)
-print("mb1: ", beta_mb1, pf_mb1)
+    beta_mb1, pf_mb1, results_mb1 = compute_beta(
+        distribution,
+        evaluator,
+        "constr_L10_mb1"
+    )
+    print("mb1: ", beta_mb1, pf_mb1)
 
-beta_mb2, pf_mb2, results_mb2 = compute_beta(
-    distribution,
-    evaluator,
-    "constr_L10_mb2"
-)
-print("mb2: ", beta_mb2, pf_mb2)
+    beta_mb2, pf_mb2, results_mb2 = compute_beta(
+        distribution,
+        evaluator,
+        "constr_L10_mb2"
+    )
+    print("mb2: ", beta_mb2, pf_mb2)
 
 #%%
 # post-processing functions
@@ -1098,12 +1116,13 @@ def draw_optim_error_history( results) :
     view = otv.View(graphErrors)
 
 #%%
-# post-process results from FORM
-if results_vm is not None: draw_importance_factors(results_vm)
-if results_shaft_defl is not None: draw_importance_factors(results_shaft_defl)
-if results_shaft_angle is not None: draw_importance_factors(results_shaft_angle)
-if results_mb1 is not None: draw_importance_factors(results_mb1)
-if results_mb2 is not None: draw_importance_factors(results_mb2)
+if False:
+    # post-process results from FORM
+    if results_vm is not None: draw_importance_factors(results_vm)
+    if results_shaft_defl is not None: draw_importance_factors(results_shaft_defl)
+    if results_shaft_angle is not None: draw_importance_factors(results_shaft_angle)
+    if results_mb1 is not None: draw_importance_factors(results_mb1)
+    if results_mb2 is not None: draw_importance_factors(results_mb2)
 
 #%%
 class ReliabiltyComponent( om.ExplicitComponent ):
@@ -1543,6 +1562,7 @@ def compute_beta_new(
     }
 
     # idx = constraint_index[response_name]
+    dimDist = int(distribution.getDimension())
 
     # --------------------------------------------------
     # Vector-valued MBSA model
@@ -1555,7 +1575,7 @@ def compute_beta_new(
     )
 
     model = ot.PythonFunction(
-        inputDim=9,     # random variables only
+        inputDim=dimDist,     # random variables only
         outputDim=1,    # all 5 reliability responses
         func=model_wrapper
     )
@@ -1855,6 +1875,10 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
 # %%[markdown]
 # ### RBDO (reliability based design optimization)
 # %%
+flag_opt_GBO = False
+flag_opt_GFO = False
+flag_DOE = True
+
 # ### The problem
 # Define the problem
 prob_rbdo = om.Problem(reports=False)
@@ -1864,7 +1888,7 @@ prob_rbdo.model.add_subsystem(
     "rbdo", ReliabilityComponent_new(modeling_options=opts),
     promotes=["*"])
 
-# Optimization
+# Optimization driver
 # ---- 
 if flag_opt_GBO:
     print("=== running GBO ===\n")
@@ -1898,11 +1922,21 @@ elif flag_opt_GFO:
     prob_rbdo.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
     # OSError: 'lss' <class Hub_Rotor_LSS_Frame>: Error calling compute(), exception: access violation reading 0x000001CB530B5FB0
 
+elif flag_DOE:
+    print("=== running DOE ===\n")
+    prob_rbdo.driver = om.DOEDriver(
+        om.UniformGenerator(num_samples=5)
+    )
+    if record_cases:
+        prob_rbdo.driver.add_recorder(
+            om.SqliteRecorder( loc_cases )
+        )
+
 else:
     print("=== running analysis only (`run_model()`) ===\n")
 
 # ---- 
-if flag_opt_GBO or flag_opt_GFO:
+if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     print(" --- setting optimization obj, desvars, constrs --- \n")
     # Add objective
     prob_rbdo.model.add_objective("msa_mass", ref=1e6)
@@ -1948,7 +1982,7 @@ if flag_opt_GBO:
     # prob_rbdo.model.approx_totals() # TODO.
     prob_rbdo.run_driver()
 
-elif flag_opt_GFO:
+elif flag_opt_GFO or flag_DOE:
     # Run the GFO
     prob_rbdo.run_driver()
 
@@ -1965,4 +1999,20 @@ print("msa_mass", prob_rbdo["msa_mass"])
 print("beta", prob_rbdo["beta_vonmises"])
 print("pf", prob_rbdo["pf_vonmises"])
 
+# %%
+cr = om.CaseReader( loc_cases )
+cases = cr.list_cases('driver')
+
+values = []
+for case in cases:
+    outputs = cr.get_case(case).outputs
+    values.append((outputs['x'].item(), outputs['y'].item(), outputs['f_xy'].item()))
+
+print("\n".join(["x: %5.2f, y: %5.2f, f_xy: %6.2f" % xyf for xyf in values]))
+
+# %%
+if record_cases:
+    print("\n=== Recorded cases from the optimization ===\n")
+    results_dict = get_recorder_results( loc_cases, None, True )
+    print(results_dict);
 # %%
