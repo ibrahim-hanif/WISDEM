@@ -28,26 +28,26 @@ import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 
 #%%
 # ### Define flags
-suffix = "_old_loads"
+suffix = "_sima_loads"
 # information
 # 1. '_old_loads':  old hub loads from felix' openfast (wrong) model
 # 2. '_sima_loads': sima loads from seraj's sima (correct) model
 
-opt_flag = False
+opt_flag = True
 opt_hub = False # (def: False) if to optimize hub, its Compn incl if dohub
-flag_save_new_data = False
-load_from_saved_data = True
-flag_save_RNAprops4tower = False
+flag_save_new_data = True
+load_from_saved_data = False
+flag_save_RNAprops4tower = True
 
 # post-processing results
 plot_cases = True
-save_new_plot = False #NOTE: saved, not changing now (commented)
+save_new_plot = True #NOTE: saved, not changing now (commented)
 
+# -------
 # Loading `openFAST` hub loads from a saved file
-part_loads = True 
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4w.mat")
-if suffix == "_sima_loads":
+if "sima" in suffix:
     loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
 
 # - results main dir
@@ -72,8 +72,7 @@ if flag_save_RNAprops4tower:
 # %% [markdown]
 # ### Defining results directory and files
 #%% Loading `openFAST` hub loads from a saved file
-if part_loads: # define paths
-    S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
+S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
 
 #%%
 # Set input options (modeling options dictionary)
@@ -98,6 +97,7 @@ prob.model = DrivetrainSE_M4W(modeling_options=opts)
 #%%
 # If performing optimization, set up the optimizer and problem formulation
 if opt_flag:
+    print(" === running GBO === ")
     # Choose the optimizer to use
     prob.driver = om.ScipyOptimizeDriver() # selecting optimzer
     prob.driver.options["optimizer"] = "SLSQP"# configuring it
@@ -147,6 +147,8 @@ if opt_flag:
     prob.model.add_constraint("constr_access", lower=0.0)
     # ---
 
+else:
+    print("=== running analysis only (`run_model()`) ===")
 
 # Set up the OpenMDAO problem
 prob.setup()
@@ -369,7 +371,8 @@ print(" - base_M: ", prob['base_M']) # drivese.base_M
 # %%
 # Save rna properties into `yaml` file for next tower optimization
 if flag_save_RNAprops4tower:
-    utilsDT.write_yaml_of_drivetrain_properties( prob, loc_save_RNAprops4tower, direct=True )
+    utilsDT.write_yaml_of_drivetrain_properties(
+        prob, loc_save_RNAprops4tower, direct=True )
 # ===============================================================
 #%%
 if plot_cases:
