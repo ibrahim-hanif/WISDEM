@@ -1,7 +1,7 @@
 # Generic analysis options where nothing is run
 general:
-    folder_output: M4W_01_semisubTower_only//outputs
-    fname_output: test_m4w
+    folder_output: outputs
+    fname_output: optim
 
 design_variables:
     tower:                          # TODO
@@ -11,17 +11,11 @@ design_variables:
             upper_bound: 10.0
         layer_thickness:            # ---- keep these fixed (15,100)mm
             flag: True
-            lower_bound: 15e-3
-            upper_bound: 1e-1
-    # monopile:                     # TODO
-    #     outer_diameter:
-    #         flag: True
-    #         lower_bound: 6.5
-    #         upper_bound: 10.0
-    #     layer_thickness:
-    #         flag: True
-    #         lower_bound: 4e-3
-    #         upper_bound: 2e-1
+            lower_bound: 4e-3  # def. 4e-3 ; 15e-3
+            upper_bound: 2e-1   # def. 2e-1 ; 1e-1
+        E:
+            flag: True
+            upper_bound: 250.e9
 
 constraints:
     tower:
@@ -37,11 +31,11 @@ constraints:
             flag: True
         d_to_t: # slenderness ratio controls the global buckling (critical)
             flag: True #False
-            lower_bound: 120.0 # 90.0, 120
-            upper_bound: 1000.0 # 500.0, 1000
+            lower_bound: 80.0 # def. 80.0 ; 120.0
+            upper_bound: 1000.0 # def. 500.0 ; 1000.0
         taper:
             flag: True # TODO 1
-            lower_bound: 0.4
+            lower_bound: 0.2 # def. 0.2 ; 0.4
         slope:
             flag: True # TODO 1
         thickness_slope:
@@ -55,33 +49,6 @@ constraints:
             # soft-stiff (cf. semi-sub report) TODO for M4W
             # lower_bound: 0.15
             # upper_bound: 0.2
-    # monopile:                         # TODO
-    #     stress:
-    #         flag: True
-    #     global_buckling:
-    #         flag: True
-    #     shell_buckling:
-    #         flag: True
-    #     d_to_t:
-    #         flag: False
-    #         lower_bound: 120.0
-    #         upper_bound: 2000.0
-    #     taper:
-    #         flag: False
-    #         lower_bound: 0.2
-    #     slope:
-    #         flag: True
-    #     thickness_slope:
-    #         flag: True
-    #     frequency_1:
-    #         flag: True
-    #         lower_bound: 0.13
-    #         upper_bound: 0.40
-    #     pile_depth:
-    #         flag: True
-    #         lower_bound: 0.0
-    #     tower_diameter_coupling:
-    #         flag: True
 
 merit_figure: tower_mass # structural_mass #(tower+monpoile) # TODO
 
@@ -89,7 +56,7 @@ driver:
     optimization:
         flag: True
         max_iter: 40         # Maximum number of iterations (SLSQP)
-        tol: 1e-6           # Convergence tolerance (SLSQP)
+        tol: 1e-3           # Convergence tolerance (SLSQP)
         solver: SLSQP       # Optimization solver. Other options are 'SLSQP' - 'CONMIN'
         step_size: 1.e-6    # Step size for finite differencing (def.: 1.e-3)
         form: forward       # Finite differencing mode, forward or central (def.)

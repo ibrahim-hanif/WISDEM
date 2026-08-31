@@ -1,5 +1,5 @@
 # %% [markdown]
-# # _Tower (on semisub) optimization_ (M4W 15MW; full `WISDEM`)
+# # _Tower (on TLP) optimization_ (M4W 15MW; full `WISDEM`)
 # 
 # ### current version:
 # mainly 'tower' optimization with given:
@@ -16,8 +16,14 @@ from wisdem import run_wisdem
 import numpy as np
 import matplotlib.pyplot as plt
 
+# plotting options and main colors
+from Drive4Wind.post_processing import color_schemes
+loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
+clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
+
+
 #%%
-wt_m4w = False # init geo of tower: True = acciona / False = iea report
+wt_m4w = True # init geo of tower: True = acciona / False = iea report
 loads_m4w = True
 
 flag_plot = True
@@ -31,13 +37,10 @@ flag_override_tower_init = False
 
 #%%
 ## File management (inputs)
-mydir = os.path.dirname(os.path.realpath(__file__))  # get path to this file
-dir_examples = os.path.dirname(mydir)
+mydir = os.path.dirname(os.path.abspath(__file__))  # get path to this file
+dir_examples = os.path.dirname(os.path.dirname(mydir))
 dir_02_ref_turbines = dir_examples +os.sep+ "02_reference_turbines" # get path to 02_reference_turbines
 dir_02_rwt_m4w = dir_02_ref_turbines +os.sep+"M4W_production_runs"
-
-# M4W run directory
-dir_m4w_run = mydir + os.sep + "M4W_01_semisubTower_only"
 
 # ---- wind turbine geometry (same init for both iea and m4w)
 # - iea15mw ref
@@ -45,16 +48,23 @@ dir_m4w_run = mydir + os.sep + "M4W_01_semisubTower_only"
 # - m4w 15mw 
 # fname_wt_input = dir_02_rwt_m4w + os.sep + "M4W-15-VolturnUS-WT.yaml"
 
-if wt_m4w:
-     fname_wt_input = dir_m4w_run +os.sep + "iea15_towerSemi_acciona.yaml"
-else:
-      fname_wt_input = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
+# ---- wind turbine geometry (same init for both iea and m4w)
+file_geo_iea_tower = os.path.join(
+     os.path.dirname(mydir),
+     "M4W_00_basecase_TowerOnly",
+     "M4W-15-TLP-base_case-woRNA.yaml"
+)
+file_geo_m4w_tower = mydir + os.sep + "outputs\\optim.yaml"
 
-fname_wt_input = dir_m4w_run + os.sep + "outputs\\test_m4w.yaml"
+if wt_m4w:
+    fname_wt_input = file_geo_m4w_tower
+else:
+    fname_wt_input = file_geo_iea_tower
 
 # ---- modelling options
-fname_model_opts_m4w = dir_m4w_run+os.sep+ "modelOpts_m4w.yaml"
-fname_model_opts_iea = dir_m4w_run+os.sep+ "modelOpts_iea15.yaml"
+fname_model_opts_m4w = mydir+os.sep+ "modelOpts_m4w.yaml"
+fname_model_opts_iea = mydir+os.sep+ "modelOpts_iea15.yaml"
+
 if loads_m4w:
       fname_modeling_options = fname_model_opts_m4w
 else:
@@ -62,14 +72,14 @@ else:
 
 # ---- analysis/optimization options
 if flag_opt_GBO:
-     fname_analysis_options = dir_m4w_run + os.sep + "analyOpts.yaml"
+     fname_analysis_options = mydir + os.sep + "analyOpts.yaml"
 else:
-     fname_analysis_options = dir_m4w_run + os.sep + "analyOpts_NOopt.yaml"
+     fname_analysis_options = mydir + os.sep + "analyOpts_NOopt.yaml"
 
 ## File Management (outputs)
-loc_scaling_report = os.path.join(dir_m4w_run,
+loc_scaling_report = os.path.join(mydir,
       'outputs', 'scaling_report.html')
-loc_n2 = os.path.join(dir_m4w_run, 'outputs', 'n2.html')
+loc_n2 = os.path.join(mydir, 'outputs', 'n2.html')
 # OR in runWISDEM, before setup()
 # om.n2(wt_opt, outfile=os.path.join(folder_output, 'n2.html'), show_browser=True); #(v) debugging
 
@@ -126,12 +136,6 @@ try:
     )
 except Exception as e:
     print("Error giving scaling report (maybe coz of analysis, not optim): ", e)
-
-#%% plotting options
-# main colors
-from Drive4Wind.post_processing import color_schemes
-loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
-clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
 
 #%%[markdown]
 # ### Tower utilizations
@@ -237,8 +241,8 @@ if flag_plot:
     plt.ylabel("height along tower (m)")
     plt.tight_layout()
     if save_new_plot:
-        loc_save_img = dir_m4w_run + os.sep + "outputs" + os.sep + (
-            "utils_tower_m4w_noFreqConstr.pdf"
+        loc_save_img = mydir + os.sep + "outputs" + os.sep + (
+            "utils_tower_m4w.png" # iea or m4w
         )
         plt.savefig(loc_save_img, dpi=300, bbox_inches='tight')
     plt.show()
@@ -248,21 +252,17 @@ if flag_plot:
 #%%
 if flag_plot:
     from Drive4Wind.utilities.plot_tower_data import plot_tower_geo_comparison
-    # define yamls and run plot
-    # Geometry YAML files
-    # 1. base IEA 15-MW
-    iea_report_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_report.yaml"
-    acciona_yaml = dir_m4w_run +os.sep + "iea15_towerSemi_acciona.yaml"
-    # 2. Made4Wind
-    m4w_yaml = dir_m4w_run +os.sep+ "outputs" + os.sep+ "test_m4w_new.yaml"
     # loc save img
     if save_new_plot:
-        loc_save_img = dir_m4w_run +os.sep+ "outputs" +os.sep+ (
-                    "geometry_tower_noFreqConstr_m4w&ieaReport.png"
+        loc_save_img = mydir +os.sep+ "outputs" +os.sep+ (
+                    "geometry_tower_m4w&iea.png"
                 )
     else: loc_save_img = None
     # plot
-    plot_tower_geo_comparison( m4w_yaml, iea_report_yaml,
-                              loc_save_img=loc_save_img )
+    plot_tower_geo_comparison(
+        file_geo_m4w_tower,
+        file_geo_iea_tower,
+        loc_save_img=loc_save_img
+    )
 
 #%%

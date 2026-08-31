@@ -1,0 +1,8 @@
+# Generic analysis options where nothing is run
+general: #(v) TODO: change?
+    folder_output: outputs
+    fname_output: NOoptim # iea: refturb_output / m4w: M4Wturb_NOoptim
+
+driver:
+    optimization:
+        flag: False

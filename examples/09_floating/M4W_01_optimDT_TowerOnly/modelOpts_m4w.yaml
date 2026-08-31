@@ -36,41 +36,42 @@ WISDEM:
         flag: False
 
     Loading:
-        mass: 883219.1694411677
-        center_of_mass: [-6.717886796932881, -0.14300017976275708, 3.9077860696396596]
-        moment_of_inertia: [360309222.227464, 275803400.30740815, 262649300.6624307, 626.0694882989046, 12636406.17174711, 226494.8553912695]
+        mass: 809684.9225594322
+        center_of_mass: [-6.8606369616191705, -0.15630011620252784, 4.04658081721006]
+        moment_of_inertia: [365261995.22411436, 275506709.3206268, 262938338.13420752, 663.9507356219401, 11395917.88461987, 227875.09607373617]
         loads:
-           -  force: [4787210.007396288, 1369703.5004503343, 1952914.9030555636]
-              moment: [15556967.428202141, 142926217.21762758, 5999166.768431177]
+           -  force: [6723426.952975957, 10797076.7763087, 8228458.906494725]
+              moment: [6349527.383013672, 156319878.43433136, -9318686.44285772]
               velocity: 11.0
 
 Environment:
     air_density: 1.225
-    air_dyn_viscosity: 1.81e-5
-    weib_shape_parameter: 2.
-    air_speed_sound: 340.
-    shear_exp: 0.12
+    air_dyn_viscosity: 1.81e-05
+    weib_shape_parameter: 1.97 # shape or 'b'
+    air_speed_sound: 340.0
+    shear_exp: 0.08
     water_density: 1025.0
-    water_dyn_viscosity: 1.3351e-3
-    soil_shear_modulus: 140.e+6
+    water_dyn_viscosity: 0.0013351
+    soil_shear_modulus: 140000000.0
     soil_poisson: 0.4
-    water_depth: 200.0
-    significant_wave_height: 4.52
-    significant_wave_period: 9.45
+    water_depth: 265.0
+    V_mean: 0.0 # TODO: if diff than 0.0, override IEC wind class' V_avg (10. for I)
+    significant_wave_height: 5.677337581 # NTM DLC 1.1 at highest wind speed (from sima)
+    significant_wave_period: 10.10683304 # same as above
 
-#(v) -------------- NEW! TODO: MB FLS options --------------
+#(v) -------------- NEW! DONE: MB FLS options --------------
 # ref to WEIS schema
 # - inputs needed:
 # -- loads (F*, M*), omega (rot_speed)
 # -- mean_wind_speed, time step, probabilities
 
-OpenFAST: 
+OpenFAST: # TODO: use sima loads, change ws and pdf_ws accord.
     simulation:
-        DT: 0.05 # DONE: time step (for integration)
-    openfast_dir: 'M:\\Vasudev_Gupta\\outputs_mainshaft_loads\\hub_loads_M4w.mat' # DONE: loads dir
+        DT: 0.1 # DONE: time step (for integration)
+    openfast_dir: 'C://SIMA_M4W_loads//all_main_shaft_loads.mat' # DONE: loads dir
 
 DLC_driver: #(v) https://weis.readthedocs.io/en/latest/dlc_generator.html#design-load-cases-in-weis
     DLCs:
         - DLC: "1.2"
-          wind_speed: [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.] # DONE: mean_wind_speed
-          probabilities: [0.06541262, 0.14245179, 0.14299681, 0.12940412, 0.10735197, 0.0824332, 0.05894909, 0.03942148, 0.02472593, 0.0083042] # DONE: probab
+          wind_speed: [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.] # TODO: update with new sima data
+          probabilities: [0.123038397328881, 0.134902615470228, 0.132548692264885, 0.126769616026711, 0.107629382303839, 0.0868113522537562, 0.0657874234835837, 0.0452365052865887, 0.0269143016138007, 0.0136533110740122] # DONE: probab
