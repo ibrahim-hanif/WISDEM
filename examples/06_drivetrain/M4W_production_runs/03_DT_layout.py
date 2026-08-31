@@ -38,16 +38,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 # %%
-from wisdem.drivetrainse.drivetrain import DriveMaterials, DrivetrainSE_M4W
-
-from wisdem.drivetrainse.hub import Hub_System
-from wisdem.drivetrainse.gearbox import Gearbox
-
-import wisdem.drivetrainse.layout as lay
-
-import wisdem.drivetrainse.drive_components as dc
-
-import wisdem.drivetrainse.drive_structure as ds
+from wisdem.drivetrainse.drivetrain import DrivetrainSE_M4W
 
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, pdf_norm_int_using_cdf
 from wisdem.commonse.fileIO import save_data, load_data, get_variable_list, var_df2dict
@@ -716,7 +707,8 @@ if plot_cases:
 #%%
 # Save rna properties into `yaml` file for next tower optimization
 if flag_save_RNAprops4tower:
-    utilsDT.write_yaml_of_drivetrain_properties( prob, loc_save_RNAprops4tower )
+    utilsDT.write_yaml_of_drivetrain_properties(
+        prob, loc_save_RNAprops4tower )
 # ===============================================================
 
  #%%[markdown]
