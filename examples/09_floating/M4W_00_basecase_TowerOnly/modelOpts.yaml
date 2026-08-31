@@ -1,0 +1,77 @@
+# Generic modeling options file to run standard WISDEM case
+General:
+    verbosity: False  # When set to True, the code prints to screen many infos
+WISDEM:
+    RotorSE:
+        flag: False
+    DriveSE:
+        flag: False
+    TowerSE:             # Options of TowerSE module
+        flag: True
+        wind: PowerWind
+        gamma_f: 1.2    # Safety factor for loads
+        gamma_m: 1.3     # Safety factor for material properties
+        gamma_n: 1.0     # Safety factor for consequence of failure
+        gamma_b: 1.1     # Safety factor for buckling
+        gamma_fatigue: 1.755  # Safety factor for fatigue failure (def: 1.0)
+        buckling_method: dnvgl # Buckling code type [eurocode or dnvgl] (def: dnvgl)
+        buckling_length: 15    # Buckling parameter
+        frame3dd:
+            shear: True
+            geom: True
+            tol: 1e-9
+    FloatingSE:
+        flag: True
+        symmetric_moorings: True
+        gamma_f: 1.35    # Safety factor for fatigue loads
+        gamma_m: 1.3     # Safety factor for material properties
+        gamma_n: 1.0     # Safety factor for ...
+        gamma_b: 1.1     # Safety factor for ...
+        gamma_fatigue: 1.755  # Safety factor for fatigue loads
+    BOS:
+        flag: False
+    OpEx:
+        flag: False
+    LCOE:
+        flag: False
+
+    Loading:
+        mass: 1123091.021441951
+        center_of_mass: [-7.532698529657817, -0.08403347458175062, 4.721852643449113]
+        moment_of_inertia: [383770656.5878385, 289565040.36380404, 265255694.35114163, 623.6741494061425, 27196404.641271874, 170351.8511298794]
+        loads:
+           -  force: [6723427.273040615, 10797075.195312388, 581455.4245063106]
+              moment: [-48532585.031878956, 124362436.5796993, -57047336.790610604]
+              velocity: 11.0
+
+Environment:
+    air_density: 1.225
+    air_dyn_viscosity: 1.81e-05
+    weib_shape_parameter: 1.97 # shape or 'b'
+    air_speed_sound: 340.0
+    shear_exp: 0.08
+    water_density: 1025.0
+    water_dyn_viscosity: 0.0013351
+    soil_shear_modulus: 140000000.0
+    soil_poisson: 0.4
+    water_depth: 265.0
+    V_mean: 0.0 # TODO: if diff than 0.0, override IEC wind class' V_avg (10. for I)
+    significant_wave_height: 5.677337581 # NTM DLC 1.1 at highest wind speed (from sima)
+    significant_wave_period: 10.10683304 # same as above
+
+#(v) -------------- NEW! DONE: MB FLS options --------------
+# ref to WEIS schema
+# - inputs needed:
+# -- loads (F*, M*), omega (rot_speed)
+# -- mean_wind_speed, time step, probabilities
+
+OpenFAST: # TODO: use sima loads, change ws and pdf_ws accord.
+    simulation:
+        DT: 0.1 # DONE: time step (for integration)
+    openfast_dir: 'C://SIMA_M4W_loads//all_main_shaft_loads.mat' # DONE: loads dir
+
+DLC_driver: #(v) https://weis.readthedocs.io/en/latest/dlc_generator.html#design-load-cases-in-weis
+    DLCs:
+        - DLC: "1.2"
+          wind_speed: [ 5.,  7.,  9., 11., 13., 15., 17., 19., 21., 23.] # TODO: update with new sima data
+          probabilities: [0.123038397328881, 0.134902615470228, 0.132548692264885, 0.126769616026711, 0.107629382303839, 0.0868113522537562, 0.0657874234835837, 0.0452365052865887, 0.0269143016138007, 0.0136533110740122] # DONE: probab
