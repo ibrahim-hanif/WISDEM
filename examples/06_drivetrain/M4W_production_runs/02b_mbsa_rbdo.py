@@ -531,57 +531,6 @@ graphPDF.setLegends(['normal pdf'])
 otv.View(graphPDF)
 
 #%%
-def run_MCS( event, numSamples=1e5 ):
-    """
-    Run a Monte-Carlo Simulation (MCS) experiment for a given `event`
-    """
-    ts = time.time()
-    # Create a Monte Carlo algorithm.
-    experiment = ot.MonteCarloExperiment()
-    algo = ot.ProbabilitySimulationAlgorithm(event, experiment) #(v) Pf = P(E) = P(G(X) < 0)
-    algo.setMaximumCoefficientOfVariation(0.05)
-    algo.setMaximumOuterSampling(int(numSamples))
-    algo.setKeepSample(True)
-    algo.run()
-    # Retrieve results.
-    result = algo.getResult()
-    probability = result.getProbabilityEstimate()
-    # calc beta also TODO
-    #
-    te = time.time()
-    t_total = te-ts 
-    print(f"! Results (MCS) in {t_total}s : Pf = {probability}.")
-    return probability
-
-def run_FORM( distribution, event, maxCallsNum=1e4 ):
-    """
-    Run a First-Order Reliability Method (FORM) analysis
-        on a given `distribution` and a given `event`
-    """
-    ts = time.time()
-    # Define a solver, here we use a :class:`~openturns.MultiStart` optimization based on :class:`~openturns.Cobyla`
-    startingSample = distribution.getSample(10)
-    optimAlgo = ot.MultiStart(ot.Cobyla(), startingSample)
-    optimAlgo.setMaximumCallsNumber( int(maxCallsNum) )
-    maxError = 1.e-3
-    optimAlgo.setMaximumAbsoluteError(maxError)
-    optimAlgo.setMaximumRelativeError(maxError)
-    optimAlgo.setMaximumResidualError(maxError)
-    optimAlgo.setMaximumConstraintError(maxError)
-    # Run FORM
-    algo = ot.FORM(optimAlgo, event)
-    algo.run()
-    # Retrieve results.
-    result = algo.getResult()
-    probability = result.getEventProbability()
-    beta = result.getHasoferReliabilityIndex()
-    #
-    te = time.time()
-    t_total = te-ts
-    print(f"! Results (FORM) in {t_total}s : Pf = {probability}, beta = {beta}.")
-    return probability, beta
-
-#%%
 # post-processing functions
 
 # Importance factors
@@ -730,29 +679,25 @@ def make_distribution_of_mbsa_inputs():
     e_mb2.setDescription([r"$e^{MB2}$"])
     e_mb2.setName("mb2_e")
 
-
+    # FLS loads
+    # = X_aero & X_dyn (cf. 2014_Nejad-On long term)
     # X uncertain
     # - tab.4.1 (2014_Torp-Safety_Factors_IEC_61400-1_ed_4_-_background_document.pdf)
     X_exp = make_dist_lognormal(0.15,1.0)
     X_dyn = make_dist_lognormal(0.05,1.0)
     X_aero= ot.Gumbel()
     X_aero.setParameter(ot.GumbelMuSigma()([1.0,0.1]))
-    X_all = X_exp*X_dyn*X_aero
-    # X_all.getSample(10)
+    X_fls = X_exp*X_dyn*X_aero
+    # X_all.getSample(10) # test
 
-    # FLS loads
-    # = X_aero & X_dyn (cf. 2014_Nejad-On long term)
-    X_fls = ot.LogNormal()
-    X_fls.setParameter(
-        ot.LogNormalMuSigma()( # NOTE: Good if physical mean = 1.0, physical std = 0.111915.
-            [1.0, 0.05, 0.0] # TODO: 0.01 test; 0.111915 actual
-        )
-    )
-    X_fls.setDescription([r"$\chi^{FLS}$"]) # TODO: rename to \xi
+    # X_fls = make_dist_lognormal(0.05, 1.0) # TODO: 0.01 test; 0.111915 actual
+    # NOTE: Good if physical mean = 1.0, physical std = 0.111915.
+
+    X_fls.setDescription([r"$\chi^{FLS}$"])
     X_fls.setName("X_FLS_hub_load")
 
     # ----
-    dims = 8
+    dims = 9
 
     # correlation matrix TODO
     # - Aerodynamic loads are highly correlated.
@@ -773,9 +718,10 @@ def make_distribution_of_mbsa_inputs():
             M2,
             M3,
             E,
-            # e_mb2,
-            X_all
-        ], copula
+            e_mb2,
+            X_fls
+        ],
+        copula
     )
 
     # TODO testing: correlation matrix of 3
@@ -794,6 +740,38 @@ def make_distribution_of_mbsa_inputs():
 # ### RBDO with improvements
 # =============================================================================
 # =============================================================================
+
+#%%
+# Init: central definition of reliability responses
+#
+# g >= 0 : safe
+# g <  0 : failure
+#
+# g = m * response + c
+# ------------------------------------------------------------
+# store constr names, operator and limits in dict
+# - in the form of: g = m * result + c
+# - with tuple (m,c) defined of each
+RELIABILITY_RESPONSES = { 
+    "constr_lss_vonmises": # Greater than 1.0 is fail
+    (-1.0, 1.0),
+    "constr_shaft_deflection": # Greater than 1.0 is fail
+    (-1.0, 1.0),
+    "constr_shaft_angle": # Greater than 1.0 is fail
+    (-1.0, 1.0),
+}
+if doMBfls:
+    RELIABILITY_RESPONSES.update({
+        "constr_L10_mb1": # Less than 1.0 is fail
+        (1.0, -1.0),
+        "constr_L10_mb2": # Less than 1.0 is fail
+        (1.0, -1.0),
+    })
+
+RELIABILITY_INDEX = {
+    name: i
+    for i, name in enumerate(RELIABILITY_RESPONSES.keys())
+}
 
 #%%
 class MBSA_Evaluator:
@@ -842,33 +820,8 @@ class MBSA_Evaluator:
 
         # ------------------------------------------------------------
         # Reliability responses ONLY
-        #
-        # g >= 0 : safe
-        # g <  0 : failure
-        #
-        # g = m * response + c
         # ------------------------------------------------------------
-        # store constr names, operator and limits in dict
-        # - in the form of: g = m * result + c
-        # - with tuple (m,c) defined of each
-        self.constr_info = { 
-            "constr_lss_vonmises": # Greater than 1.0 is fail
-            (-1.0, 1.0),
-            "constr_shaft_deflection": # Greater than 1.0 is fail
-            (-1.0, 1.0),
-            "constr_shaft_angle": # Greater than 1.0 is fail
-            (-1.0, 1.0),
-            #
-            "msa_mass":
-            (1.0, 0.0)
-        }
-        if doMBfls:
-            self.constr_info.update({
-                "constr_L10_mb1": # Less than 1.0 is fail
-                (1.0, -1.0),
-                "constr_L10_mb2": # Less than 1.0 is fail
-                (1.0, -1.0),
-            })
+        self.constr_info = RELIABILITY_RESPONSES
 
         # ------------------------------------------------------------
         # Objective responses
@@ -929,8 +882,8 @@ class MBSA_Evaluator:
         M_aero_hub = np.array([Mx, My, Mz]).reshape(3, 1)
 
         E_lss = float(X[6])
-        # mb2_e = float(X[7])
-        X_fls = float(X[7])        
+        mb2_e = float(X[7])
+        X_fls = float(X[8])        
 
         # ------------------------------------------------
         # Design variables
@@ -949,7 +902,7 @@ class MBSA_Evaluator:
         prob.set_val("F_aero_hub", F_aero_hub )
         prob.set_val("M_aero_hub", M_aero_hub )
         prob.set_val("lss_E", E_lss)
-        # prob.set_val("bear2.mb_e", mb2_e)
+        prob.set_val("bear2.mb_e", mb2_e)
         if model_opts["flags"]["mb_fls"]: prob.set_val("mb_fls.X_fls", X_fls) # X_fls is handled by your Analytical_* component
 
         # ------------------------------------------------
@@ -958,7 +911,7 @@ class MBSA_Evaluator:
         prob.run_model()
 
         # ------------------------------------------------
-        # Retrieve responses
+        # Retrieve reliability responses
         # ------------------------------------------------
         results = {}
 
@@ -972,12 +925,27 @@ class MBSA_Evaluator:
             results[ response_name ] = g
 
         # ------------------------------------------------
+        # Retrieve objective responses
+        # ------------------------------------------------
+        lst_obj_names = self.objective_names
+
+        for name in lst_obj_names:
+
+            results[ name ] = float(
+                np.max(
+                    np.asarray(
+                        prob[ name ]
+                    )
+                )
+            )
+
+        # ------------------------------------------------
         # Store COMPLETE result dictionary
         # ------------------------------------------------
 
         self.cache[cache_key] = results
 
-        return results
+        return dict(results)
 
 #%%
 class MBSA_LimitStateModel:
@@ -995,15 +963,29 @@ class MBSA_LimitStateModel:
         2 = shaft angle
         3 = MB1 L10
         4 = MB2 L10
+
+    Inputs
+    _____
+    evaluator : class instance
+
+    design_variables : dict
+
+    response_name : str
+        if input by user, use FORM to output reliability of defined response_name
+        otherwise default to None, and use MCS to output reliability for all responses
     """
 
-    def __init__(self, evaluator, design_variables, response_name):
+    def __init__(self, evaluator, design_variables, response_name=None):
         self.evaluator = evaluator
         self.design_variables = design_variables
         self.response_name = response_name
 
         # Validation on the 'response_name'
-        if response_name not in evaluator.constr_info:
+        if (
+            response_name is not None) and (
+            response_name not in evaluator.constr_info
+            ):
+
             raise ValueError(
                 f"Unknown response '{response_name}'. "
                 f"Available responses: "
@@ -1032,27 +1014,151 @@ class MBSA_LimitStateModel:
             #     results["constr_L10_mb2"],
             # ]
 
-        return [ results[ self.response_name ]]
+        response_name = self.response_name
+        # the user's response name's reliability
+        if response_name is not None:
+            return [ results[ self.response_name ]]
+        # all response names' reliabilities
+        else:
+            return [
+                results[ name ] for name in RELIABILITY_RESPONSES
+            ]
 
 #%%
-def compute_beta_new(
+# Function for reliability analysis (FORM, MCS)
+
+def calculate_pf_using_beta( beta ):
+    """
+    Helper function to calculate probability of failure (pf) using
+    the reliability index (beta)
+
+    pf = Phi^-1 ( -beta )
+    """
+    normal = ot.Normal()
+    pf = normal.computeCDF(-beta)
+    # print(f" --- calculated pf (from beta) = {pf_calc}") # test
+    return pf
+
+def calculate_beta_from_pf( pf ):
+    """
+    Helper function to calculate reliability index (beta) using
+    the probability of failure (pf)
+
+    beta = -Phi ( pf )
+    """
+    normal = ot.Normal()
+    beta = -normal.computeQuantile(pf)[0]
+    # print(f" --- calculated beta (from pf) = {beta_calc}") # test
+    return beta
+
+# -----------------------------------------------------------------
+# FORM: first order reliability method
+# -----------------------------------------------------------------
+def run_FORM( starting_point, event,
+             max_calls=1e4, maxError = 1.0e-3, verbose=False ):
+    """
+    Run a First-Order Reliability Method (FORM) analysis
+        on a given `distribution` and a given `event`
+    """
+    ts = time.time()
+
+    # Define a solver
+    optimAlgo = ot.Cobyla()
+    # optimAlgo = ot.MultiStart(ot.Cobyla(), starting_point) # here we use a :class:`~openturns.MultiStart` optimization based on :class:`~openturns.Cobyla`
+
+    optimAlgo.setStartingPoint( starting_point )
+
+    optimAlgo.setMaximumCallsNumber( int(max_calls) )
+
+    optimAlgo.setMaximumAbsoluteError(maxError)
+    optimAlgo.setMaximumRelativeError(maxError)
+    optimAlgo.setMaximumResidualError(maxError)
+    optimAlgo.setMaximumConstraintError(maxError)
+
+    # Run FORM
+    algo = ot.FORM(
+        optimAlgo,
+        event,
+        starting_point,
+    )
+
+    algo.run()
+
+    # Retrieve results.
+    result = algo.getResult()
+    # Pf
+    pf = result.getEventProbability()
+    # print(f" --- result Pf = {pf}") # test
+    # Beta
+    beta = result.getHasoferReliabilityIndex()
+    # print(f" --- result beta = {beta}") # test
+
+    pf_calc = calculate_pf_using_beta( beta )
+
+    #
+    te = time.time()
+    t_total = te-ts
+
+    if verbose: print(
+        f"! Results (FORM) in {t_total}s : Beta = {beta}, Pf = {pf_calc}."
+        )
+
+    return beta, pf_calc, result, t_total
+
+# -----------------------------------------------------------------
+# MCS: monte carlo simulations
+# -----------------------------------------------------------------
+def run_MCS( event, max_calls=1e5, verbose=False):
+    """
+    Run a Monte-Carlo Simulation (MCS) experiment for a given `event`
+    """
+    ts = time.time()
+    # Create a Monte Carlo algorithm.
+    experiment = ot.MonteCarloExperiment()
+    algo = ot.ProbabilitySimulationAlgorithm(event, experiment) #(v) Pf = P(E) = P(G(X) < 0)
+    algo.setMaximumCoefficientOfVariation(0.05)
+    algo.setMaximumOuterSampling(int(max_calls))
+    algo.setKeepSample(True)
+    algo.run()
+    # Retrieve results.
+    result = algo.getResult()
+    pf = result.getProbabilityEstimate()
+    # calc beta also TODO
+    beta_calc = calculate_beta_from_pf( pf )
+
+    te = time.time()
+    t_total = te-ts 
+
+    if verbose: print(
+        f"! Results (FORM) in {t_total}s : Beta = {beta_calc}, Pf = {pf}."
+        )
+
+    return beta_calc, pf, result, t_total
+
+#%%
+def compute_reliability(
     distribution, dist_samples, dist_mean,
     evaluator,
-    response_name,
     design_variables,
+    response_name=None,
     max_calls=1.E3,
 ):
     """
     reliability analysis
     """
+    # -----------
+    # init
+    # -----------
+    flagRunFORM = False
 
-    constraint_index = { # TODO: better use evaluator.constr_info ?
-        "constr_lss_vonmises": 0,
-        "constr_shaft_deflection": 1,
-        "constr_shaft_angle": 2,
-        "constr_L10_mb1": 3,
-        "constr_L10_mb2": 4,
-    }
+    if response_name is not None:
+        # run FORM to calc beta of this response_name
+        flagRunFORM = True
+        outputDims = 1
+    else:
+        # run MCS to calc beta for all responses
+        outputDims = int(len(RELIABILITY_RESPONSES)) # all reliability responses
+
 
     # idx = constraint_index[response_name]
     dimDist = int(distribution.getDimension())
@@ -1069,7 +1175,7 @@ def compute_beta_new(
 
     model = ot.PythonFunction(
         inputDim=dimDist,     # random variables only
-        outputDim=1,    # all 5 reliability responses
+        outputDim=outputDims,    
         func=model_wrapper
     )
 
@@ -1083,9 +1189,9 @@ def compute_beta_new(
     # Random vector
     # --------------------------------------------------
 
-    X = ot.RandomVector(distribution)
+    X = ot.RandomVector(distribution)   # X = [X1, X2, ...]
 
-    G = ot.CompositeRandomVector(
+    G = ot.CompositeRandomVector(       # Y = G(X) = g(X1, X2,...)
         model,
         X,
     )
@@ -1099,13 +1205,19 @@ def compute_beta_new(
     #     g <= 0: failure
     # --------------------------------------------------
 
-    event = ot.ThresholdEvent(
+    event = ot.ThresholdEvent(          # E = {Y < 0} = {G(X) < 0}
         G,
         ot.Less(),
         0.0,
     )
 
-    event.setName(response_name)
+    if flagRunFORM: event.setName(response_name)
+
+    # =====================================================
+    # Estimate probability of failure and reliability index
+    # 
+    # Pf = P(E) = P(G(X) < 0)
+    # =====================================================
 
     # --------------------------------------------------
     # Beta: initial screening
@@ -1131,53 +1243,22 @@ def compute_beta_new(
         print(f"-- inactive reliab constr: estimate beta {beta_est} > 8.0; returning safe values.")
         return 8.0, 0.0, None
 
-    # --------------------------------------------------
-    # FORM
-    # --------------------------------------------------
+    if flagRunFORM:
+        # --------------------------------------------------
+        # FORM
+        # --------------------------------------------------
+        beta, pf, result, time_run = run_FORM(
+            dist_mean, event, max_calls
+        )
+    else:
+        # --------------------------------------------------
+        # MCS
+        # --------------------------------------------------
+        beta, pf, result, time_run = run_MCS(
+            event, max_calls
+        )
 
-    # starting_point = distribution.getMean()
-    starting_point = dist_mean
-
-    optimAlgo = ot.Cobyla()
-
-    optimAlgo.setStartingPoint(
-        starting_point
-    )
-
-    optimAlgo.setMaximumCallsNumber(
-        int(max_calls)
-    )
-
-    maxError = 1.0e-3
-
-    optimAlgo.setMaximumAbsoluteError(maxError)
-    optimAlgo.setMaximumRelativeError(maxError)
-    optimAlgo.setMaximumResidualError(maxError)
-    optimAlgo.setMaximumConstraintError(maxError)
-
-    algo = ot.FORM(
-        optimAlgo,
-        event,
-        starting_point,
-    )
-
-    algo.run()
-
-    result = algo.getResult()
-    # Pf
-    pf = result.getEventProbability()
-    # print(f" --- result Pf = {pf}") # test
-    # Beta
-    beta = result.getHasoferReliabilityIndex()
-    # print(f" --- result beta = {beta}") # test
-
-    normal = ot.Normal()
-    beta_calc = -normal.computeQuantile(pf)[0]
-    # print(f" --- calculated beta (from pf) = {beta_calc}") # test
-    pf_calc = normal.computeCDF(-beta)
-    # print(f" --- calculated pf (from beta) = {pf_calc}") # test
-
-    return beta, pf_calc, result
+    return beta, pf, result
 
 #%%
 # TEST
@@ -1189,13 +1270,11 @@ dist_mean = distribution.getMean()
 evaluator = MBSA_Evaluator(opts,loc_load_saved_data+".csv")
 
 design_variables = {
-    "L_h1": np.array([4.95916667]), #prob["L_h1"],
-    "L_12": np.array([5.56416667]), #prob["L_12"],
-    "lss_diameter": np.array([2.03333333, 2.56666667]), #prob["lss_diameter"],
-    "lss_wall_thickness": np.array([0.28093333, 0.08253333]) #prob["lss_wall_thickness"]
+    "L_h1": prob["L_h1"], # 4.95916667
+    "L_12": prob["L_12"], # 5.56416667
+    "lss_diameter": prob["lss_diameter"], # [2.03333333, 2.56666667]
+    "lss_wall_thickness": prob["lss_wall_thickness"] # [0.28093333, 0.08253333]
 }
-
-
 
 #%%
 # Calculate the reliablity for each constraint
@@ -1203,60 +1282,60 @@ design_variables = {
 # ---- 
 response_name = "msa_mass"
 results_msa_mass = evaluator.evaluate(
-    X=distribution.getMean(),
+    X=dist_mean,
     design_variables=design_variables
 )
 print(f"{response_name}: { results_msa_mass[response_name] }")
 
 # ---- 
 response_name = "constr_lss_vonmises"
-beta_vm, pf_vm, results_vm = compute_beta_new(
+beta_vm, pf_vm, results_vm = compute_reliability(
     distribution, dist_samples, dist_mean,
     evaluator,
-    response_name,
-    design_variables
+    design_variables,
+    response_name
 )
 print(f"{response_name}: beta={beta_vm}, pf={pf_vm}")
 
 # ---- 
 response_name = "constr_shaft_deflection"
-beta_shaft_defl, pf_shaft_defl, results_shaft_defl = compute_beta_new(
+beta_shaft_defl, pf_shaft_defl, results_shaft_defl = compute_reliability(
     distribution, dist_samples, dist_mean,
     evaluator,
-    response_name,
-    design_variables
+    design_variables,
+    response_name
 )
 print(f"{response_name}: beta={beta_shaft_defl}, pf={pf_shaft_defl}")
 
 # ---- 
 response_name = "constr_shaft_angle"
-beta_shaft_angle, pf_shaft_angle, results_shaft_angle = compute_beta_new(
+beta_shaft_angle, pf_shaft_angle, results_shaft_angle = compute_reliability(
     distribution, dist_samples, dist_mean,
     evaluator,
-    response_name,
-    design_variables
+    design_variables,
+    response_name
 )
 print(f"{response_name}: beta={beta_shaft_angle}, pf={pf_shaft_angle}")
 
 # ---- 
 if doMBfls:
+    # ---- MB1
     response_name = "constr_L10_mb1"
-    beta_mb1, pf_mb1, results_mb1 = compute_beta_new(
+    beta_mb1, pf_mb1, results_mb1 = compute_reliability(
         distribution, dist_samples, dist_mean,
         evaluator,
-        response_name,
-        design_variables
+        design_variables,
+        response_name
     )
     print(f"{response_name}: beta={beta_mb1}, pf={pf_mb1}")
 
-# ---- 
-if doMBfls:
+    # ---- MB2
     response_name = "constr_L10_mb2"
-    beta_mb2, pf_mb2, results_mb2 = compute_beta_new(
+    beta_mb2, pf_mb2, results_mb2 = compute_reliability(
         distribution, dist_samples, dist_mean,
         evaluator,
-        response_name,
-        design_variables
+        design_variables,
+        response_name
     )
     print(f"{response_name}: beta={beta_mb2}, pf={pf_mb2}")
 
@@ -1380,7 +1459,7 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
 
         for constr_name, beta_name, pf_name in constraints:
 
-            beta, pf, result = compute_beta_new(
+            beta, pf, result = compute_reliability(
                 self.distribution, self.dist_samples, self.dist_mean,
                 self.evaluator,
                 constr_name,
