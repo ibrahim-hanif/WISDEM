@@ -816,14 +816,16 @@ plt.scatter(
     df_trb["d"],
     df_trb["k_yy"],
     s=80,
-    label=r"$k_{yy}$"
+    label=r"$k_{yy}$",
+    color="blue"
 )
 
 plt.scatter(
     df_trb["d"],
     df_trb["k_zz"],
     s=80,
-    label=r"$k_{zz}$"
+    label=r"$k_{zz}$",
+    color="red"
 )
 
 plt.yscale("log")
@@ -946,12 +948,14 @@ pred_zz = (
 plot_yANDz_stiffnesses = False # TODO
 
 if plot_yANDz_stiffnesses:
-    clr_yy = 'tab:blue'
+    clr_yy = 'black'
+    clr_yy_line = "blue"
     label_scat_yy = r"$k_{yy}$"+" data"
     label_pred_yy = r"$k_{yy}$"+" fit"
     plot_name = "plot_fit_rotat_stiff_XY" # NOTE: .png added later
 else:
-    clr_yy = 'orange'
+    clr_yy = 'black'
+    clr_yy_line = "#00FF00"
     label_scat_yy = 'Database'
     label_pred_yy = "Model prediction"
     plot_name = "plot_fit_rotat_stiff" # NOTE: .png added later
@@ -964,6 +968,7 @@ plt.scatter(
     df_trb["k_yy"][1:], # ----
     s=200,
     color=clr_yy,
+    marker="x",
     label = label_scat_yy
 )
 
@@ -972,7 +977,8 @@ if plot_yANDz_stiffnesses:
         df_trb["d"][1:],    # TODO: saved plot with [1:] ----
         df_trb["k_zz"][1:], # ----
         s=200,
-        c="orange",
+        c="black",
+        marker="o",
         label = r"$k_{zz}$"+" data"
     )
 
@@ -980,6 +986,7 @@ plt.plot(
     d_grid,
     pred_yy,
     "-",
+    color=clr_yy_line,
     lw=5.0,
     label = label_pred_yy
 )
@@ -988,7 +995,7 @@ if plot_yANDz_stiffnesses:
     plt.plot(
         d_grid,
         pred_zz,
-        "orange",
+        c="red",
         lw=5.0,
         label = r"$k_{zz}$"+" fit"
     )
