@@ -832,7 +832,7 @@ plt.yscale("log")
 
 plt.xlabel("D [mm]")
 plt.ylabel(r"$k_{\theta}$"+" [Nm/rad]")
-plt.title("TRB Bearing Rotational Stiffness")
+plt.title("Database of TRB2 tilting stiffness")
 plt.grid(True, which="both", alpha=0.3)
 plt.legend(loc="lower right")
 plt.tight_layout()
@@ -945,7 +945,7 @@ pred_zz = (
 #%%
 # ===== plot the fit =====
 
-plot_yANDz_stiffnesses = False # TODO
+plot_yANDz_stiffnesses = True # TODO
 
 if plot_yANDz_stiffnesses:
     clr_yy = 'black'
@@ -1004,11 +1004,11 @@ plt.yscale("log")
 
 if plot_yANDz_stiffnesses:
     plt.title(
-        "Power-law fit of TRB rotational stiffness"
+        "Power-law fit of TRB2 tilting stiffness"
     )
 else:
     plt.title(
-        f"Power-law fit of TRB rotational stiffness \n R²={model['k_yy']['r2']:.3f}"
+        f"Power-law fit of TRB2 tilting stiffness \n R²={model['k_yy']['r2']:.3f}"
     )
 
 plt.xlabel("D [mm]")
