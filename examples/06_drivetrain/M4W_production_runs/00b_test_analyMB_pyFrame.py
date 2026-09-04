@@ -27,7 +27,25 @@ from Drive4Wind.utilities import utilities_drivetrain as utilsDT
 from Drive4Wind.post_processing import analyseWTLoads, color_schemes
 from Drive4Wind.utilities import funcs_errors
 
+# Define plotting options
+loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
+clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
+
+params_plot_rc = {
+        "font.size": 24,
+        "axes.labelsize": 24,
+        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+        "lines.linewidth": 2,
+        "lines.markersize": 6,
+    }
+plt.rcParams.update( params_plot_rc )
+
 #%%
+
+suffix = "_sima"
+# 1. "_m4w"
+# 2. "_sima"
+
 # paths / locations
 results_dir = "00b_results"
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -53,7 +71,8 @@ load_fls_loads = False
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4W.mat")
 # TODO new
-# loc_all_loads_mat_file = "C:\\SIMA_M4W_loads\\all_main_shaft_loads.mat"
+if "sima" in suffix:
+    loc_all_loads_mat_file = "C:\\SIMA_M4W_loads\\all_main_shaft_loads.mat"
 
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_new.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
@@ -72,24 +91,15 @@ else: # define paths
         M_uls_full = np.array( [Snew['Mx_max'], Snew['My_max'], Snew['Mz_max']] ).reshape((3, 1))
 
 # %%
-# Define plotting options
-loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
-clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
-
-params_plot_rc = {
-        "font.size": 24,
-        "axes.labelsize": 24,
-        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
-        "lines.linewidth": 2,
-        "lines.markersize": 6,
-    }
-plt.rcParams.update( params_plot_rc )
-# %%
 # Plot hub load statistics
 loc_hub_loads_stats = os.path.join(dir_loads, "hub_loads_M4W_stats.pdf")
+if "sima" in suffix:
+    loc_hub_loads_stats = os.path.join(results_path,
+            "hub_loads" + suffix.upper() + "_stats.png")
 
 analyseWTLoads.plot_ms_load_statistics(
-    S_all,clrs_m4w["Turquoise"],clrs_m4w["Aqua"], (22,16)
+    S_all,"blue","red", (15,15),
+    # loc_save_plot=loc_hub_loads_stats
     ) 
 
 #%%
@@ -198,8 +208,8 @@ else:
 #%%
 # TODO: uncomment the desired analysis type
 # anaString = "MomentReactingFrame_nonAnalyBeam"; analysis = 1
-anaString = "MomentReacting"; analysis = 2
-# anaString = "nonMomentReacting"; analysis = 3
+# anaString = "MomentReacting"; analysis = 2
+anaString = "nonMomentReacting"; analysis = 3
 
 #%%[markdown]
 # ### Compare mb* loads (F,M) btw analy_*(s) (and Hub_* `pyFrame3DD`)
@@ -578,26 +588,32 @@ M_mb2_myframe[3,:] = np.hypot(M_mb2_myframe[1,:], M_mb2_myframe[2,:])
 # --- main colors
 loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
 clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
-clr_Frame = clrs_m4w['Dark_Blue']
-if analysis == 1: clr_Beam = clrs_m4w['Aqua']
-else: clr_Beam = clrs_m4w['Red']
+clr_Frame = "k" #clrs_m4w['Dark_Blue']
 # --- line options
 lineWidth_Frame = 3
 lineStyle_Frame = 'dashed'
 # --- labels
-label_analyMB = " analytical"
-label_Frame = " \nstructural solver"
+label_analyMB = " analytical: "
+label_Frame = " structural solver: "
 # ---- based on analysis: [ analyMB, pyFrame ]
-if analysis == 1: lstAnaType = ["non-MR", "MR"]
-elif analysis == 2: lstAnaType = ["MR"]*2
-elif analysis == 3: lstAnaType = ["MR "+r"$(k_{\theta}=0)$","non-MR"]
+if analysis == 1:
+    lstAnaType = ["non-MR", "MR"]
+    clr_Beam = "#0000FF" #clrs_m4w['Aqua']
+
+elif analysis == 2:
+    lstAnaType = ["MR"]*2
+    clr_Beam = "#00FF00" #clrs_m4w['Red']
+
+elif analysis == 3:
+    lstAnaType = ["MR "+r"$(k_{\theta}=0)$","non-MR"]
+    clr_Beam = "#7FFF00" #clrs_m4w['Red']
 # -------------------------
 # options: Journal polish
 # plot rc params
 params_plot_rc = {
-        "font.size": 24,
-        "axes.labelsize": 24,
-        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+        "font.size": 20,
+        "axes.labelsize": 20,
+        "legend.fontsize": 20, # 16 for pdf of `var_with_iter` plot
         "lines.linewidth": 4.5,
         "lines.markersize": 6,
     }
@@ -617,8 +633,12 @@ gs = fig.add_gridspec(5, 2, hspace=0.35, wspace=0.25)
 # ==== axial ====
 # 0,0 = mb1
 ax = fig.add_subplot(gs[0,0])
-ax.plot(0, 0, label=lstAnaType[0]+label_analyMB, color=clr_Beam )
-ax.plot(0, 0, label=lstAnaType[1]+label_Frame, color=clr_Frame, linestyle=lineStyle_Frame, linewidth=lineWidth_Frame)
+ax.plot(0, 0,
+        label=label_analyMB+lstAnaType[0],
+        color=clr_Beam )
+ax.plot(0, 0,
+        label=label_Frame+lstAnaType[1],
+        color=clr_Frame, linestyle=lineStyle_Frame, linewidth=lineWidth_Frame)
 ax.set_title("MB1 " + r"$(\times 10^6)$")
 ax.set_xticks([])
 ax.set_yticks([])
