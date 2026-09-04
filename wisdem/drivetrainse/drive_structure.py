@@ -2216,6 +2216,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_input("lss_E", val=0.0, units="Pa")
         if doReliability:
             self.add_input("X_fls", val=1.0, desc="Uncertainty factor, scaling all fls hub loads")
+            self.add_input("X_Cr", val=1.0, desc="Uncertainty factor for bearing Cr")
         # ---- Outputs ----
         # self.add_output("P_mb2_sum", val=0.0, units="N")# TODO: testing, then comment out
         self.add_output('L10h_mb1', val=0.0, desc='L10 life MB1', units='h')
@@ -2224,22 +2225,33 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_output('constr_L10_mb2', val=0.0, desc='Safety factor MB2')
         # self.add_output('constr_L10_mb_all', val=0.0, desc='Minimum safety factor')
         
-    def multiply_uncertainity_factors_to_hub_loads(self, X_fls):
+    def multiply_uncertainity_factors_to_hub_loads(self,
+            X_fls,
+            Fx,Fy,Fz, Mx,My,Mz
+        ):
         """
         returns X_fls * (F or M)_fls
         - local variables, non-mutating self.
         """
         return (
-            X_fls * self.Fx,
-            X_fls * self.Fy,
-            X_fls * self.Fz,
-            X_fls * self.Mx,
-            X_fls * self.My,
-            X_fls * self.Mz,
+            X_fls * Fx,
+            X_fls * Fy,
+            X_fls * Fz,
+            X_fls * Mx,
+            X_fls * My,
+            X_fls * Mz,
         )
 
     def compute(self, inputs, outputs):
         # ---- Inputs ----
+        # partial SFs
+        # - f : load
+        gamma_f = 1.0 #float(self.options["modeling_options"]["gamma_f"]) # 1.0 for FLS (cf. IEC-1)
+        # - m : material resistance
+        gamma_m = float(self.options["modeling_options"]["gamma_m"])
+        # - n : consequence of fail
+        gamma_n = float(self.options["modeling_options"]["gamma_n"])
+        gamma = gamma_f * gamma_m * gamma_n
         # bearings
         D_mb2 = float(inputs['D_shaft_mb2'][0])
         T_mb2 = float(inputs['Tshaft_mb2'][0])
@@ -2255,6 +2267,15 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # drivetrain
         tilt_rad = float(np.deg2rad(inputs["tilt"][0]))
         s_lss = inputs["s_lss"]
+        # Reliability ----
+        X_fls, X_Cr = 1.0, 1.0
+        if self.doReliability:
+            X_fls = float(inputs["X_fls"][0])
+            X_Cr = float(inputs["X_Cr"][0])
+            # print(f" -- doReliability True inside Analy_*: X_fls={X_fls}") # TODO: test
+            # print(f"  -- before *, mean Fy={np.mean(self.Fy)} and My={np.mean(self.My)}") # test
+            # print(f"  -- after *, mean Fy={np.mean(self.Fy)} and My={np.mean(self.My)}") # test            
+        # ----
         
         # direct drive?
         direct = self.options["modeling_options"]["direct"]
@@ -2275,24 +2296,15 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
             # lever arm; dist from mb2 (+ve towards hub)
             delta = float(s_mb2-s_carrier)
         # materials
-        E = float(inputs['lss_E'][0])
+        E = float(inputs['lss_E'][0]) / gamma_m
         # --------
         # compute lambda to check if EB_beam can be used for TRB2
         tube_mb2 = Tube(D_mb2,T_mb2)
         I = tube_mb2.Ixx
         EI = E*I + 1e-6 # div by 0.0 (def), avoid by 1e-6
         # --------
-        # Reliability
-        if self.doReliability:
-            X_fls = float(inputs["X_fls"][0])
-            # print(f" -- doReliability True inside Analy_*: X_fls={X_fls}") # TODO: test
-            # print(f"  -- before *, mean Fy={np.mean(self.Fy)} and My={np.mean(self.My)}") # test
-            Fx, Fy, Fz, Mx, My, Mz = self.multiply_uncertainity_factors_to_hub_loads(
-                X_fls)
-            # print(f"  -- after *, mean Fy={np.mean(self.Fy)} and My={np.mean(self.My)}") # test
-        else:
-            Fx, Fy, Fz = self.Fx, self.Fy, self.Fz
-            Mx, My, Mz = self.Mx, self.My, self.Mz
+        Fx, Fy, Fz = self.Fx, self.Fy, self.Fz
+        Mx, My, Mz = self.Mx, self.My, self.Mz
         # --------
         # Bearing loads (analytical) calculation: shape=(4, 72000, 11)
         # ---- 0. Minimal
@@ -2339,9 +2351,12 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         
         # outputs["P_mb2_sum"] = P_mb2_sum # TODO: testing, then comment out
 
+        P_mb1_sum *= X_fls
+        P_mb2_sum *= X_fls
+
         # L10 life calculation
-        Cr1 = inputs['Cr_mb1']
-        Cr2 = inputs['Cr_mb2']
+        Cr1 = inputs['Cr_mb1'] * X_Cr
+        Cr2 = inputs['Cr_mb2'] * X_Cr
         # L10 = (Cr/P)^p
         L10_mb1 = (Cr1 / P_mb1_sum) ** (p) # note: noth in [N] !!!
         L10_mb2 = (Cr2 / P_mb2_sum) ** (p)
@@ -2358,7 +2373,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # print(f"L10h_mb1: {outputs['L10h_mb1']}, L10h_mb2: {outputs['L10h_mb2']}") # debugging
         
         # constraints: on FLS safety factors (20 years = 20*8766 hours)
-        L_design = inputs['lifetime']
+        L_design = inputs['lifetime'] * gamma_n
         # ---- mb1 ----
         outputs['constr_L10_mb1'] = (L10h_mb1/(L_design*8766))**(1/p) # inside log should be >= 1, with log should be >= 0
         self.constr_L10_mb1 = outputs['constr_L10_mb1']
