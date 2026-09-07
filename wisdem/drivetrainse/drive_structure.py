@@ -2223,7 +2223,8 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         self.add_output('L10h_mb2', val=0.0, desc='L10 life MB2', units='h')
         self.add_output('constr_L10_mb1', val=0.0, desc='Safety factor MB1')
         self.add_output('constr_L10_mb2', val=0.0, desc='Safety factor MB2')
-        # self.add_output('constr_L10_mb_all', val=0.0, desc='Minimum safety factor')
+        self.add_output('constr_log_L10_mb1', val=0.0, desc='Log scaled constr L10 of MB1')
+        self.add_output('constr_log_L10_mb2', val=0.0, desc='Log scaled constr L10 of MB2')
         
     def multiply_uncertainity_factors_to_hub_loads(self,
             X_fls,
@@ -2380,8 +2381,13 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # ---- mb2 ----
         outputs['constr_L10_mb2'] = (L10h_mb2/(L_design*8766))**(1/p)
         self.constr_L10_mb2 = outputs['constr_L10_mb2']
-        # ---- all ----
-        # outputs['constr_L10_mb_all'] = min(outputs['constr_L10_mb1'], outputs['constr_L10_mb2'])
+        # ---- log-scaled ----
+        outputs['constr_log_L10_mb1'] = np.log(
+            (L10h_mb1/(L_design*8766))
+        )
+        outputs['constr_log_L10_mb2'] = np.log(
+            (L10h_mb2/(L_design*8766))
+        )
 # ---------------
 
 # ---------------
