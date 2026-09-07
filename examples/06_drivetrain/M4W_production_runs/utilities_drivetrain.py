@@ -10,6 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import scipy.io as sio
+import ast
 from Drive4Wind.post_processing.color_schemes import loc_clr_scheme_m4w, read_color_scheme
 clrs_m4w = read_color_scheme( loc_clr_scheme_m4w )
 
@@ -594,3 +595,171 @@ def define_modeling_options_dict_for_drivetrainSE(
     return opts
 
 # %%
+def plot_drivetrain_constraints(
+        csv_path,
+        lst_constrs=[
+                "constr_lss_vonmises",
+                "constr_bedplate_vonmises",
+                "constr_shaft_deflection",
+                "constr_shaft_angle",
+                "constr_mb1_defl",
+                "constr_mb2_defl",
+                "constr_stator_deflection",
+                "constr_stator_angle",
+                "constr_L10_mb1",
+                "constr_L10_mb2",
+            ],
+        flag_WTnamespace=False,
+        loc_save_img=None):
+
+    if flag_WTnamespace: prefix="drivese."
+    else: prefix=""
+
+    df = pd.read_csv(csv_path)
+    dict_vals = var_df2dict( df )
+
+    # --------------------------------------------------
+    # FIlter constraints
+    # --------------------------------------------------
+
+    vonmises_vars = []
+    scalar_vars = []
+    for var in lst_constrs:
+        if "vonmises" in var: vonmises_vars.append(var)
+        else: scalar_vars.append(var)
+
+    # --------------------------------------------------
+    # Figure
+    # --------------------------------------------------
+
+    fig, axs = plt.subplots(
+        2,
+        1,
+        figsize=(12, 12)
+    )
+
+    # ==================================================
+    # TOP: Line plot: von-MIses stress
+    # ==================================================
+
+    ax = axs[0]
+
+    for var in vonmises_vars:
+
+        val = dict_vals[prefix+var]
+
+        arr = np.asarray(
+            ast.literal_eval(val),
+            dtype=float
+        ).flatten()
+
+        ax.plot(
+            np.arange(len(arr)),
+            arr,
+            marker="o",
+            linewidth=4,
+            label=var.split("_")[1]
+        )
+
+    ax.axhline(
+        1.0,
+        color="k",
+        linestyle="--",
+        linewidth=2,
+        label="1.0 limit"
+    )
+
+    # ax.set_title("von-Mises Stress utilization")
+
+    ax.set_ylabel("Stress utilization")
+
+    ax.set_xlabel("Node of the structure")
+
+    ax.grid(True, alpha=0.3)
+
+    ax.legend()
+
+    # ==================================================
+    # BOTTOM: Bar plot: scalars
+    # ==================================================
+
+    ax = axs[1]
+
+    values = []
+    colors = []
+
+    for var in scalar_vars:
+
+        val = float( dict_vals[prefix+var] )
+        values.append( val )
+
+        if "L10" in var:
+            if val >= 1.0: colors.append( "tab:green" )
+            else: colors.append( "tab:red" )
+        else:
+            if val >= 1.0: colors.append( "tab:red" )
+            else: colors.append( "tab:green" )
+
+    values = np.asarray(values)
+
+    x = np.arange(len(values))
+
+    ax.bar(
+        x,
+        values,
+        color=colors
+    )
+
+    ax.axhline(
+        1.0,
+        color="k",
+        linestyle="--",
+        linewidth=2,
+        label="Limit = 1.0"
+    )
+
+    for i, v in enumerate(values):
+
+        ax.text(
+            i,
+            v + 0.03*np.max(values),
+            f"{v:.2f}",
+            ha="center"
+        )
+
+    ax.set_xticks(x)
+
+    ax.set_xticklabels(
+        [
+            s.replace("constr_", "")
+            for s in scalar_vars
+        ],
+        rotation=30,
+        ha="right"
+    )
+
+    ax.set_ylabel("Constraint utilization")
+
+    ax.grid(
+        True,
+        axis="y",
+        alpha=0.3
+    )
+
+    ax.legend()
+
+    plt.tight_layout()
+
+    if loc_save_img:
+
+        plt.savefig(
+            loc_save_img,
+            bbox_inches="tight",
+            dpi=300
+        )
+
+    plt.show()
+
+    return fig, axs
+
+#%%
