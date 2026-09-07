@@ -28,21 +28,26 @@ import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 
 #%%
 # ### Define flags
+wt_prefix = "iea_optim"
+# 1. "iea_orig"
+# 2. "iea_optim"
+
 suffix = "_sima_loads"
 # information
 # 1. '_old_loads':  old hub loads from felix' openfast (wrong) model
 # 2. '_sima_loads': sima loads from seraj's sima (correct) model
 
-opt_flag = True
+opt_flag = False
 opt_hub = False # (def: False) if to optimize hub, its Compn incl if dohub
-flag_save_new_data = True
-load_from_saved_data = False
-flag_save_RNAprops4tower = True
+flag_save_new_data = False
+load_from_saved_data = True
+flag_save_RNAprops4tower = False
 
 # post-processing results
 plot_cases = True
-save_new_plot = True #NOTE: saved, not changing now (commented)
+save_new_plot = False #NOTE: saved, not changing now (commented)
 
+#%%
 # -------
 # Loading `openFAST` hub loads from a saved file
 dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
@@ -64,7 +69,8 @@ basecaseCSVpath = os.path.join(
 basecaseDF = pd.read_csv(basecaseCSVpath)
 basecaseDict = var_df2dict(basecaseDF)
 
-loc_save_data = os.path.join(results_path, "m4w_base_case_DT"+suffix)
+loc_save_data = os.path.join(results_path,
+        wt_prefix+"_DT"+suffix)
 if flag_save_RNAprops4tower:
     loc_save_RNAprops4tower = os.path.join(
         results_path, "RNA_props_model_for_tower"+suffix+".yaml")
@@ -153,114 +159,117 @@ else:
 # Set up the OpenMDAO problem
 prob.setup()
 # ----
-#%% overwrite variables from saved data
+#%%
+# Problem variables: set or overwrite variables from saved data
+
 if load_from_saved_data:
     print(" loading prob vars from saved csv")
     prob = load_data( loc_save_data+".csv", prob )
-#%%
-# Set high-level input values (that desc the turbine)
-machine_rating = float(basecaseDict["drivese.machine_rating"])
-prob.set_val("machine_rating",machine_rating,"kW")
-prob["upwind"] = bool(basecaseDict["drivese.upwind"])
-D_rotor = prob["rotor_diameter"] = float(basecaseDict["drivese.rotor_diameter"])
-prob["D_top"] = float(basecaseDict["drivese.D_top"]) #tower top diameter
-prob["minimum_rpm"] = float(basecaseDict["drivese.minimum_rpm"])
-rated_rpm = prob["rated_rpm"] = float(basecaseDict["drivese.rated_rpm"]) #7.56
-prob["rated_torque"] = float(basecaseDict["drivese.rated_torque"]) # 21.3 * 1e6 # Nm
-if doMBfls:
-    prob["lifetime"] = float(basecaseDict["drivese.lifetime"]) #design life in years ('lifetime' from WEIS, WindIO)
-prob["overhang"] = float(basecaseDict["drivese.overhang"]) #ref.2
-prob["drive_height"] = float(basecaseDict["drivese.drive_height"])
-prob["tilt"] = float(basecaseDict["drivese.tilt"]) #[deg] ref.3
 
-# Loading from rotor
-# prob["F_aero_hub"] = np.array([2517580.0, -27669.0, 3204.0]).reshape((3, 1))
-# prob["M_aero_hub"] = np.array([21030561.0, 7414045.0, 1450946.0]).reshape((3, 1))
-prob['F_aero_hub'] = np.array( [S_all['Fx_max'], S_all['Fy_max'], S_all['Fz_max']] ).reshape((3, 1))
-prob['M_aero_hub'] = np.array( [S_all['Mx_max'], S_all['My_max'], S_all['Mz_max']] ).reshape((3, 1))
-# ----
+else:
+    # Set high-level input values (that desc the turbine)
+    machine_rating = float(basecaseDict["drivese.machine_rating"])
+    prob.set_val("machine_rating",machine_rating,"kW")
+    prob["upwind"] = bool(basecaseDict["drivese.upwind"])
+    D_rotor = prob["rotor_diameter"] = float(basecaseDict["drivese.rotor_diameter"])
+    prob["D_top"] = float(basecaseDict["drivese.D_top"]) #tower top diameter
+    prob["minimum_rpm"] = float(basecaseDict["drivese.minimum_rpm"])
+    rated_rpm = prob["rated_rpm"] = float(basecaseDict["drivese.rated_rpm"]) #7.56
+    prob["rated_torque"] = float(basecaseDict["drivese.rated_torque"]) # 21.3 * 1e6 # Nm
+    if doMBfls:
+        prob["lifetime"] = float(basecaseDict["drivese.lifetime"]) #design life in years ('lifetime' from WEIS, WindIO)
+    prob["overhang"] = float(basecaseDict["drivese.overhang"]) #ref.2
+    prob["drive_height"] = float(basecaseDict["drivese.drive_height"])
+    prob["tilt"] = float(basecaseDict["drivese.tilt"]) #[deg] ref.3
 
-# Blade properties and hub design options
-# --- NOTE: copied from M4W_base_case_driver's NOoptim csv
-prob["hub_diameter"] = float(basecaseDict["drivese.hub_diameter"])
-n_blades = prob["n_blades"] = float(basecaseDict["drivese.n_blades"])
-blade_mass = prob["blade_mass"] = float(basecaseDict["drivese.blade_mass"])
-prob["blades_mass"] = float(basecaseDict["drivese.blades_mass"]) #n_blades * blade_mass
-prob["blades_cm"] = float(basecaseDict["drivese.blades_cm"])
-prob["blades_I"] = eval(basecaseDict["drivese.blades_I"])
+    # Loading from rotor
+    # prob["F_aero_hub"] = np.array([2517580.0, -27669.0, 3204.0]).reshape((3, 1))
+    # prob["M_aero_hub"] = np.array([21030561.0, 7414045.0, 1450946.0]).reshape((3, 1))
+    prob['F_aero_hub'] = np.array( [S_all['Fx_max'], S_all['Fy_max'], S_all['Fz_max']] ).reshape((3, 1))
+    prob['M_aero_hub'] = np.array( [S_all['Mx_max'], S_all['My_max'], S_all['Mz_max']] ).reshape((3, 1))
+    # ----
 
-lstHub = ["flange_t2shell_t",
-          "flange_OD2hub_D",
-          "flange_ID2flange_OD",
-          "hub_in2out_circ",
-          "hub_stress_concentration",
-          "n_front_brackets",
-          "n_rear_brackets",
-          "clearance_hub_spinner",
-          "spin_hole_incr",
-          "blade_root_diameter",
+    # Blade properties and hub design options
+    # --- NOTE: copied from M4W_base_case_driver's NOoptim csv
+    prob["hub_diameter"] = float(basecaseDict["drivese.hub_diameter"])
+    n_blades = prob["n_blades"] = float(basecaseDict["drivese.n_blades"])
+    blade_mass = prob["blade_mass"] = float(basecaseDict["drivese.blade_mass"])
+    prob["blades_mass"] = float(basecaseDict["drivese.blades_mass"]) #n_blades * blade_mass
+    prob["blades_cm"] = float(basecaseDict["drivese.blades_cm"])
+    prob["blades_I"] = eval(basecaseDict["drivese.blades_I"])
 
-          "pitch_system.BRFM",
-          "pitch_system_scaling_factor",
+    lstHub = ["flange_t2shell_t",
+            "flange_OD2hub_D",
+            "flange_ID2flange_OD",
+            "hub_in2out_circ",
+            "hub_stress_concentration",
+            "n_front_brackets",
+            "n_rear_brackets",
+            "clearance_hub_spinner",
+            "spin_hole_incr",
+            "blade_root_diameter",
 
-          "spinner_gust_ws"]
-for name in lstHub:
-    prob[name] = float(basecaseDict["drivese."+name])
-# ----
-#%%
-# Drivetrain configuration and sizing inputs
-prob["bear1.bearing_type"] = "CARB" # iea15 report: TRB2; latest wisdem: CARB
-prob["bear2.bearing_type"] = "SRB"  
-prob["bear1.D_shaft"] = 2.2
-prob["bear2.D_shaft"] = 2.2
-if doMBfls:
-    prob["bear1.mb_e"] = 0.4 # from 0.3-0.4 
-    prob["bear2.mb_e"] = 0.4
-    # prob["bear2.mb_k"] = 0.0 #3e10
-    prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
-# - init condn for some design vars
-myones = np.ones(2)
-prob["L_h1"] = 1.0
-prob["L_12"] = 1.2
-prob["lss_diameter"] = 3.0 * myones #* 2
-prob["lss_wall_thickness"] = 0.1 * myones #* 2
+            "pitch_system.BRFM",
+            "pitch_system_scaling_factor",
 
-prob["nose_diameter"] = 2.2 * myones #* 2
-prob["nose_wall_thickness"] = 0.1 * myones #* 2
+            "spinner_gust_ws"]
+    for name in lstHub:
+        prob[name] = float(basecaseDict["drivese."+name])
+    # ----
+    
+    # Drivetrain configuration and sizing inputs
+    prob["bear1.bearing_type"] = "CARB" # iea15 report: TRB2; latest wisdem: CARB
+    prob["bear2.bearing_type"] = "SRB"  
+    prob["bear1.D_shaft"] = 2.2
+    prob["bear2.D_shaft"] = 2.2
+    if doMBfls:
+        prob["bear1.mb_e"] = 0.4 # from 0.3-0.4 
+        prob["bear2.mb_e"] = 0.4
+        # prob["bear2.mb_k"] = 0.0 #3e10
+        prob["mb_fls.e_mb"] = prob["bear2.mb_e"]
+    # - init condn for some design vars
+    myones = np.ones(2)
+    prob["L_h1"] = 1.0
+    prob["L_12"] = 1.2
+    prob["lss_diameter"] = 3.0 * myones #* 2
+    prob["lss_wall_thickness"] = 0.1 * myones #* 2
 
-prob["L_generator"] = float(basecaseDict["drivese.L_generator"])  # core length
-prob["generator_mass_user"] = float(basecaseDict["drivese.generator_mass"])
-prob["generator_radius_user"] = float(basecaseDict["drivese.R_generator"]) # air gap radius
+    prob["nose_diameter"] = 2.2 * myones #* 2
+    prob["nose_wall_thickness"] = 0.1 * myones #* 2
 
-prob["access_diameter"] = float(basecaseDict["drivese.access_diameter"])
+    prob["L_generator"] = float(basecaseDict["drivese.L_generator"])  # core length
+    prob["generator_mass_user"] = float(basecaseDict["drivese.generator_mass"])
+    prob["generator_radius_user"] = float(basecaseDict["drivese.R_generator"]) # air gap radius
 
-prob["bedplate_wall_thickness"] = 0.05 * np.ones(4) # same mass (as report): use 0.0925
+    prob["access_diameter"] = float(basecaseDict["drivese.access_diameter"])
 
-prob["yaw_system_mass_user"] = 0.0 # report = 100e3
+    prob["bedplate_wall_thickness"] = 0.05 * np.ones(4) # same mass (as report): use 0.0925
 
-prob["shaft_deflection_allowable"] = 1e-4
-prob["shaft_angle_allowable"] = 1e-3
-prob["stator_deflection_allowable"] = 1e-2 #(def: 1e-4 m; 1e-2)
-prob["stator_angle_allowable"] = 1e-1 #(def: 1e-3 deg; 1e-1)
-# ----
+    prob["yaw_system_mass_user"] = 0.0 # report = 100e3
 
-# Material properties (4 materials defined, cf. "n_mat"=4)
-prob["E_mat"] = np.c_[200e9 * np.ones(3), 205e9 * np.ones(3), 118e9 * np.ones(3), [4.46e10, 1.7e10, 1.67e10]].T
-# - (v, note) these would be  -np.c_-> (4,3) -.T-> (3,4) array
-prob["G_mat"] = np.c_[79.3e9 * np.ones(3), 80e9 * np.ones(3), 47.6e9 * np.ones(3), [3.27e9, 3.48e9, 3.5e9]].T
-prob["Xt_mat"] = np.c_[450e6 * np.ones(3), 814e6 * np.ones(3), 310e6 * np.ones(3), [6.092e8, 3.81e7, 1.529e7]].T
-prob["rho_mat"] = np.r_[7800.0, 7850.0, 7200.0, 1940.0]
-prob["Xy_mat"] = np.r_[345e6, 485e6, 265e6, 18.9e6]
-prob["wohler_exp_mat"] = 1e1 * np.ones(4)
-prob["wohler_A_mat"] = 1e1 * np.ones(4)
-prob["unit_cost_mat"] = np.r_[0.7, 0.9, 0.5, 1.9]
-# - Material assignment
-prob["lss_material"] = prob["hss_material"] = "steel_drive"
-prob["bedplate_material"] = "steel"
-prob["hub_material"] = "cast_iron"
-prob["spinner_material"] = "glass_uni"
-prob["material_names"] = ["steel", "steel_drive", "cast_iron", "glass_uni"]
-# ----
+    prob["shaft_deflection_allowable"] = 1e-4
+    prob["shaft_angle_allowable"] = 1e-3
+    prob["stator_deflection_allowable"] = 1e-2 #(def: 1e-4 m; 1e-2)
+    prob["stator_angle_allowable"] = 1e-1 #(def: 1e-3 deg; 1e-1)
+    # ----
+
+    # Material properties (4 materials defined, cf. "n_mat"=4)
+    prob["E_mat"] = np.c_[200e9 * np.ones(3), 205e9 * np.ones(3), 118e9 * np.ones(3), [4.46e10, 1.7e10, 1.67e10]].T
+    # - (v, note) these would be  -np.c_-> (4,3) -.T-> (3,4) array
+    prob["G_mat"] = np.c_[79.3e9 * np.ones(3), 80e9 * np.ones(3), 47.6e9 * np.ones(3), [3.27e9, 3.48e9, 3.5e9]].T
+    prob["Xt_mat"] = np.c_[450e6 * np.ones(3), 814e6 * np.ones(3), 310e6 * np.ones(3), [6.092e8, 3.81e7, 1.529e7]].T
+    prob["rho_mat"] = np.r_[7800.0, 7850.0, 7200.0, 1940.0]
+    prob["Xy_mat"] = np.r_[345e6, 485e6, 265e6, 18.9e6]
+    prob["wohler_exp_mat"] = 1e1 * np.ones(4)
+    prob["wohler_A_mat"] = 1e1 * np.ones(4)
+    prob["unit_cost_mat"] = np.r_[0.7, 0.9, 0.5, 1.9]
+    # - Material assignment
+    prob["lss_material"] = prob["hss_material"] = "steel_drive"
+    prob["bedplate_material"] = "steel"
+    prob["hub_material"] = "cast_iron"
+    prob["spinner_material"] = "glass_uni"
+    prob["material_names"] = ["steel", "steel_drive", "cast_iron", "glass_uni"]
+    # ----
 
 # %%
 # ### Print inputs and outputs to the model `Problem`
@@ -386,4 +395,32 @@ if plot_cases:
         loc_save_data+".csv", os.path.join(results_path, "iea_report_DT.csv"),
         m4w_label="IEA 15MW (UN)", iea_label="IEA 15MW (report)",
         flag_WTnamespace=False, loc_save_img=loc_save_img )
+
+# %%
+lst_constrs=[
+    "constr_lss_vonmises",
+    "constr_bedplate_vonmises",
+    "constr_shaft_deflection",
+    "constr_shaft_angle",
+    "constr_mb1_defl",
+    "constr_mb2_defl",
+    # "constr_stator_deflection",
+    "constr_stator_angle",
+    "constr_L10_mb1",
+    "constr_L10_mb2",
+]
+
+if plot_cases:
+    # save plot loc
+    loc_save_img = None
+    if save_new_plot:
+        loc_save_img = os.path.join( results_path,
+                        wt_prefix+"_DT_utils"+suffix+".png" )
+    # plot
+    utilsDT.plot_drivetrain_constraints(
+        csv_path=loc_save_data+".csv",
+        lst_constrs=lst_constrs,
+        loc_save_img=loc_save_img
+    )
+    
 # %%
