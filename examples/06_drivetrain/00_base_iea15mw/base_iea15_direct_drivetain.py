@@ -384,6 +384,7 @@ if flag_save_RNAprops4tower:
         prob, loc_save_RNAprops4tower, direct=True )
 # ===============================================================
 #%%
+# Plot drivetrain/nacelle mass comparison btw iea orig and optim
 if plot_cases:
     # save plot loc
     loc_save_img = None
@@ -396,7 +397,9 @@ if plot_cases:
         m4w_label="IEA 15MW (UN)", iea_label="IEA 15MW (report)",
         flag_WTnamespace=False, loc_save_img=loc_save_img )
 
-# %%
+#%%
+# Plot drivetrain constraint utilizations
+
 lst_constrs=[
     "constr_lss_vonmises",
     "constr_bedplate_vonmises",
@@ -417,10 +420,25 @@ if plot_cases:
         loc_save_img = os.path.join( results_path,
                         wt_prefix+"_DT_utils"+suffix+".png" )
     # plot
-    utilsDT.plot_drivetrain_constraints(
+    fig, axes = utilsDT.plot_drivetrain_constraints(
         csv_path=loc_save_data+".csv",
         lst_constrs=lst_constrs,
         loc_save_img=loc_save_img
     )
     
 # %%
+# change axes[0] plots line colors
+axes[0].lines[0].set_color("tab:blue")
+axes[0].lines[1].set_color("tab:red")
+axes[0].legend()
+
+axes[1].legend(["1.0 limit"])
+
+# save
+if save_new_plot:
+    loc_save_img = os.path.join( results_path,
+                    wt_prefix+"_DT_utils"+suffix+".pdf" )
+    fig.savefig( loc_save_img )
+
+# show the changed plot
+fig
