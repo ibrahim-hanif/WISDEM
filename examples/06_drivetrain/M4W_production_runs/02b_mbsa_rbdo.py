@@ -10,6 +10,7 @@
 
 #%%
 import sys
+from numpy.linalg import norm
 import scipy.io as sio
 
 venv_needed = 'rbdo_wisdem_env'
@@ -41,25 +42,26 @@ import pandas as pd
 from wisdem.drivetrainse.drivetrain import MBSA
 from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from_mat_to_dict, load_all_mat_to_dict, pdf_norm_int_using_cdf
 from wisdem.commonse.fileIO import save_data, load_data, var_df2dict
-from wisdem.commonse.cross_sections import Tube
 import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 
 # %%
 # ### Define flags
-suffix = "_sima" # _noMBfls
+suffix = "_sima_2SRBs"
+# 1. _sima
+# 2. _sima_2SRBs
 
 # Optimization flags
 flag_opt_GBO = False     # GBO: gradient based optimizer
 flag_opt_GFO = False
 
-# post-processing results
-make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
-record_cases = False    #TODO: add in final setup (full problem)
-plot_cases = True      #NOTE: saved, not changing now (commented)
-flag_scaling_show_browser = False
 flag_save_new_data = False
 flag_load_from_data = True
 flag_load_from_02data = False
+
+# post-processing results
+plot_cases = True      #NOTE: saved, not changing now (commented)
+make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
+flag_scaling_show_browser = False
 
 # Loading `openFAST` hub loads from a saved file
 # TODO: dont even need to do this now, coz `Load_Own_Hub_Loads` component does it internally and outputs the needed loads for the DT component. So, can just set `own_hub_loads=True` in `modelling_options` and not worry about loading the loads here in the script. JazakumAllahu khayr.
@@ -107,14 +109,6 @@ if flag_load_from_data:
 
 loc_xdsm = os.path.join(results_path, 'xdsm_02')
 
-# Record results?
-if record_cases:
-    print(" ---- Recording cases using `SqliteRecorder` ---- ")
-    loc_cases = os.path.join(results_path,
-        "cases_recorded"+suffix+".sql")
-    if os.path.exists( loc_cases ):
-        os.remove( loc_cases )
-
 #%% Loading `openFAST` hub loads from a saved file
 if part_loads: # define paths
     S_all, keys_all = load_all_mat_to_dict(loc_all_loads_mat_file)
@@ -134,6 +128,9 @@ opts = defModelOpts(loc_all_loads_mat_file)
 doMBfls = opts["flags"]["mb_fls"]
 dohub = opts["flags"]["hub"]
 dogen = opts["flags"]["generator"]
+
+# gamma_n = opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.2
+
 # %% [markdown]
 # ### Defining the model `problem class`:
 
@@ -162,10 +159,6 @@ if flag_opt_GBO:
     prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
     # prob.driver.options # disp for debugging
     # prob.set_solver_print(level=2)
-
-    if record_cases:
-        recorder = om.SqliteRecorder( loc_cases )
-        prob.driver.add_recorder( recorder=recorder )
 
 else:
     print("=== running analysis only (`run_model()`) ===")
@@ -486,7 +479,8 @@ print("- lss: ",
       np.max(prob["constr_lss_vonmises"])
       )
 if doMBfls:
-    print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"], "\n" )
+    print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
+    print("constr_log_L10_mb(1,2):", prob["mb_fls.constr_log_L10_mb1"], prob["mb_fls.constr_log_L10_mb2"], "\n" )
 #
 print("--- obj: masses ---")
 print(f"MSA mass: {prob["msa_mass"]}")
@@ -570,11 +564,6 @@ def draw_optim_error_history( results) :
 # from `copilot`
 # ==============================================================
 
-#%%
-# Add uncertainty to FLS hub loads # TODO
-opts["WISDEM"]["DriveSE"]["reliability"] = True
-doMBfls = opts["flags"]["mb_fls"] = True
-
 # %%
 def make_distribution_of_mbsa_inputs():
     """
@@ -598,62 +587,78 @@ def make_distribution_of_mbsa_inputs():
     mb2_e = float(savedDataDict["bear2.mb_e"])
     # Inputs: random distibutions saved
     all_loads_dict = sio.loadmat(loc_all_loads_mat_file)
-    str_max_dist = "_max_mean_std"
+    str_max_dist = "_max_mu_sigma"
     str_max = "_max"
 
-    # F_aero_hub
-    # CoV = std / mean = sigma / mu
-    CoV_uls = 0.01 # 0.01 test; 0.1 cf. 2021_Al-Sanad
+    # ---- helper functions
     def make_dist_lognormal( sigma, mu=1.0 ):    
-        X_uls = ot.LogNormal()
-        X_uls.setParameter(
+        dist = ot.LogNormal()
+        dist.setParameter(
             ot.LogNormalMuSigma()(
                 [ mu, sigma, 0.0]
             )
         )
-        return X_uls
+        return dist
+
+    def make_dist_gumbel( mu, sigma ):    
+            dist = ot.Gumbel()
+            dist.setParameter(
+                ot.GumbelMuSigma()(
+                    [ mu, sigma ]
+                )
+            )
+            return dist
+
+    def print_mean_std_of_dist( dist, num_samples=20 ):
+        samples = dist.getSample(num_samples) # test
+        print(f"mean = {np.mean(samples)}, std = {np.std(samples)}")
+    # ----
+
+    # F_aero_hub
+    # CoV = std / mean = sigma / mu
+    CoV_uls = 0.01 # 0.01 test; 0.1 cf. 2021_Al-Sanad
     X_uls = make_dist_lognormal( CoV_uls )
     # - 1.
-    F1_mean = float(all_loads_dict["Fx"+str_max_dist][0,0])
+    F1_mu = float(all_loads_dict["Fx"+str_max_dist][0,0])
     F1_sigma = float(all_loads_dict["Fx"+str_max_dist][0,1])
-    F1 = make_dist_lognormal( F1_sigma, F1_mean )
+    F1 = make_dist_gumbel( F1_mu, F1_sigma )
     # F1 = F_aero_hub[0] * X_uls # TODO: * _dist OR * X_uls
     F1.setDescription([r"$F_x^{ULS}$"])
     F1.setName("F_aero_hub_x")
     # - 2.
-    F2_mean = float(all_loads_dict["Fy"+str_max_dist][0,0])
+    F2_mu = float(all_loads_dict["Fy"+str_max_dist][0,0])
     F2_sigma = float(all_loads_dict["Fy"+str_max_dist][0,1])
-    F2 = make_dist_lognormal( F2_sigma, F2_mean )
+    F2 = make_dist_gumbel( F2_mu, F2_sigma )
     # F2 = F_aero_hub[1] * X_uls # * _dist OR * X_uls
     F2.setDescription([r"$F_y^{ULS}$"])
     F2.setName("F_aero_hub_y")
     # - 3.
-    F3_mean = float(all_loads_dict["Fz"+str_max_dist][0,0])
+    F3_mu = float(all_loads_dict["Fz"+str_max_dist][0,0])
     F3_sigma = float(all_loads_dict["Fz"+str_max_dist][0,1])
-    F3 = make_dist_lognormal( F3_sigma, F3_mean )
+    F3 = make_dist_gumbel( F3_mu, F3_sigma )
     # F3 = F_aero_hub[2] * X_uls # * _dist OR * X_uls
     F3.setDescription([r"$F_z^{ULS}$"])
     F3.setName("F_aero_hub_z")
 
     # M_aero_hub
     # - 1.
-    M1_mean = float(all_loads_dict["Mx"+str_max_dist][0,0])
+    M1_mu = float(all_loads_dict["Mx"+str_max_dist][0,0])
     M1_sigma = float(all_loads_dict["Mx"+str_max_dist][0,1])
-    M1 = make_dist_lognormal( M1_sigma, M1_mean )
+    M1 = make_dist_gumbel( M1_mu, M1_sigma )
     # M1 = M_aero_hub[0] * X_uls # * _dist OR * X_uls
     M1.setDescription([r"$M_x^{ULS}$"])
     M1.setName("M_aero_hub_x")
     # - 2.
-    M2_mean = float(all_loads_dict["My"+str_max_dist][0,0])
+    M2_mu = float(all_loads_dict["My"+str_max_dist][0,0])
     M2_sigma = float(all_loads_dict["My"+str_max_dist][0,1])
-    M2 = make_dist_lognormal( M2_sigma, M2_mean )
+    M2 = make_dist_gumbel( M2_mu, M2_sigma )
     # M2 = M_aero_hub[1] * X_uls # * _dist OR * X_uls
     M2.setDescription([r"$M_y^{ULS}$"])
     M2.setName("M_aero_hub_y")
     # - 3.
-    M3_mean = float(all_loads_dict["Mz"+str_max_dist][0,0])
+    M3_mu = float(all_loads_dict["Mz"+str_max_dist][0,0])
     M3_sigma = float(all_loads_dict["Mz"+str_max_dist][0,1])
-    M3 = make_dist_lognormal( M3_sigma, M3_mean )
+    M3 = make_dist_gumbel( M3_mu, M3_sigma )
     # M3 = M_aero_hub[2] * X_uls # * _dist OR * X_uls
     M3.setDescription([r"$M_z^{ULS}$"])
     M3.setName("M_aero_hub_z")
@@ -679,16 +684,18 @@ def make_distribution_of_mbsa_inputs():
     e_mb2.setDescription([r"$e^{MB2}$"])
     e_mb2.setName("mb2_e")
 
+    X_Cr = make_dist_lognormal(0.05, 1.0)
+    X_Cr.setDescription([r"$\chi_{Cr}$"])
+    X_Cr.setName("X_Cr")
+
     # FLS loads
     # = X_aero & X_dyn (cf. 2014_Nejad-On long term)
     # X uncertain
     # - tab.4.1 (2014_Torp-Safety_Factors_IEC_61400-1_ed_4_-_background_document.pdf)
     X_exp = make_dist_lognormal(0.15,1.0)
     X_dyn = make_dist_lognormal(0.05,1.0)
-    X_aero= ot.Gumbel()
-    X_aero.setParameter(ot.GumbelMuSigma()([1.0,0.1]))
-    X_fls = X_exp*X_dyn*X_aero
-    # X_all.getSample(10) # test
+    X_aero= make_dist_lognormal(0.10,1.0)
+    X_fls = X_dyn*X_aero#*X_exp
 
     # X_fls = make_dist_lognormal(0.05, 1.0) # TODO: 0.01 test; 0.111915 actual
     # NOTE: Good if physical mean = 1.0, physical std = 0.111915.
@@ -718,7 +725,7 @@ def make_distribution_of_mbsa_inputs():
             M2,
             M3,
             E,
-            e_mb2,
+            X_Cr,
             X_fls
         ],
         copula
@@ -817,6 +824,8 @@ class MBSA_Evaluator:
         # Cache
         # ------------------------------------------------------------
         self.cache = {}
+        self.n_model_evals = 0
+        self.n_cache_hits = 0
 
         # ------------------------------------------------------------
         # Reliability responses ONLY
@@ -838,6 +847,8 @@ class MBSA_Evaluator:
         # init
         constr_info = self.constr_info
         model_opts = self.model_opts
+
+        self.n_model_evals += 1
 
         X = np.asarray(X, dtype=float)
 
@@ -866,6 +877,7 @@ class MBSA_Evaluator:
         # ------------------------------------------------
 
         if cache_key in self.cache:
+            self.n_cache_hits += 1
             return self.cache[cache_key]
 
         # ------------------------------------------------
@@ -882,7 +894,7 @@ class MBSA_Evaluator:
         M_aero_hub = np.array([Mx, My, Mz]).reshape(3, 1)
 
         E_lss = float(X[6])
-        mb2_e = float(X[7])
+        X_Cr = float(X[7])
         X_fls = float(X[8])        
 
         # ------------------------------------------------
@@ -902,8 +914,9 @@ class MBSA_Evaluator:
         prob.set_val("F_aero_hub", F_aero_hub )
         prob.set_val("M_aero_hub", M_aero_hub )
         prob.set_val("lss_E", E_lss)
-        prob.set_val("bear2.mb_e", mb2_e)
-        if model_opts["flags"]["mb_fls"]: prob.set_val("mb_fls.X_fls", X_fls) # X_fls is handled by your Analytical_* component
+        if model_opts["flags"]["mb_fls"]:
+            prob.set_val("mb_fls.X_fls", X_fls) # X_fls is handled by your Analytical_* component
+            prob.set_val("mb_fls.X_Cr", X_Cr)
 
         # ------------------------------------------------
         # Run WISDEM/MBSA
@@ -1017,7 +1030,7 @@ class MBSA_LimitStateModel:
         response_name = self.response_name
         # the user's response name's reliability
         if response_name is not None:
-            return [ results[ self.response_name ]]
+            return [ results[ response_name ]]
         # all response names' reliabilities
         else:
             return [
@@ -1135,6 +1148,66 @@ def run_MCS( event, max_calls=1e5, verbose=False):
 
     return beta_calc, pf, result, t_total
 
+def run_initial_screening_for_beta(model, dist_samples):
+    # =====================================================
+    # Estimate probability of failure and reliability index
+    # 
+    # Pf = P(E) = P(G(X) < 0)
+    # =====================================================
+
+    # --------------------------------------------------
+    # Beta: initial screening
+    # - quick response-space screening estimate
+    # - beforehand to skip inactive constraints
+    # --------------------------------------------------
+    
+    # init
+    n_dist = int( np.asarray(dist_samples).shape[1] )
+
+    # eval func
+    values = model( dist_samples )
+    vals = np.asarray(values)
+
+    n_g = int( vals.shape[1] )
+
+    # stats
+    mu = np.mean(vals, axis=0)
+    sigma = np.std(vals, axis=0)
+
+    # operations
+    tol = 1e-8
+    ptp_le_tol = np.ptp(vals,axis=0) < tol
+    sigma_le_tol = sigma < tol
+
+    # --------------------------------------------------
+    # Estimated beta
+    # --------------------------------------------------
+    # = correct direction for a quick response-space screening estimate.
+    beta_est = abs(mu) / sigma
+
+    beta_ge_8 = beta_est > 8.0
+
+    if bool( np.any( ptp_le_tol ) ) or bool( np.any( sigma_le_tol ) ):
+        print(f"-- some constraint appears deterministic: limit state constant wrt. uncertain vars: ptp/sigma below tol; returning safe values.")
+        beta_est[ ptp_le_tol | sigma_le_tol ] = 8.0
+
+    if bool( np.any( beta_ge_8 ) ):
+        print(f"-- some inactive reliab constr: estimate beta {beta_est[beta_ge_8]} > 8.0; returning safe values.")
+        beta_est[ beta_ge_8 ] = 8.0
+
+    # --------------------------------------------------
+    # Estimated pf
+    # --------------------------------------------------
+    pf_est = np.zeros(n_g)
+    for i, beta in enumerate(beta_est):
+        pf_est[i] = calculate_pf_using_beta( beta )
+
+    if n_g == 1:
+        beta_est = beta_est[0]
+        pf_est = pf_est[0]
+
+    return beta_est, pf_est
+
 #%%
 def compute_reliability(
     distribution, dist_samples, dist_mean,
@@ -1144,20 +1217,39 @@ def compute_reliability(
     max_calls=1.E3,
 ):
     """
-    reliability analysis
+    Reliability analysis
+
+    Inputs
+    _______
+    
+    max_calls: int or float
+        maximum calls for the reliability analysis algorithm (FORM or MCS).
+        if `max_calls` == 0, the estimated (screened) beta is output.
+    
+    Internal Progress
+    _______
+    1. DONE : implement working function
+    2. TODO : adapt, for multiple outputs (all g) from model, beta_est, MCS and return statements; marked TODO.2
     """
     # -----------
     # init
     # -----------
-    flagRunFORM = False
+    max_calls = int(max_calls)
+    num_reliab_resp = int(len(RELIABILITY_RESPONSES)) # TODO.2
 
-    if response_name is not None:
-        # run FORM to calc beta of this response_name
-        flagRunFORM = True
+    response_selected = response_name is not None
+
+    if response_selected:
+        print(f"=== {response_name} ===")
         outputDims = 1
     else:
-        # run MCS to calc beta for all responses
-        outputDims = int(len(RELIABILITY_RESPONSES)) # all reliability responses
+        outputDims = num_reliab_resp  # all reliability responses
+
+    # -----
+    # Algorithm type 
+    # -----
+    # 0 = estimated beta, 1 = FORM, 2 = MCS
+    bool_alg = 0 if (max_calls == 0) else (1 if response_selected else 2)
 
 
     # idx = constraint_index[response_name]
@@ -1173,7 +1265,7 @@ def compute_reliability(
         response_name=response_name
     )
 
-    model = ot.PythonFunction(
+    model = ot.PythonFunction( # f( d, X )
         inputDim=dimDist,     # random variables only
         outputDim=outputDims,    
         func=model_wrapper
@@ -1204,14 +1296,13 @@ def compute_reliability(
     #     g > 0 : safe
     #     g <= 0: failure
     # --------------------------------------------------
-
-    event = ot.ThresholdEvent(          # E = {Y < 0} = {G(X) < 0}
-        G,
-        ot.Less(),
-        0.0,
-    )
-
-    if flagRunFORM: event.setName(response_name)
+    if bool_alg == 1: # TODO.2
+        event = ot.ThresholdEvent(          # E = {Y < 0} = {G(X) < 0}
+            G,
+            ot.Less(),
+            0.0,
+        )
+        event.setName(response_name)
 
     # =====================================================
     # Estimate probability of failure and reliability index
@@ -1224,51 +1315,57 @@ def compute_reliability(
     # - quick response-space screening estimate
     # - beforehand to skip inactive constraints
     # --------------------------------------------------
-    # sample = distribution.getSample(20) # handled by dist_samples
-    values = model( dist_samples )
+    beta_est, pf_est = run_initial_screening_for_beta(model, dist_samples)
 
-    # i = constraint_index[ response_name ]
+    if (bool_alg == 0) or (beta_est == 8.0):
+        # --------------------------------------------------
+        # Estimated beta
+        # --------------------------------------------------
+        return beta_est, pf_est, None
 
-    vals = np.asarray(values)
-    mu = np.mean(vals)
-    sigma = np.std(vals)
-
-    if bool(np.ptp(vals) < 1.e-8) or bool(sigma < 1e-16):
-        print(f"-- constraint appears deterministic: limit state constant wrt. uncertain vars: sigma={sigma}; returning safe values.")
-        return 8.0, 0.0, None
-    # beta_est
-    # = correct direction for a quick response-space screening estimate.
-    beta_est = mu / sigma
-    if bool(beta_est > 8.0):
-        print(f"-- inactive reliab constr: estimate beta {beta_est} > 8.0; returning safe values.")
-        return 8.0, 0.0, None
-
-    if flagRunFORM:
+    elif (bool_alg == 1):
         # --------------------------------------------------
         # FORM
         # --------------------------------------------------
         beta, pf, result, time_run = run_FORM(
             dist_mean, event, max_calls
         )
-    else:
+        # print error between estimated and actual (test)
+        err_beta_est = ((beta_est-beta)/beta)*1e2
+        print(f" --- comparing beta_est ({beta_est}) and beta ({beta}): % err = {err_beta_est}")
+
+    elif (bool_alg == 2):
         # --------------------------------------------------
         # MCS
         # --------------------------------------------------
         beta, pf, result, time_run = run_MCS(
             event, max_calls
         )
+        # print error between estimated and actual (test)
+        err_beta_est = ((beta_est-beta)/beta)*1e2
+        print(f" --- comparing beta_est ({beta_est}) and beta ({beta}): % err = {err_beta_est}")
 
     return beta, pf, result
 
 #%%
-# TEST
-distribution = make_distribution_of_mbsa_inputs()
-N_samples = 20
-dist_samples = distribution.getSample( N_samples )
-dist_mean = distribution.getMean()
+# RUN -----------------------------------------------------------------
 
-evaluator = MBSA_Evaluator(opts,loc_load_saved_data+".csv")
+# Reliability in modeling_options
+# opts = defModelOpts(loc_all_loads_mat_file)
 
+# Add uncertainty to FLS hub loads # TODO
+opts["WISDEM"]["DriveSE"]["reliability"] = True
+doMBfls = opts["flags"]["mb_fls"] = True
+
+# gamma_f = opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.0
+# gamma_m = opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.0
+# gamma_n = opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0
+# -----
+
+evaluator = MBSA_Evaluator(opts,loc_load_saved_data+".csv") # TODO: _gammaN_1p2
+om.n2(evaluator.prob, outfile=loc_n2, show_browser=True);
+
+# prob = load_data( loc_load_saved_data+".csv", prob )
 design_variables = {
     "L_h1": prob["L_h1"], # 4.95916667
     "L_12": prob["L_12"], # 5.56416667
@@ -1277,12 +1374,30 @@ design_variables = {
 }
 
 #%%
+DISTRIBUTION = make_distribution_of_mbsa_inputs()
+N_samples = 2**5
+DIST_SAMPLES = DISTRIBUTION.getSample( N_samples )
+DIST_MEAN = DISTRIBUTION.getMean()
+
+#%%
+# Estimate the reliablity for all constraints,
+# using `beta_est` as a quick screening
+
+betas, pfs, _ = compute_reliability(
+    DISTRIBUTION, DIST_SAMPLES, DIST_MEAN,
+    evaluator,
+    design_variables,
+    None, 0
+)
+print(f".= beta={betas}, \n.= pf={pfs}")
+
+#%%
 # Calculate the reliablity for each constraint
 
 # ---- 
 response_name = "msa_mass"
 results_msa_mass = evaluator.evaluate(
-    X=dist_mean,
+    X=DIST_MEAN,
     design_variables=design_variables
 )
 print(f"{response_name}: { results_msa_mass[response_name] }")
@@ -1290,7 +1405,7 @@ print(f"{response_name}: { results_msa_mass[response_name] }")
 # ---- 
 response_name = "constr_lss_vonmises"
 beta_vm, pf_vm, results_vm = compute_reliability(
-    distribution, dist_samples, dist_mean,
+    DISTRIBUTION, DIST_SAMPLES, DIST_MEAN,
     evaluator,
     design_variables,
     response_name
@@ -1300,7 +1415,7 @@ print(f"{response_name}: beta={beta_vm}, pf={pf_vm}")
 # ---- 
 response_name = "constr_shaft_deflection"
 beta_shaft_defl, pf_shaft_defl, results_shaft_defl = compute_reliability(
-    distribution, dist_samples, dist_mean,
+    DISTRIBUTION, DIST_SAMPLES, DIST_MEAN,
     evaluator,
     design_variables,
     response_name
@@ -1310,7 +1425,7 @@ print(f"{response_name}: beta={beta_shaft_defl}, pf={pf_shaft_defl}")
 # ---- 
 response_name = "constr_shaft_angle"
 beta_shaft_angle, pf_shaft_angle, results_shaft_angle = compute_reliability(
-    distribution, dist_samples, dist_mean,
+    DISTRIBUTION, DIST_SAMPLES, DIST_MEAN,
     evaluator,
     design_variables,
     response_name
@@ -1322,7 +1437,7 @@ if doMBfls:
     # ---- MB1
     response_name = "constr_L10_mb1"
     beta_mb1, pf_mb1, results_mb1 = compute_reliability(
-        distribution, dist_samples, dist_mean,
+        DISTRIBUTION, DIST_SAMPLES, DIST_MEAN,
         evaluator,
         design_variables,
         response_name
@@ -1332,7 +1447,7 @@ if doMBfls:
     # ---- MB2
     response_name = "constr_L10_mb2"
     beta_mb2, pf_mb2, results_mb2 = compute_reliability(
-        distribution, dist_samples, dist_mean,
+        DISTRIBUTION, DIST_SAMPLES, DIST_MEAN,
         evaluator,
         design_variables,
         response_name
@@ -1348,7 +1463,7 @@ if doMBfls and results_mb1 is not None: draw_importance_factors(results_mb1)
 if doMBfls and results_mb2 is not None: draw_importance_factors(results_mb2)
 
 #%%[markdown]
-# ------------------------------ RBDO ----------------------------------
+# ------------------------------ `RBDO` ----------------------------------
 #%%
 class ReliabilityComponent_new( om.ExplicitComponent ):
     """
@@ -1376,10 +1491,11 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
         opts = self.options["modeling_options"]
         n_dlcs = opts["WISDEM"]["n_dlc"]
         doMBfls = opts["flags"]["mb_fls"]
+        self.max_calls = opts["WISDEM"]["DriveSE"]["reliability_max_calls"]
 
-        self.distribution = make_distribution_of_mbsa_inputs()
-        self.dist_samples = self.distribution.getSample( N_samples )
-        self.dist_mean = self.distribution.getMean()
+        self.distribution = DISTRIBUTION #make_distribution_of_mbsa_inputs()
+        self.dist_samples = DIST_SAMPLES #self.distribution.getSample( N_samples )
+        self.dist_mean = DIST_MEAN #self.distribution.getMean()
 
         self.evaluator = MBSA_Evaluator(opts,loc_load_saved_data+".csv")
 
@@ -1423,7 +1539,7 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
 
         # Calculate the objective
         obj_name = "msa_mass"
-        results_msa_mass = evaluator.evaluate(
+        results_msa_mass = self.evaluator.evaluate(
             X=self.dist_mean,
             design_variables=design_variables
         )
@@ -1462,9 +1578,9 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
             beta, pf, result = compute_reliability(
                 self.distribution, self.dist_samples, self.dist_mean,
                 self.evaluator,
-                constr_name,
                 design_variables,
-                max_calls=1.E3,
+                constr_name,
+                max_calls=self.max_calls,
             )
 
             # test
@@ -1476,10 +1592,36 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
 # %%[markdown]
 # ### RBDO (reliability based design optimization)
 # %%
+opts["WISDEM"]["DriveSE"]["reliability_max_calls"] = 1e3
+
 flag_opt_GBO = False
-flag_opt_GFO = True
+flag_opt_GFO = False
 flag_DOE = False
 
+record_cases = False    #TODO: add in final setup (full problem)
+flag_save_new_data = False
+flag_load_from_data = False
+
+# ---- ---- ---- ---- ----
+if flag_opt_GBO:
+    str_optim = "_gbo"
+elif flag_opt_GFO:
+    str_optim = "_gfo"
+elif flag_DOE:
+    str_optim = "_doe"
+
+loc_save_data_rbdo = os.path.join(results_path, "02"+suffix+str_optim)
+loc_load_saved_data_rbdo = os.path.join(results_path, "02"+suffix+"_gfo")
+
+# Record results?
+if record_cases:
+    print(" ---- Recording cases using `SqliteRecorder` ---- ")
+    loc_cases = os.path.join(results_path,
+        "cases_recorded"+suffix+".sql")
+    if os.path.exists( loc_cases ):
+        os.remove( loc_cases )
+
+#%%
 # ### The problem
 # Define the problem
 prob_rbdo = om.Problem(reports=False)
@@ -1541,10 +1683,10 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # Add objective
     prob_rbdo.model.add_objective("msa_mass", ref=1e6)
     # Add design variables
-    prob_rbdo.model.add_design_var("L_h1", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
-    prob_rbdo.model.add_design_var("L_12", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
-    prob_rbdo.model.add_design_var("lss_diameter", lower=1.0, upper=5.0, ref=5.0, ref0=1.0)
-    prob_rbdo.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.5, ref=1.0, ref0=4e-3) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
+    prob_rbdo.model.add_design_var("L_h1", lower=0.1, upper=2.0, ref=2.0, ref0=0.1)
+    prob_rbdo.model.add_design_var("L_12", lower=2.0, upper=5.0, ref=5.0, ref0=2.0)
+    prob_rbdo.model.add_design_var("lss_diameter", lower=1.0, upper=4.0, ref=4.0, ref0=1.0)
+    prob_rbdo.model.add_design_var("lss_wall_thickness", lower=1e-2, upper=0.5, ref=1.0, ref0=1e-2) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
     # Add constraints
     prob_rbdo.model.add_constraint("beta_vonmises", lower=3.0)
     # prob_rbdo.model.add_constraint("beta_shaft_defl", lower=3.0)
@@ -1568,10 +1710,13 @@ print("\n=== All outputs from the model ===\n")
 prob_rbdo.model.list_outputs();
 
 # Set values of DVs
-prob_rbdo.set_val("L_h1", float(prob["L_h1"][0]) )
-prob_rbdo.set_val("L_12", float(prob["L_12"][0]) )
-prob_rbdo.set_val("lss_diameter", prob["lss_diameter"])
-prob_rbdo.set_val("lss_wall_thickness", prob["lss_wall_thickness"])
+if not flag_load_from_data:
+    prob_rbdo.set_val("L_h1", float(prob["L_h1"][0]) )
+    prob_rbdo.set_val("L_12", float(prob["L_12"][0]) )
+    prob_rbdo.set_val("lss_diameter", prob["lss_diameter"])
+    prob_rbdo.set_val("lss_wall_thickness", prob["lss_wall_thickness"])
+else:
+    prob_rbdo = load_data( loc_load_saved_data_rbdo+".csv", prob_rbdo )
 
 #%%
 # ### Run: Optimization / DOE / Analysis
@@ -1594,11 +1739,49 @@ else:
 t1 = time.time()
 print(" - WISDEM RBDO run completed in,", t1-t0, "seconds")
 
-# %%
-# post-processing
-print("msa_mass", prob_rbdo["msa_mass"])
-print("beta", prob_rbdo["beta_vonmises"])
-print("pf", prob_rbdo["pf_vonmises"])
+# %%[markdown]
+# # _____ Post-processing _____
+#%%
+# Print the results
+print("LSS desvars:")
+print(" ", prob_rbdo["L_h1"], prob_rbdo["L_12"], prob_rbdo["lss_diameter"], prob_rbdo["lss_wall_thickness"], "\n" )
+
+# post-processing rbdo
+lst_constrs = [
+    "beta_vonmises",
+    "beta_shaft_deflection",
+    "beta_shaft_angle"
+]
+if doMBfls:
+    lst_constrs.append("beta_mb1")
+    lst_constrs.append("beta_mb2")
+
+for name in lst_constrs: print( name, prob_rbdo[ name ])
+
+#
+print("--- obj: masses ---")
+print(f"MSA mass: {prob_rbdo["msa_mass"]}")
+
+# list_driver_vars = prob.list_driver_vars()
+# ==========================================================
+#%%
+### Recorded cases
+if False: #record_cases:
+    print("\n=== Recorded cases from the optimization ===\n")
+    results_dict = get_recorder_results( loc_cases, None, True )
+    print(results_dict);
+
+#%%
+# Driver scaling report 
+try:
+    prob_rbdo.driver.scaling_report(
+        outfile=loc_scaling_report,show_browser=flag_scaling_show_browser
+    );
+except:
+    pass
+#%%
+if flag_save_new_data: save_data(loc_save_data_rbdo, prob_rbdo)
+# ===============================================================
 
 # %%
 cr = om.CaseReader( loc_cases )
