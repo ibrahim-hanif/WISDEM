@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 # import scipy.io as sio # --- not used in here, but within imports
 import csv
 import pandas as pd
+from scipy import stats
 
 # %%
 # import needed `WISDEM` modules
@@ -1265,4 +1266,314 @@ loc_plot_mb_k_theta_multivariate = os.path.join(
 # plt.savefig(loc_plot_mb_k_theta_multivariate) # TODO 
 # --
 plt.show()
+
+#%%[markdown]
+# # Uncertainty in MB `Cr` for `RBDO`
+# ==================================================================
+
+#%%
+# setup
+
+bearing_type = "TRB2" # TODO: TRB2, SRB
+
+mbClass = dc.MainBearing_withDerivatives()
+allMBprops = mbClass.BEARINGS
+
+mbProps = allMBprops[ bearing_type ]
+
+
+c = float(mbProps["c"])
+m = float(mbProps["m"])
+
+# ------------------------------------------------------------
+# ============ 2015_Guo TRB2 Cr and X_Cr =====================
+# ------------------------------------------------------------
+
+path_guo_trb2 = os.path.join(
+    os.path.dirname(os.path.abspath(bearing_rotatStiff_csv)),
+    f"2015_Guo_{bearing_type}_bore1m_Cr.csv")
+
+df = pd.read_csv(path_guo_trb2)
+
+# ------------------------------------------------------------
+# Empirical relation shown in the figure:
+# C_emp(D) = 6579.9 D^0.8592
+# ------------------------------------------------------------
+
+df["C_emp_kN"] = c * (df["d"]/1e3)**m
+
+df["X_Cr"] = df["C_kN"] / df["C_emp_kN"]
+
+# Lognormal model for multiplicative model error
+log_x = np.log(df["X_Cr"].to_numpy())
+mu_ln = log_x.mean()
+sigma_ln = log_x.std(ddof=1)
+
+mean_xcr = np.exp(mu_ln + 0.5*sigma_ln**2)
+std_xcr = np.sqrt(
+    (np.exp(sigma_ln**2)-1)
+    * np.exp(2*mu_ln + sigma_ln**2)
+)
+cov_xcr = std_xcr / mean_xcr
+
+# ------------------------------------------------------------
+# Verification plot: detected points over original image
+# ------------------------------------------------------------
+"""
+fig, ax = plt.subplots(figsize=(12, 7))
+ax.imshow(img)
+ax.scatter(xp, yp, facecolors="none", edgecolors="red", s=100, linewidths=1.2)
+for n, xx, yy in zip(df["number"], xp, yp):
+    ax.text(xx+5, yy-5, str(n), fontsize=7, color="red")
+ax.set_xlim(x0-20, x1+20)
+ax.set_ylim(y_bottom+20, y_top-20)
+ax.axis("off")
+plt.show()
+
+print(f"Detected {len(df)} blue measured points.")
+print(f"CSV: {csv_path}")
+print(f"Calibration CSV: {calib_path}")
+print()
+"""
+print("TRB2 empirical relation:")
+print("  C_emp(D) = 6579.9 * D^0.8592")
+print()
+print("Multiplicative uncertainty:")
+print(f"  ln(X_Cr) ~ Normal(mu={mu_ln:.5f}, sigma={sigma_ln:.5f})")
+print(f"  mean(X_Cr) = {mean_xcr:.5f}")
+print(f"  std(X_Cr)  = {std_xcr:.5f}")
+print(f"  CoV(X_Cr)  = {cov_xcr:.5f}")
+print()
+print(df[["number", "d", "C_kN", "X_Cr"]].round(4).to_string(index=False))
+
+# %%[markdown]
+# ### Uncertainty in Cr of TRB2
+# %%
+
+str_plot = f"plot_Guo{bearing_type}_mb_Cr_LogNormal_fit"
+
+# ---------------------------------------------------
+# Load database
+# ---------------------------------------------------
+
+# df = df_trb # TODO: if True: str_plot = plot_mb_Cr_LogNormal_fit
+
+# ---------------------------------------------------
+# Inputs
+# ---------------------------------------------------
+
+d_m = df["d"].values / 1000.0      # mm -> m
+C_actual = df["C_kN"].values       # kN
+
+# ---------------------------------------------------
+# Empirical fit from plot
+# ---------------------------------------------------
+
+C_fit = c * d_m**m
+df["C_emp_kN"] = C_fit
+
+# ---------------------------------------------------
+# Residual uncertainty factor
+# ---------------------------------------------------
+
+X_Cr = C_actual / C_fit
+df["X_Cr"] = X_Cr
+
+# ---------------------------------------------------
+# Statistics
+# ---------------------------------------------------
+
+mu = np.mean(X_Cr)
+sigma = np.std(X_Cr, ddof=1)
+cov = sigma / mu
+
+print("\nX_Cr statistics")
+print("----------------")
+print(f"mean = {mu:.4f}")
+print(f"std  = {sigma:.4f}")
+print(f"cov  = {cov:.4f}")
+
+# ---------------------------------------------------
+# Fit LogNormal
+# ---------------------------------------------------
+
+shape, loc, scale = stats.lognorm.fit(
+    X_Cr,
+    floc=0.0
+)
+
+print("\nLogNormal fit")
+print("-------------")
+print(f"shape = {shape:.6f}")
+print(f"loc   = {loc:.6f}")
+print(f"scale = {scale:.6f}")
+
+# ---------------------------------------------------
+# Plot
+# ---------------------------------------------------
+
+# -------------------------
+# options: Journal polish
+# plot rc params
+params_plot_rc = {
+        "font.size": 24,
+        "axes.labelsize": 24,
+        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+        "lines.linewidth": 4,
+        "lines.markersize": 6,
+    }
+plt.rcParams.update( params_plot_rc )
+# -------------------------
+
+
+fig, axes = plt.subplots(
+    1, 2,
+    figsize=(15,7)
+)
+
+plt.suptitle(
+    f"{bearing_type} dynamic load capacity: uncertainty quantification",
+    # fontsize=16,
+    y=0.95
+    )
+
+# ===================================================
+# Histogram + fitted LogNormal
+# ===================================================
+
+ax = axes[0]
+
+ax.hist(
+    X_Cr,
+    bins='auto',
+    density=True,
+    alpha=0.6,
+    edgecolor='k',
+    label="Uncertainty"
+)
+
+x_pdf = np.linspace(
+    0.5*X_Cr.min(),
+    1.5*X_Cr.max(),
+    500
+)
+
+pdf_fit = stats.lognorm.pdf(
+    x_pdf,
+    shape,
+    loc=loc,
+    scale=scale
+)
+
+ax.plot(
+    x_pdf,
+    pdf_fit,
+    'r-',
+    # linewidth=3,
+    label='Fit'
+)
+
+ax.axvline(
+    mu,
+    color='black',
+    linestyle='--',
+    # linewidth=3.0,
+    label=f'Mean={mu:.2f},\n Std={sigma:.2f}'
+)
+
+ax.set_xlabel( r'$\chi_{Cr}$' )
+ax.set_ylabel("PDF")
+ax.set_title("LogNormal fit") # Residual Factor Distribution
+ax.legend(loc="upper right")
+
+# ===================================================
+# Check Gaussianity in log-space
+# ===================================================
+
+ax = axes[1]
+
+logX = np.log(X_Cr)
+
+ax.hist(
+    logX,
+    bins=8,#'auto',
+    density=True,
+    alpha=0.6,
+    edgecolor='k',
+    # label="Uncertainty"
+)
+
+mu_log, sigma_log = stats.norm.fit(logX)
+
+x_log = np.linspace(
+    logX.min()*1.1,
+    logX.max()*1.1,
+    500
+)
+
+pdf_norm = stats.norm.pdf(
+    x_log,
+    mu_log,
+    sigma_log
+)
+
+ax.plot(
+    x_log,
+    pdf_norm,
+    'r-',
+    # linewidth=3,
+    # label='Fit'
+)
+
+ax.set_xlabel(r"$\log( \chi_{Cr} )$")
+ax.set_ylabel("PDF")
+ax.set_title("Log-Space Normal fit")
+ax.legend(loc="upper right")
+
+plt.tight_layout()
+
+loc_plot_mb_Cr_random = os.path.join(
+    os.path.dirname(os.path.abspath(bearing_rotatStiff_csv)),
+    str_plot+".png")
+# plt.savefig(loc_plot_mb_Cr_random) # TODO 
+
+plt.show()
+
+print(f"X_Cr ~ LogNormal(mean={mu:.3f}, std={sigma:.3f})")
+
+# %%
+# residual-vs-bore plot
+# - recommended for the paper, iff nice looking and insightful
+
+str_plot_XCrVSd = f"plot_Guo{bearing_type}_XCr_vs_d"
+
+plt.figure(figsize=(8.5,8))
+
+plt.scatter(
+    d_m, X_Cr,
+    s=80,
+    label="Uncertainty"
+    )
+
+plt.axhline(
+    mu,
+    label="Mean",
+    color="red",
+    linestyle="--"
+)
+
+plt.xlabel("Bore diameter (D) [m]")
+plt.ylabel(r"$\chi_{Cr}$"+" [-]")
+plt.title( f"{bearing_type}: uncertainty vs. bore diameter",
+          y=1.05 )
+plt.legend()
+plt.grid(True)
+
+loc_plot_mb_XCr_vs_d = os.path.join(
+    os.path.dirname(os.path.abspath(bearing_rotatStiff_csv)),
+    str_plot_XCrVSd+".png")
+# plt.savefig( loc_plot_mb_XCr_vs_d ) # TODO 
+
+plt.show()
+
 # %%
