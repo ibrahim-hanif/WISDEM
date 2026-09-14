@@ -701,7 +701,7 @@ def make_distribution_of_mbsa_inputs():
     # X_fls = make_dist_lognormal(0.05, 1.0) # TODO: 0.01 test; 0.111915 actual
     # NOTE: Good if physical mean = 1.0, physical std = 0.111915.
 
-    X_fls.setDescription([r"$\chi^{FLS}$"])
+    X_fls.setDescription([r"$\chi_{FLS}$"])
     X_fls.setName("X_FLS_hub_load")
 
     # ----
@@ -1466,6 +1466,245 @@ if results_shaft_angle is not None: draw_importance_factors(results_shaft_angle)
 if doMBfls and results_mb1 is not None: draw_importance_factors(results_mb1)
 if doMBfls and results_mb2 is not None: draw_importance_factors(results_mb2)
 
+#%%
+# custom post-processing function
+
+# OWN GET IMPORTANCE FACTORS
+def get_importance_factors(results):
+    """
+    Definition
+    -------
+    for `u_star = results.getStandardSpaceDesignPoint()` \n
+    and `beta = results.getHasoferReliabilityIndex()`
+
+    \t `alpha = u_star / beta`
+
+    alpha vector = the normalized design-point direction in standard normal space
+
+    then importance is as defined in this function:
+
+    \t `importance = |alpha| / sum( |alpha| )`
+
+    Internal Progress
+    -------
+    0. by Vasudev Gupta @ IMT, NTNU on 14.9.2026
+    1. DONE: implement with same results as `openturns`'s `result.drawImportanceFactors()`
+    """
+    alpha = np.asarray(
+        results.getImportanceFactors()
+        )
+    alpha = np.abs(alpha)
+    alpha = alpha / np.sum(alpha)
+    return alpha
+
+# MASK
+def mask_importance_factors_and_labels( importance, labels, threshold=0.001 ):
+    mask = importance > threshold
+    labels = labels[mask]
+    importance = importance[mask]
+    return importance, labels
+
+def plot_piechart_importance_factors(
+        results, distribution,
+        threshold_importance=0.001,
+        figsize=(10,10) ):
+
+    labels = np.asarray( distribution.getDescription() )
+
+    importance = get_importance_factors(results)
+
+    importance, labels = mask_importance_factors_and_labels(
+        importance, labels, threshold_importance
+    )    
+
+    # PLOT
+    fig, ax = plt.subplots(figsize=figsize)
+
+    ax.pie(
+        importance,
+        labels=[
+            f"{label} : {100*imp:.1f}%"
+            for label, imp
+            in zip(labels, importance)
+        ],
+    )
+
+    ax.set_title("Importance factors")
+
+    return fig, ax
+
+#%%
+# RESULTS: post-process from FORM
+
+reliability_results_dict_with_response_name = {
+    "constr_lss_vonmises": results_vm,
+    "constr_lss_deflection": results_shaft_defl,
+    "constr_lss_angle": results_shaft_angle,
+    "constr_mb1": results_mb1,
+    "constr_mb2": results_mb2,
+}
+
+TITLES_BETA = {
+        "beta_vonmises":
+            r"$\beta_{LSS,\,von-Mises}$",
+
+        "beta_shaft_deflection":
+            r"$\beta_{LSS,\,deflection}$",
+
+        "beta_shaft_angle":
+            r"$\beta_{LSS,\,angle}$",
+
+        "beta_mb1":
+            r"$\beta_{L10,\,MB1}$",
+
+        "beta_mb2":
+            r"$\beta_{L10,\,MB2}$",
+    }
+
+threshold_importance = 0.001   # 0.1%
+
+figsize = (12,12)
+
+params_plot_rc = {
+        "font.size": 24,
+        "axes.labelsize": 24,
+        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+        "lines.linewidth": 2,
+        "lines.markersize": 6,
+    }
+plt.rcParams.update( params_plot_rc )
+
+# -----
+if results_vm is not None: 
+    fig, ax = plot_piechart_importance_factors(
+        results_vm, DISTRIBUTION, threshold_importance=threshold_importance,
+        figsize=figsize
+    )
+    title = "Importance factors: " + rf"{TITLES_BETA["beta_vonmises"]}"
+    ax.set_title( title )
+
+if results_shaft_defl is not None:
+    fig, ax = plot_piechart_importance_factors(
+        results_shaft_defl, DISTRIBUTION, threshold_importance=threshold_importance,
+        figsize=figsize
+    )
+    title = "Importance factors: " + rf"{TITLES_BETA["beta_shaft_deflection"]}"
+    ax.set_title( title )
+
+if results_shaft_angle is not None:
+    fig, ax = plot_piechart_importance_factors(
+        results_shaft_angle, DISTRIBUTION, threshold_importance=threshold_importance,
+        figsize=figsize
+    )
+    title = "Importance factors: " + rf"{TITLES_BETA["beta_shaft_angle"]}"
+    ax.set_title( title )
+    
+if doMBfls and results_mb1 is not None:
+    fig, ax = plot_piechart_importance_factors(
+        results_mb1, DISTRIBUTION, threshold_importance=threshold_importance,
+        figsize=figsize
+    )
+    title = "Importance factors: " + rf"{TITLES_BETA["beta_mb1"]}"
+    ax.set_title( title )
+
+if doMBfls and results_mb2 is not None:
+    fig, ax = plot_piechart_importance_factors(
+        results_mb2, DISTRIBUTION, threshold_importance=threshold_importance,
+        figsize=figsize
+    )
+    title = "Importance factors: " + rf"{TITLES_BETA["beta_mb2"]}"
+    ax.set_title( title )
+
+#%%
+# Heatmap for all reliability constraints
+importance_matrix = []
+
+for name, result in reliability_results_dict_with_response_name.items():
+
+    if result is not None:
+        imp = get_importance_factors( result )
+    else:
+        imp = np.zeros(( DISTRIBUTION.getDimension(), ))
+
+    importance_matrix.append(imp)
+
+importance_matrix = np.array(
+    importance_matrix
+)
+
+# ===========================
+var_names = np.asarray(DISTRIBUTION.getDescription())
+
+fig, ax = plt.subplots(
+    figsize=(15,7)
+)
+
+im = ax.imshow(
+    100*importance_matrix,
+    aspect="auto",
+    cmap="viridis"
+)
+
+for i in range(importance_matrix.shape[0]):
+    for j in range(importance_matrix.shape[1]):
+
+        val = importance_matrix[i,j] * 1e2
+
+        if val > threshold_importance * 1e2:
+
+            ax.text(
+                j,
+                i,
+                f"{val:.1f}",
+                ha="center",
+                va="center",
+                color="red",
+            )
+
+ax.set_xticks(
+    np.arange(len(var_names))
+)
+
+ax.set_xticklabels(
+    var_names,
+    # rotation=45,
+    ha="center",
+    y = -0.02,
+)
+
+ax.set_yticks(
+    np.arange(len(reliability_results_dict_with_response_name))
+)
+
+ax.set_yticklabels(
+    list(TITLES_BETA.values())
+)
+
+cbar = fig.colorbar(
+    im,
+    ax=ax
+)
+
+cbar.set_label(
+    "Importance [%]"
+)
+
+ax.set_title(
+    "FORM importance factors",
+    y=1.02
+)
+
+fig.tight_layout()
+
+if False: #flag_save_plot:
+    extn = ".png"
+
+    loc_plot = os.path.join(
+        results_path,
+        f"importance_factors_form{extn}")
+    
+    fig.savefig(loc_plot, dpi=300)
+
 #%%[markdown]
 # ------------------------------ `RBDO` ----------------------------------
 #%%
@@ -1588,7 +1827,7 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
 # %%[markdown]
 # ### RBDO (reliability based design optimization)
 # %%
-opts["WISDEM"]["DriveSE"]["reliability_max_calls"] = 0
+max_calls = opts["WISDEM"]["DriveSE"]["reliability_max_calls"] = 0
 
 BOUNDS_DESVARS = { # TODO unused
     "L_h1": (0.1, 2.0),
@@ -1604,9 +1843,11 @@ BOUNDS_DESVARS = { # TODO unused
 flag_opt_GBO = False
 flag_opt_GFO = False
 flag_DOE = True
-DOE_NUM_SAMPLES = 100 # test: 2, then 50 then 200?
-DOE_which_desvar = "_L" # _L, _D, _t, all = ""
+DOE_NUM_SAMPLES = 100 # for beta_est, 100 ; for FORM, 50.
+DOE_which_desvar = "" # _L, _D, _t, all = ""
+
 if not flag_DOE: DOE_which_desvar = ""
+str_form = "" if max_calls == 0 else "_FORM"
 
 record_cases = True    #TODO: add in final setup (full problem)
 flag_save_new_data = False
@@ -1626,13 +1867,14 @@ elif flag_DOE:
 loc_save_data_rbdo = os.path.join(results_path, "02"+suffix+str_optim)
 loc_load_saved_data_rbdo = os.path.join(results_path, "02"+suffix+"_gfo")
 loc_cases = os.path.join(results_path,
-        f"cases{suffix}{str_optim.upper()}_samples_{DOE_NUM_SAMPLES}{DOE_which_desvar}.sql"
+        f"cases{suffix}{str_optim.upper()}{str_form}_samples_{DOE_NUM_SAMPLES}{DOE_which_desvar}.sql"
         )
 
+# define loc for DOE csv 
 if len(DOE_which_desvar) != 0: str_which_desvar = DOE_which_desvar.split("_")[1] 
 else: str_which_desvar = "desvars"
 loc_doe_csv_data = os.path.join( results_path,
-        f"DOE{suffix}_betas-vs-{str_which_desvar}_samples_{DOE_NUM_SAMPLES}.csv"
+        f"DOE{suffix}_betas-vs-{str_which_desvar}{str_form}_samples_{DOE_NUM_SAMPLES}.csv"
         )
 
 # Record results?
@@ -1914,78 +2156,309 @@ elif "D" in DOE_which_desvar:
 elif "t" in DOE_which_desvar:
     pairs_desvars = pairs_desvars[2]
 
+params_plot_rc = {
+        "font.size": 24,
+        "axes.labelsize": 24,
+        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+        "lines.linewidth": 2,
+        "lines.markersize": 6,
+    }
+plt.rcParams.update( params_plot_rc )
 
-def plot_DOE_landscape(loc_doe_csv_data, lst_constrs, pairs_desvars):
+#%%
+def plot_DOE_landscape(
+        loc_doe_csv_data,
+        lst_constrs,
+        pairs_desvars,
+        figsize=(14, 16),
+        wspace=0.10,
+        hspace=0.12,
+        nlevels=30,
+        beta_target=3.0,
+        ):
     """
-    Plot 2-D DOE landscapes.
+    Plot 2-D DOE reliability landscapes.
 
-    Rows    = reliability constraints
-    Columns = pairs of design variables
+    Layout
+    ------
+        beta_vonmises
+            -> spans the full top row
 
-    Example
+        beta_shaft_deflection
+            -> lower left
+
+        beta_shaft_angle
+            -> lower right
+
+        beta_mb1
+            -> bottom left
+
+        beta_mb2
+            -> bottom right
+
+    Each contour plot has its own colorbar.
+
+    IMPORTANT
+    ---------
+    Each beta response gets its OWN color scale. This is important
+    because the different reliability indices can have very
+    different numerical ranges.
+
+    Parameters
+    ----------
+    loc_doe_csv_data : str
+        Path to DOE CSV file.
+
+    lst_constrs : list[str]
+        Reliability beta columns in the DOE CSV.
+
+    pairs_desvars : tuple(str, str)
+        Design-variable pair to plot.
+
+        Example:
+            ("L_h1", "L_12")
+
+    figsize : tuple
+        Figure size.
+
+    wspace : float
+        Horizontal spacing.
+
+    hspace : float
+        Vertical spacing.
+
+    nlevels : int
+        Number of contour levels.
+
+    beta_target : float
+        Reliability target, normally beta = 3.
+
+    Returns
     -------
-    lst_constrs = [
-        "beta_vonmises",
-        "beta_shaft_deflection",
-        "beta_shaft_angle",
-        "beta_mb1",
-        "beta_mb2",
-    ]
-
-    pairs_desvars = [
-        ("L_h1", "L_12"),
-    ]
+    fig, axs
     """
 
     from scipy.interpolate import griddata
+    from matplotlib.gridspec import GridSpec
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-    # ------------------------------------------------------------
-    # Read saved DOE data
-    # ------------------------------------------------------------
+    # ============================================================
+    # Read DOE data
+    # ============================================================
+
     df_doe = pd.read_csv(loc_doe_csv_data)
 
-    # ------------------------------------------------------------
-    # Figure
-    # ------------------------------------------------------------
-    fig, axs = plt.subplots(
-        len(lst_constrs),
-        1,
-        figsize=( 4 * len(pairs_desvars), 6 * len(lst_constrs) ),
-        squeeze=False,
+    # ============================================================
+    # Design-variable pair
+    # ============================================================
+
+    desvar_x, desvar_y = pairs_desvars
+
+    # ============================================================
+    # Check columns
+    # ============================================================
+
+    required_columns = (
+        [desvar_x, desvar_y]
+        + lst_constrs
+    )
+
+    missing_columns = [
+        col for col in required_columns
+        if col not in df_doe.columns
+    ]
+
+    if missing_columns:
+
+        raise ValueError(
+            "The following columns are missing from the DOE CSV:\n"
+            + "\n".join(missing_columns)
+        )
+
+    # ============================================================
+    # FIGURE
+    #
+    # We explicitly allocate colorbar axes in the GridSpec.
+    #
+    # 4 columns:
+    #
+    #   plot | cbar | plot | cbar
+    #
+    # Top plot spans columns 0:3, with cbar in column 3.
+    #
+    # This avoids make_axes_locatable + constrained_layout issues.
+    # ============================================================
+
+    fig = plt.figure(
+        figsize=figsize,
         constrained_layout=True,
     )
 
+    gs = GridSpec(
+        nrows=3,
+        ncols=2,
+        figure=fig,
+        wspace=wspace,
+        hspace=hspace,
+    )
+
+    # ============================================================
+    # Axes
+    # ============================================================
+
     # ------------------------------------------------------------
-    # Loop over constraints
+    # Top plot: beta_vonmises
     # ------------------------------------------------------------
-    for i_constr, constr in enumerate(lst_constrs):
 
-        # Loop over design-variable pairs
-        j_pair = 0
-        desvar_x, desvar_y = pairs_desvars
+    ax_vm = fig.add_subplot(
+        gs[0, 0]
+    )
 
-        ax = axs[i_constr, j_pair]
+    # ------------------------------------------------------------
+    # Second row
+    # ------------------------------------------------------------
 
-        x = df_doe[desvar_x].to_numpy()
-        y = df_doe[desvar_y].to_numpy()
-        beta = df_doe[constr].to_numpy()
+    ax_defl = fig.add_subplot(
+        gs[1, 0]
+    )
 
-        # ----------------------------------------------------
-        # Create interpolation grid
-        # ----------------------------------------------------
+    ax_angle = fig.add_subplot(
+        gs[1, 1]
+    )
+
+    # ------------------------------------------------------------
+    # Third row
+    # ------------------------------------------------------------
+
+    ax_mb1 = fig.add_subplot(
+        gs[2, 0]
+    )
+
+    ax_mb2 = fig.add_subplot(
+        gs[2, 1]
+    )
+
+    # ============================================================
+    # Dictionary connecting each constraint to its axes
+    # ============================================================
+
+    axs = {
+        "beta_vonmises":
+            ax_vm,
+
+        "beta_shaft_deflection":
+            ax_defl,
+
+        "beta_shaft_angle":
+            ax_angle,
+
+        "beta_mb1":
+            ax_mb1,
+
+        "beta_mb2":
+            ax_mb2,
+    }
+
+    # ============================================================
+    # Plot each constraint
+    # ============================================================
+
+    for constr in lst_constrs:
+
+        ax = axs[constr]
+        # cax = caxs[constr]
+
+        # --------------------------------------------------------
+        # Data
+        # --------------------------------------------------------
+
+        x = df_doe[
+            desvar_x
+        ].to_numpy(
+            dtype=float
+        )
+
+        y = df_doe[
+            desvar_y
+        ].to_numpy(
+            dtype=float
+        )
+
+        beta = df_doe[
+            constr
+        ].to_numpy(
+            dtype=float
+        )
+
+        # --------------------------------------------------------
+        # Remove invalid values
+        # --------------------------------------------------------
+
+        valid = (
+            np.isfinite(x)
+            &
+            np.isfinite(y)
+            &
+            np.isfinite(beta)
+        )
+
+        x = x[valid]
+        y = y[valid]
+        beta = beta[valid]
+
+        # ========================================================
+        # INDIVIDUAL COLOR SCALE
+        #
+        # This is the critical correction.
+        #
+        # Every beta response gets its OWN vmin/vmax.
+        # ========================================================
+
+        beta_min = np.min(beta)
+        beta_max = np.max(beta)
+
+        # For constant or inactive constaints:
+        constant_constr = False
+        if beta_max-beta_min < 1e-3:
+            constant_constr = True
+
+        # --------------------------------------------------------
+        # Start color scale at zero
+        #
+        # This is useful because beta = 0 has a natural
+        # interpretation for these reliability plots.
+        # --------------------------------------------------------
+
+        vmin = beta_min # 0.0
+        vmax = beta_max
+
+        # --------------------------------------------------------
+        # If the maximum is very small, protect against
+        # zero-width color scale.
+        # --------------------------------------------------------
+
+        if vmax <= vmin: vmax = vmin + 1.0
+
+        # ========================================================
+        # Interpolation grid
+        # ========================================================
+
         xi = np.linspace(
-            x.min(),
-            x.max(),
+            np.min(x),
+            np.max(x),
             150,
         )
 
         yi = np.linspace(
-            y.min(),
-            y.max(),
+            np.min(y),
+            np.max(y),
             150,
         )
 
-        XI, YI = np.meshgrid(xi, yi)
+        XI, YI = np.meshgrid(
+            xi,
+            yi,
+        )
 
         ZI = griddata(
             (x, y),
@@ -1994,73 +2467,193 @@ def plot_DOE_landscape(loc_doe_csv_data, lst_constrs, pairs_desvars):
             method="linear",
         )
 
-        # ----------------------------------------------------
-        # Filled beta landscape
-        # ----------------------------------------------------
+        # ========================================================
+        # Filled contour
+        # ========================================================
+
         cf = ax.contourf(
             XI,
             YI,
             ZI,
-            levels=30,
+
+            levels=nlevels,
+
             cmap="viridis",
+
+            vmin=vmin,
+            vmax=vmax,
         )
 
-        # ----------------------------------------------------
-        # Beta = 3 reliability boundary
-        # ----------------------------------------------------
-        if np.nanmin(ZI) <= 3.0 <= np.nanmax(ZI):
+        # ========================================================
+        # beta = 3 reliability boundary
+        # ========================================================
+
+        ZI_min = np.nanmin(ZI)
+        ZI_max = np.nanmax(ZI)
+
+        if (
+            ZI_min <= beta_target
+            and
+            ZI_max >= beta_target
+        ):
+
             ax.contour(
                 XI,
                 YI,
                 ZI,
-                levels=[3.0],
+
+                levels=[
+                    beta_target
+                ],
+
                 colors="red",
-                linewidths=2.0,
+
+                # linewidths=2.0,
+
+                zorder=4,
             )
 
-        # ----------------------------------------------------
-        # DOE samples
-        # ----------------------------------------------------
+        # ========================================================
+        # DOE sample points
+        # ========================================================
+
         ax.scatter(
             x,
             y,
+
             c=beta,
+
             cmap="viridis",
+
+            vmin=vmin,
+            vmax=vmax,
+
             edgecolor="k",
-            linewidth=0.5,
-            s=35,
-            zorder=3,
+
+            # linewidth=0.4,
+
+            s=28,
+
+            zorder=5,
         )
 
-        # ----------------------------------------------------
-        # Labels
-        # ----------------------------------------------------
-        ax.set_ylabel(desvar_y, fontsize=14)
-        if i_constr == len(lst_constrs) - 1:
-            ax.set_xlabel(desvar_x, fontsize=14)
+        # ========================================================
+        # Axis labels
+        # ========================================================
+
+        ax.set_xlabel(
+            desvar_x
+        )
+
+        ax.set_ylabel(
+            desvar_y
+        )
+
+        # --------------------------------------------------------
+        # Remove duplicate labels to make figure cleaner
+        # --------------------------------------------------------
+        loc_colorbar = "center right"
+        borderpad_colorbar = -1
+
+        if constr in [
+            "beta_shaft_deflection",
+            "beta_shaft_angle",
+        ]:
+            ax.set_xlabel("")
+
+        if constr in [
+            "beta_shaft_angle",
+            "beta_mb2",
+        ]:
+            ax.set_ylabel("")
+            loc_colorbar = "center left"
+            borderpad_colorbar = -4
+
+        # ========================================================
+        # Title
+        # ========================================================
 
         ax.set_title(
-            constr.split("beta_")[1], # constr.replace("beta_", r"$\beta_{\mathrm{$") + "}$"
-            fontsize=14
+            TITLES_BETA.get(
+                constr,
+                constr,
+            ),
+            y=1.05
         )
+
+        # ========================================================
+        # Grid
+        # ========================================================
 
         ax.grid(
             True,
-            alpha=0.2,
+            alpha=0.20,
         )
 
-        # ----------------------------------------------------
-        # Colorbar
-        # ----------------------------------------------------
-        cbar = fig.colorbar(
-            cf,
-            ax=ax,
-        )
-        cbar.set_label(r"$\beta$")
+        # ========================================================
+        # COLORBAR
+        #
+        # The colorbar is now an explicitly allocated GridSpec
+        # axis, so it stays inside the figure.
+        # ========================================================
+
+        if constant_constr:
+            text_inactive = "INACTIVE CONSTRAINT\n" + rf"$(\beta={beta_max:.2f}$)"
+
+            ax.text(
+                0.5,
+                0.5,
+                text_inactive,
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                # fontsize=16,
+                bbox=dict(
+                    facecolor="white",
+                    alpha=0.8,
+                ),
+                color="black",
+                zorder=6
+            )
+
+        else:
+            cax = inset_axes(
+                ax,
+                width="3%",
+                height="80%",
+                loc=loc_colorbar,
+                borderpad= borderpad_colorbar,
+            )
+
+            cbar = fig.colorbar(
+                cf,
+                cax=cax,
+            )
+
+            cbar.ax.tick_params(
+                # labelsize=9
+            )
+
+            # --------------------------------------------------------
+            # Optional beta label
+            # --------------------------------------------------------
+
+            # cbar.set_label(
+            #     r"$\beta$",
+            #     fontsize=11,
+            # )
+
+    # ============================================================
+    # Overall title
+    # ============================================================
 
     fig.suptitle(
-        "Reliability landscape: " + r"$\beta$" + " vs. " + DOE_which_desvar.split("_")[1],
-        fontsize=16,
+        "Reliability landscape: "
+        + r"$\beta$"
+        + " vs. "
+        # + DOE_which_desvar.split("_")[1], # TODO
+        + f"{desvar_x} and {desvar_y}",
+        # fontsize=18,
     )
 
     return fig, axs
@@ -2070,18 +2663,23 @@ fig, axs = plot_DOE_landscape(
     loc_doe_csv_data,
     lst_constrs,
     pairs_desvars,
+    figsize=(14,16),
+    wspace=0.38, hspace=0.0,
 )
 
 # display(fig)
 
-if flag_save_plot:
+if False: #flag_save_plot:
+    extn = ".png"
+
     loc_plot = os.path.join(
         results_path,
-        f"DOE{suffix}_betas-vs-{str_which_desvar}_samples_{DOE_NUM_SAMPLES}.png")
+        f"DOE{suffix}_betas-vs-{str_which_desvar}_samples_{DOE_NUM_SAMPLES}{extn}")
+    
     fig.savefig(loc_plot, dpi=300)
 
 #%%[markdown]
-# ## Surrogate
+# ## Surrogate-based FORM RBDO (insha'Allah)
 
 #%%
 # Plot DOE surrogate landscape
