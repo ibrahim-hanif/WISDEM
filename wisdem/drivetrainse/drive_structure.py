@@ -2217,6 +2217,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         if doReliability:
             self.add_input("X_fls", val=1.0, desc="Uncertainty factor, scaling all fls hub loads")
             self.add_input("X_Cr", val=1.0, desc="Uncertainty factor for bearing Cr")
+        self.add_input("gamma_mbf", val=1.0, desc="Safety factor for MB fatigue")
         # ---- Outputs ----
         # self.add_output("P_mb2_sum", val=0.0, units="N")# TODO: testing, then comment out
         self.add_output('L10h_mb1', val=0.0, desc='L10 life MB1', units='h')
@@ -2268,7 +2269,12 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # drivetrain
         tilt_rad = float(np.deg2rad(inputs["tilt"][0]))
         s_lss = inputs["s_lss"]
+
         # Reliability ----
+        gamma_mbf = float(inputs["gamma_mbf"][0])
+        if "gamma_mbf" in self.options["modeling_options"]:
+            gamma_mbf = float(self.options["modeling_options"]["gamma_mbf"])
+
         X_fls, X_Cr = 1.0, 1.0
         if self.doReliability:
             X_fls = float(inputs["X_fls"][0])
@@ -2352,8 +2358,8 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         
         # outputs["P_mb2_sum"] = P_mb2_sum # TODO: testing, then comment out
 
-        P_mb1_sum *= X_fls
-        P_mb2_sum *= X_fls
+        P_mb1_sum *= (X_fls*gamma_f)
+        P_mb2_sum *= (X_fls*gamma_f)
 
         # L10 life calculation
         Cr1 = inputs['Cr_mb1'] * X_Cr
@@ -2374,7 +2380,7 @@ class Analytical_FLS_Bearing_Life( om.ExplicitComponent ):
         # print(f"L10h_mb1: {outputs['L10h_mb1']}, L10h_mb2: {outputs['L10h_mb2']}") # debugging
         
         # constraints: on FLS safety factors (20 years = 20*8766 hours)
-        L_design = inputs['lifetime'] * gamma_n
+        L_design = inputs['lifetime'] * gamma_mbf
         # ---- mb1 ----
         outputs['constr_L10_mb1'] = (L10h_mb1/(L_design*8766))**(1/p) # inside log should be >= 1, with log should be >= 0
         self.constr_L10_mb1 = outputs['constr_L10_mb1']
