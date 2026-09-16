@@ -512,6 +512,9 @@ if flag_save_new_data: save_data(loc_save_data, prob)
 # -------------------------- using `openturns` --------------------------
 
 #%%
+
+ot.RandomGenerator.SetSeed(0) # set random seed for reproducibility
+
 # Pf = Phi( -beta )
 Phi = ot.Normal(0,1) # standard normal distribution
 beta_s = np.asarray([1.28, 2.33, 3.09, 3.72, 4.26, 4.75, 5.2, 10.0])
@@ -1361,9 +1364,15 @@ def compute_reliability(
 opts["WISDEM"]["DriveSE"]["reliability"] = True
 doMBfls = opts["flags"]["mb_fls"] = True
 
-gamma_f = opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.0
-# gamma_m = opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.0
-# gamma_n = opts["WISDEM"]["DriveSE"]["gamma_n"] = 1.0
+gamma_f = opts["WISDEM"]["DriveSE"]["gamma_f"] = 1.0 # # TODO keep uncommented
+gamma_m = opts["WISDEM"]["DriveSE"]["gamma_m"] = 1.0
+gamma_n = opts["WISDEM"]["DriveSE"]["gamma_n"] #= 1.0
+
+gamma_mbf = opts["WISDEM"]["DriveSE"]["gamma_mbf"] = 1.0
+
+str_partialSFs = ""
+if (gamma_f != 1.0) or (gamma_m != 1.0):
+    str_partialSFs = "_w_partialSFs"
 # -----
 
 evaluator = MBSA_Evaluator(opts,loc_load_saved_data+".csv") # TODO: _gammaN_1p2
@@ -1460,12 +1469,13 @@ if doMBfls:
 
 #%%
 # post-process results from FORM
+"""
 if results_vm is not None: draw_importance_factors(results_vm)
 if results_shaft_defl is not None: draw_importance_factors(results_shaft_defl)
 if results_shaft_angle is not None: draw_importance_factors(results_shaft_angle)
 if doMBfls and results_mb1 is not None: draw_importance_factors(results_mb1)
 if doMBfls and results_mb2 is not None: draw_importance_factors(results_mb2)
-
+"""
 #%%
 # custom post-processing function
 
@@ -1648,9 +1658,13 @@ im = ax.imshow(
 for i in range(importance_matrix.shape[0]):
     for j in range(importance_matrix.shape[1]):
 
-        val = importance_matrix[i,j] * 1e2
+        val = (importance_matrix[i,j] * 1e2)
 
-        if val > threshold_importance * 1e2:
+        # show importance in text if more than threshold
+        if val > (threshold_importance * 1e2):
+            # color
+            if val >= (50.0): clr = "black"
+            else: clr = "white"
 
             ax.text(
                 j,
@@ -1658,7 +1672,7 @@ for i in range(importance_matrix.shape[0]):
                 f"{val:.1f}",
                 ha="center",
                 va="center",
-                color="red",
+                color= clr,
             )
 
 ax.set_xticks(
@@ -1701,7 +1715,7 @@ if False: #flag_save_plot:
 
     loc_plot = os.path.join(
         results_path,
-        f"importance_factors_form{extn}")
+        f"importance_factors_form{str_partialSFs}{extn}")
     
     fig.savefig(loc_plot, dpi=300)
 
@@ -1856,6 +1870,17 @@ flag_save_doe_data = False
 flag_save_plot = False
 
 # ---- ---- ---- ---- ----
+
+# post-processing rbdo
+lst_constrs = [
+    "beta_vonmises",
+    "beta_shaft_deflection",
+    "beta_shaft_angle"
+]
+if doMBfls:
+    lst_constrs.append("beta_mb1")
+    lst_constrs.append("beta_mb2")
+
 if flag_opt_GBO:
     str_optim = "_gbo"
 elif flag_opt_GFO:
@@ -2019,16 +2044,6 @@ print(" - WISDEM RBDO run completed in,", t1-t0, "seconds")
 print("LSS desvars:")
 print(" ", prob_rbdo["L_h1"], prob_rbdo["L_12"], prob_rbdo["lss_diameter"], prob_rbdo["lss_wall_thickness"], "\n" )
 
-# post-processing rbdo
-lst_constrs = [
-    "beta_vonmises",
-    "beta_shaft_deflection",
-    "beta_shaft_angle"
-]
-if doMBfls:
-    lst_constrs.append("beta_mb1")
-    lst_constrs.append("beta_mb2")
-
 for name in lst_constrs: print( name, prob_rbdo[ name ])
 
 #
@@ -2137,6 +2152,14 @@ print(df_doe)
 if flag_save_doe_data:
     df_doe.to_csv( loc_doe_csv_data, index=False )
 
+if flag_load_from_data:
+    # DOE samples
+    df_doe = pd.read_csv( loc_doe_csv_data )
+    # RBDO saved data
+    dict_rbdo = var_df2dict(
+        pd.read_csv( loc_load_saved_data_rbdo+".csv" )
+        )
+
 #%%
 # Plot DOE landscape function
 # - in a subplot (5,2) with lst_constr on rows and DOE_which_desvar on columns
@@ -2149,12 +2172,30 @@ pairs_desvars = [ # based on the value on DOE_which_desvars
 ]
 if "L" in DOE_which_desvar:
     pairs_desvars = pairs_desvars[0]
+    # desvars_reference: take out respetive values 
+    dv_ref_x = float(desvars_reference["L_h1"][0])
+    dv_ref_y = float(desvars_reference["L_12"][0])
+    # rbdo data
+    dv_rbdo_x = float(dict_rbdo["L_h1"])
+    dv_rbdo_y = float(dict_rbdo["L_12"])
 
 elif "D" in DOE_which_desvar:
     pairs_desvars = pairs_desvars[1]
+    # desvars_reference: take out respetive values 
+    dv_ref_x = float(desvars_reference["lss_diameter"][0])
+    dv_ref_y = float(desvars_reference["lss_diameter"][1])
+    # rbdo data
+    dv_rbdo_x = float(eval(dict_rbdo["lss_diameter"])[0])
+    dv_rbdo_y = float(eval(dict_rbdo["lss_diameter"])[1])
 
 elif "t" in DOE_which_desvar:
     pairs_desvars = pairs_desvars[2]
+    # desvars_reference: take out respetive values 
+    dv_ref_x = float(desvars_reference["lss_wall_thickness"][0])
+    dv_ref_y = float(desvars_reference["lss_wall_thickness"][1])
+    # rbdo data
+    dv_rbdo_x = float(eval(dict_rbdo["lss_wall_thickness"])[0])
+    dv_rbdo_y = float(eval(dict_rbdo["lss_wall_thickness"])[1])
 
 params_plot_rc = {
         "font.size": 24,
@@ -2170,6 +2211,8 @@ def plot_DOE_landscape(
         loc_doe_csv_data,
         lst_constrs,
         pairs_desvars,
+        plot_ref=True,
+        plot_rbdo=True,
         figsize=(14, 16),
         wspace=0.10,
         hspace=0.12,
@@ -2363,7 +2406,7 @@ def plot_DOE_landscape(
     # Plot each constraint
     # ============================================================
 
-    for constr in lst_constrs:
+    for iter, constr in enumerate(lst_constrs):
 
         ax = axs[constr]
         # cax = caxs[constr]
@@ -2497,7 +2540,7 @@ def plot_DOE_landscape(
             ZI_max >= beta_target
         ):
 
-            ax.contour(
+            c_beta_t = ax.contour(
                 XI,
                 YI,
                 ZI,
@@ -2506,11 +2549,29 @@ def plot_DOE_landscape(
                     beta_target
                 ],
 
-                colors="red",
+                colors="white",
 
                 # linewidths=2.0,
 
                 zorder=4,
+            )
+            # ----------------------------------------------------
+            # Label directly on the white contour
+            #
+            # NOTE:
+            # clabel() does NOT have a "labels=" argument.
+            # Use fmt instead.
+            # ----------------------------------------------------
+
+            ax.clabel(
+                c_beta_t,
+                levels=[beta_target],
+                fmt={
+                    beta_target:
+                        rf"$\beta_t={beta_target:g}$"
+                },
+                inline=True,
+                # fontsize=11,
             )
 
         # ========================================================
@@ -2529,13 +2590,40 @@ def plot_DOE_landscape(
             vmax=vmax,
 
             edgecolor="k",
-
             # linewidth=0.4,
-
             s=28,
-
             zorder=5,
+
+            label="DOE samples"
         )
+
+        # ========================================================
+        # DDO and RBDO points
+        # ========================================================
+        if plot_ref:
+            ax.scatter(
+                dv_ref_x,
+                dv_ref_y,
+                color="blue",
+                edgecolor="k",
+                marker="v",
+                # linewidth=0.4,
+                s=280,
+                zorder=6,
+                label="DDO-optimal"
+            )
+        if plot_rbdo:
+            ax.scatter(
+                dv_rbdo_x,
+                dv_rbdo_y,
+                color="red",
+                edgecolor="k",
+                marker="*",
+                # linewidth=0.4,
+                s=380,
+                zorder=6,
+                label="RBDO-optimal"
+            )
 
         # ========================================================
         # Axis labels
@@ -2580,6 +2668,8 @@ def plot_DOE_landscape(
             ),
             y=1.05
         )
+
+        if iter == 2: ax.legend(loc="upper right")
 
         # ========================================================
         # Grid
@@ -2663,6 +2753,7 @@ fig, axs = plot_DOE_landscape(
     loc_doe_csv_data,
     lst_constrs,
     pairs_desvars,
+    plot_ref=False, plot_rbdo=False,
     figsize=(14,16),
     wspace=0.38, hspace=0.0,
 )
