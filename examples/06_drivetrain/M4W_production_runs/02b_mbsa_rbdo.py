@@ -53,7 +53,6 @@ suffix = "_sima_2SRBs"
 
 # Optimization flags
 flag_opt_GBO = False     # GBO: gradient based optimizer
-flag_opt_GFO = False
 
 flag_save_new_data = False
 flag_load_from_data = True
@@ -784,6 +783,9 @@ RELIABILITY_INDEX = {
     for i, name in enumerate(RELIABILITY_RESPONSES.keys())
 }
 
+# to annualize reliability
+EVENTS_PER_YEAR_DLC51 = 1/50
+
 #%%
 class MBSA_Evaluator:
     """
@@ -1068,6 +1070,21 @@ def calculate_beta_from_pf( pf ):
     # print(f" --- calculated beta (from pf) = {beta_calc}") # test
     return beta
 
+def annualize_poisson_failure_probability(
+    events_per_year,
+    pf_conditional
+):
+    """
+    
+    """
+    pf_annual = 1.0 - np.exp(
+        -events_per_year * pf_conditional
+    )
+
+    beta_annual = calculate_beta_from_pf(pf_annual)
+
+    return beta_annual, pf_annual
+
 # -----------------------------------------------------------------
 # FORM: first order reliability method
 # -----------------------------------------------------------------
@@ -1152,7 +1169,7 @@ def run_MCS( event, max_calls=1e5, verbose=False):
 
     return beta_calc, pf, result, t_total
 
-def run_initial_screening_for_beta(model, dist_samples):
+def run_initial_screening_for_beta(model, dist_samples, response_name):
     # =====================================================
     # Estimate probability of failure and reliability index
     # 
@@ -1166,6 +1183,7 @@ def run_initial_screening_for_beta(model, dist_samples):
     # --------------------------------------------------
     
     # init
+    response_selected = response_name is not None
     n_dist = int( np.asarray(dist_samples).shape[1] )
 
     # eval func
@@ -1178,17 +1196,35 @@ def run_initial_screening_for_beta(model, dist_samples):
     mu = np.mean(vals, axis=0)
     sigma = np.std(vals, axis=0)
 
-    # operations
-    tol = 1e-8
-    ptp_le_tol = np.ptp(vals,axis=0) < tol
-    sigma_le_tol = sigma < tol
-
     # --------------------------------------------------
     # Estimated beta
     # --------------------------------------------------
     # = correct direction for a quick response-space screening estimate.
     beta_est = abs(mu) / sigma
 
+    # ===== Annualize =====
+    # 1. only on constraint
+    if response_selected and ("L10" not in response_name):
+        beta_annual, _ = annualize_poisson_failure_probability(
+            events_per_year=EVENTS_PER_YEAR_DLC51,
+            pf_conditional= calculate_pf_using_beta( beta_est ) 
+        )
+        beta_est = np.array([beta_annual]) # convert to array for consistency
+    # 2. all constraints at once
+    else:
+        # beta_annual = beta_est.copy() # 'shallow copy': Changes to copy don't affect original.
+        for i, thisBeta in enumerate( beta_est ):
+            if i < 3: # for non-FLS constraints; TODO not hard coded
+                beta_est[i], _ = annualize_poisson_failure_probability(
+                    events_per_year=EVENTS_PER_YEAR_DLC51,
+                    pf_conditional=calculate_pf_using_beta( thisBeta ) 
+                )
+
+    # ===== Upper limit capping =====
+    # operations
+    tol = 1e-8
+    ptp_le_tol = np.ptp(vals,axis=0) < tol
+    sigma_le_tol = sigma < tol
     beta_ge_8 = beta_est > 8.0
 
     if bool( np.any( ptp_le_tol ) ) or bool( np.any( sigma_le_tol ) ):
@@ -1319,7 +1355,8 @@ def compute_reliability(
     # - quick response-space screening estimate
     # - beforehand to skip inactive constraints
     # --------------------------------------------------
-    beta_est, pf_est = run_initial_screening_for_beta(model, dist_samples)
+    beta_est, pf_est = run_initial_screening_for_beta(
+        model, dist_samples, response_name)
 
     if (bool_alg == 0) or (beta_est == 8.0):
         # --------------------------------------------------
@@ -1335,6 +1372,12 @@ def compute_reliability(
         beta, pf, result, time_run = run_FORM(
             dist_mean, event, max_calls
         )
+        # Annualize for non-FLS (or rare or recurring) events
+        if "L10" not in response_name:
+            beta, pf = annualize_poisson_failure_probability(
+                events_per_year=EVENTS_PER_YEAR_DLC51,
+                pf_conditional=pf
+            )
         # print error between estimated and actual (test)
         err_beta_est = ((beta_est-beta)/beta)*1e2
         print(f" --- comparing beta_est ({beta_est}) and beta ({beta}): % err = {err_beta_est}")
@@ -1348,6 +1391,12 @@ def compute_reliability(
         beta, pf, result, time_run = run_MCS(
             event, max_calls
         )
+        # Annualize for non-FLS (or rare or recurring) events
+        if "L10" not in response_name:
+            beta, pf = annualize_poisson_failure_probability(
+                events_per_year=EVENTS_PER_YEAR_DLC51,
+                pf_conditional=pf
+            )
         # print error between estimated and actual (test)
         err_beta_est = ((beta_est-beta)/beta)*1e2
         print(f" --- comparing beta_est ({beta_est}) and beta ({beta}): % err = {err_beta_est}")
@@ -1841,7 +1890,7 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
 # %%[markdown]
 # ### RBDO (reliability based design optimization)
 # %%
-max_calls = opts["WISDEM"]["DriveSE"]["reliability_max_calls"] = 0
+max_calls = opts["WISDEM"]["DriveSE"]["reliability_max_calls"] = 1e3
 
 BOUNDS_DESVARS = { # TODO unused
     "L_h1": (0.1, 2.0),
@@ -1857,7 +1906,7 @@ BOUNDS_DESVARS = { # TODO unused
 flag_opt_GBO = False
 flag_opt_GFO = False
 flag_DOE = True
-DOE_NUM_SAMPLES = 100 # for beta_est, 100 ; for FORM, 50.
+DOE_NUM_SAMPLES = 50 # for beta_est, 100 ; for FORM, 50.
 DOE_which_desvar = "" # _L, _D, _t, all = ""
 
 if not flag_DOE: DOE_which_desvar = ""
@@ -1936,26 +1985,35 @@ elif flag_opt_GFO:
     print("=== running GFO ===\n")
     # GFO: gradient free optimizer
     # ---- Simple GA (Genetic Alg.)
-    # prob_rbdo.driver = om.SimpleGADriver()
+    prob_rbdo.driver = om.SimpleGADriver()
+    prob_rbdo.driver.options["max_gen"] = 100
+    prob_rbdo.driver.options["pop_size"] = 100
+    prob_rbdo.driver.options["bits"] = {'xC': 12}
+    prob_rbdo.driver.options["run_parallel"] = False
+    prob_rbdo.driver.options["elitism"] = True
+    prob_rbdo.driver.options["procs_per_model"] = 1
     # ---- Evolution
     # prob_rbdo.driver = om.DifferentialEvolutionDriver()
     # prob_rbdo.driver.options['max_gen'] = 400
     # prob_rbdo.driver.options['Pc'] = 0.5
     # prob_rbdo.driver.options['F'] = 0.5
     # ---- NSGA2
-    from wisdem.optimization_drivers.nsga2_driver import NSGA2Driver
-    prob_rbdo.driver = NSGA2Driver()
-    prob_rbdo.driver.options["max_gen"] = 5 * 1 # * 4 # TODO
-    prob_rbdo.driver.options["run_parallel"] = True
-    prob_rbdo.driver.options["procs_per_model"] = 2 # TODO
-
+    # from wisdem.optimization_drivers.nsga2_driver import NSGA2Driver
+    # prob_rbdo.driver = NSGA2Driver()
+    # prob_rbdo.driver.options["max_gen"] = 5 * 1
+    # prob_rbdo.driver.options["run_parallel"] = True
+    # prob_rbdo.driver.options["procs_per_model"] = 2
+    # ---- options
     prob_rbdo.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
 
 elif flag_DOE:
     print(f"=== running DOE: {DOE_NUM_SAMPLES} samples ===\n")
 
     prob_rbdo.driver = om.DOEDriver(
-        om.UniformGenerator(num_samples=DOE_NUM_SAMPLES)
+        om.LatinHypercubeGenerator(
+            samples=DOE_NUM_SAMPLES,
+            criterion="centermaximin"
+            )
     )
 
     if record_cases:
@@ -2009,11 +2067,13 @@ prob_rbdo.model.list_outputs();
 
 # Set values of DVs
 if not flag_load_from_data:
+    print("- user defined init prob vars.")
     prob_rbdo.set_val("L_h1", float(desvars_reference["L_h1"][0]) )
     prob_rbdo.set_val("L_12", float(desvars_reference["L_12"][0]) )
     prob_rbdo.set_val("lss_diameter", desvars_reference["lss_diameter"])
     prob_rbdo.set_val("lss_wall_thickness", desvars_reference["lss_wall_thickness"])
 else:
+    print("- loading prob vars from saved csv ...")
     prob_rbdo = load_data( loc_load_saved_data_rbdo+".csv", prob_rbdo )
 
 #%%
@@ -2121,35 +2181,45 @@ def read_doe_cases_2_df(loc_cases):
                 float(np.asarray(case["beta_mb2"]).ravel()[0]),
         }
 
+        row_obj = {
+            "msa_mass":
+                float(np.asarray(case["msa_mass"]).ravel()[0]),
+        }
+
         row_all = {}
         if len(DOE_which_desvar) == 0:
             row_all.update( row_L )
             row_all.update( row_D )
             row_all.update( row_t )
-            row_all.update( row_beta )
 
         elif "L" in DOE_which_desvar:
             row_all.update( row_L )
-            row_all.update( row_beta )
 
         elif "D" in DOE_which_desvar:
             row_all.update( row_D )
-            row_all.update( row_beta )
 
         elif "t" in DOE_which_desvar:
             row_all.update( row_t )
-            row_all.update( row_beta )
+
+        # all
+        row_all.update( row_obj )
+        row_all.update( row_beta )
 
         rows.append(row_all)
 
     return pd.DataFrame(rows)
 
 #%%
-df_doe = read_doe_cases_2_df(loc_cases)
-
-print(df_doe)
+if record_cases:
+    df_doe = read_doe_cases_2_df(loc_cases)
+    print(df_doe)
 
 if flag_save_doe_data:
+    # ---- clip "beta_" column values more than 8.0 ----
+    for c in lst_constrs:
+        df_doe[c] = pd.to_numeric(
+            df_doe[c], errors="coerce").clip(upper=8.0)
+    # ---- save ----
     df_doe.to_csv( loc_doe_csv_data, index=False )
 
 if flag_load_from_data:
@@ -2170,32 +2240,51 @@ pairs_desvars = [ # based on the value on DOE_which_desvars
     ("D_1", "D_2"),
     ("t_1", "t_2"),
 ]
+
+desvars_ref_seperated = {
+    "L_h1": float(desvars_reference["L_h1"][0]),
+    "L_12": float(desvars_reference["L_12"][0]),
+    "D_1" : float(desvars_reference["lss_diameter"][0]), 
+    "D_2" : float(desvars_reference["lss_diameter"][1]), 
+    "t_1" : float(desvars_reference["lss_wall_thickness"][0]),
+    "t_2" : float(desvars_reference["lss_wall_thickness"][1]),
+}
+
+desvars_rbdo_seperated = {
+    "L_h1": float(dict_rbdo["L_h1"]),
+    "L_12": float(dict_rbdo["L_12"]),
+    "D_1" : float(eval(dict_rbdo["lss_diameter"])[0]),
+    "D_2" : float(eval(dict_rbdo["lss_diameter"])[1]), 
+    "t_1" : float(eval(dict_rbdo["lss_wall_thickness"])[0]),
+    "t_2" : float(eval(dict_rbdo["lss_wall_thickness"])[1]),
+}
+
 if "L" in DOE_which_desvar:
     pairs_desvars = pairs_desvars[0]
     # desvars_reference: take out respetive values 
-    dv_ref_x = float(desvars_reference["L_h1"][0])
-    dv_ref_y = float(desvars_reference["L_12"][0])
+    dv_ref_x = desvars_ref_seperated["L_h1"]
+    dv_ref_y = desvars_ref_seperated["L_12"]
     # rbdo data
-    dv_rbdo_x = float(dict_rbdo["L_h1"])
-    dv_rbdo_y = float(dict_rbdo["L_12"])
+    dv_rbdo_x = desvars_rbdo_seperated["L_h1"]
+    dv_rbdo_y = desvars_rbdo_seperated["L_12"]
 
 elif "D" in DOE_which_desvar:
     pairs_desvars = pairs_desvars[1]
     # desvars_reference: take out respetive values 
-    dv_ref_x = float(desvars_reference["lss_diameter"][0])
-    dv_ref_y = float(desvars_reference["lss_diameter"][1])
+    dv_ref_x = desvars_ref_seperated["D_1"]
+    dv_ref_y = desvars_ref_seperated["D_2"]
     # rbdo data
-    dv_rbdo_x = float(eval(dict_rbdo["lss_diameter"])[0])
-    dv_rbdo_y = float(eval(dict_rbdo["lss_diameter"])[1])
+    dv_rbdo_x = desvars_rbdo_seperated["D_1"]
+    dv_rbdo_y = desvars_rbdo_seperated["D_2"]
 
 elif "t" in DOE_which_desvar:
     pairs_desvars = pairs_desvars[2]
     # desvars_reference: take out respetive values 
-    dv_ref_x = float(desvars_reference["lss_wall_thickness"][0])
-    dv_ref_y = float(desvars_reference["lss_wall_thickness"][1])
+    dv_ref_x = desvars_ref_seperated["t_1"]
+    dv_ref_y = desvars_ref_seperated["t_2"]
     # rbdo data
-    dv_rbdo_x = float(eval(dict_rbdo["lss_wall_thickness"])[0])
-    dv_rbdo_y = float(eval(dict_rbdo["lss_wall_thickness"])[1])
+    dv_rbdo_x = desvars_rbdo_seperated["t_1"]
+    dv_rbdo_y = desvars_rbdo_seperated["t_2"]
 
 params_plot_rc = {
         "font.size": 24,
@@ -2353,8 +2442,12 @@ def plot_DOE_landscape(
     # Top plot: beta_vonmises
     # ------------------------------------------------------------
 
+    ax_mass = fig.add_subplot(
+            gs[0, 0]
+        )
+    
     ax_vm = fig.add_subplot(
-        gs[0, 0]
+        gs[0, 1]
     )
 
     # ------------------------------------------------------------
@@ -2386,6 +2479,10 @@ def plot_DOE_landscape(
     # ============================================================
 
     axs = {
+
+        "msa_mass":
+            ax_mass,
+
         "beta_vonmises":
             ax_vm,
 
@@ -2406,7 +2503,7 @@ def plot_DOE_landscape(
     # Plot each constraint
     # ============================================================
 
-    for iter, constr in enumerate(lst_constrs):
+    for iter, constr in enumerate(axs.keys()):
 
         ax = axs[constr]
         # cax = caxs[constr]
@@ -2643,16 +2740,10 @@ def plot_DOE_landscape(
         loc_colorbar = "center right"
         borderpad_colorbar = -1
 
-        if constr in [
-            "beta_shaft_deflection",
-            "beta_shaft_angle",
-        ]:
+        if iter < 4:
             ax.set_xlabel("")
 
-        if constr in [
-            "beta_shaft_angle",
-            "beta_mb2",
-        ]:
+        if iter % 2:
             ax.set_ylabel("")
             loc_colorbar = "center left"
             borderpad_colorbar = -4
@@ -2718,6 +2809,7 @@ def plot_DOE_landscape(
             cbar = fig.colorbar(
                 cf,
                 cax=cax,
+                # format="%.2f", # TODO
             )
 
             cbar.ax.tick_params(
@@ -2772,6 +2864,59 @@ if False: #flag_save_plot:
 #%%[markdown]
 # ## Surrogate-based FORM RBDO (insha'Allah)
 
+# For this problem I'd use one surrogate per reliability response:
+
+# $$ \begin{aligned} \hat\beta_{VM} &= f_{VM}(\mathbf d)\\ \hat\beta_{defl} &= f_{defl}(\mathbf d)\\ \hat\beta_{angle} &= f_{angle}(\mathbf d)\\ \hat\beta_{MB1} &= f_{MB1}(\mathbf d)\\ \hat\beta_{MB2} &= f_{MB2}(\mathbf d) \end{aligned} $$
+
+# And: $$ \hat m = f_m(\mathbf d). $$ 
+
+# A Gaussian-process/Kriging model is a good first choice because you ultimately want a smooth landscape.
+
+# For example, with scikit-learn:
+
+#%%
+# imports
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import (
+    ConstantKernel,
+    Matern,
+    WhiteKernel
+)
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+#%%
+
+DESVARS_NAMES = list(BOUNDS_DESVARS.keys())
+
+BETA_NAMES = ['msa_mass'] + lst_constrs
+
+X = df_doe[DESVARS_NAMES].values
+
+surrogates = {}
+
+for beta_name in BETA_NAMES:
+
+    y = df_doe[beta_name].values
+
+    surrogate = make_pipeline(
+        StandardScaler(),
+        GaussianProcessRegressor(
+            kernel=(
+                ConstantKernel(1.0)
+                * Matern(nu=2.5)
+                + WhiteKernel()
+            ),
+            normalize_y=True,
+            n_restarts_optimizer=5,
+            random_state=1,
+        )
+    )
+
+    surrogate.fit(X, y)
+
+    surrogates[beta_name] = surrogate
+
 #%%
 # Plot DOE surrogate landscape
 def plot_surrogate_beta_landscapes(
@@ -2779,31 +2924,47 @@ def plot_surrogate_beta_landscapes(
     reference_design,
     bounds,
     ngrid=60,
+    figsize=(18, 24),
+    plot_ref=False,
+    plot_rbdo=False,
 ):
 
-    pairs = [
-        ("L_h1", "L_12"),
-        ("D_1", "D_2"),
-        ("t_1", "t_2"),
-    ]
-
-    beta_names = lst_constrs
-
     beta_titles = [
-        "von-Mises",
-        "LSS deflection",
-        "LSS angle",
-        "L10 MB1",
-        "L10 MB2",
+        r"$\beta_{LSS,\ von-Mises}$",
+        r"$\beta_{LSS,\ deflection}$",
+        r"$\beta_{LSS,\ angle}$",
+        r"$\beta_{L10,\ MB1}$",
+        r"$\beta_{L10,\ MB2}$",
     ]
 
-    fig, axes = plt.subplots(
-        3, 5,
-        figsize=(22, 12),
-        constrained_layout=True,
+    # ------------------------------------------------------------
+    # Rows:
+    #   0 -> MSA mass
+    #   1-5 -> reliability indices
+    # ------------------------------------------------------------
+    row_names = BETA_NAMES
+
+    row_titles = (
+        [r"$m_{MSA}$"]
+        + beta_titles
     )
 
-    for irow, (xname, yname) in enumerate(pairs):
+    # ------------------------------------------------------------
+    # Columns:
+    #   0-2 -> design-variable pairs
+    # ------------------------------------------------------------
+    nrows = len(row_names)
+    ncols = len(pairs_desvars)
+
+    fig, axes = plt.subplots(
+        nrows,
+        ncols,
+        figsize=figsize,
+        constrained_layout=True,
+        squeeze=False,
+    )
+
+    for icol, (xname, yname) in enumerate(pairs_desvars):
 
         xlo, xhi = bounds[xname]
         ylo, yhi = bounds[yname]
@@ -2813,64 +2974,197 @@ def plot_surrogate_beta_landscapes(
 
         XX, YY = np.meshgrid(x, y)
 
-        for icol, (beta_name, title) in enumerate(
-            zip(beta_names, beta_titles)
+        # --------------------------------------------------------
+        # Column title = design-variable pair
+        # --------------------------------------------------------
+        axes[0, icol].set_title(
+            f"{xname} vs {yname}",
+            y=1.03,
+        )
+
+        for irow, (quantity_name, row_title) in enumerate(
+            zip(row_names, row_titles)
         ):
 
+            # ----------------------------------------------------
             # Start from reference design
+            # ----------------------------------------------------
             grid = np.tile(
                 np.array([
                     reference_design[name]
-                    for name in DESVARS
+                    for name in DESVARS_NAMES
                 ]),
                 (XX.size, 1)
             )
 
             # Replace the two plotted variables
-            grid[:, DESVARS.index(xname)] = XX.ravel()
-            grid[:, DESVARS.index(yname)] = YY.ravel()
+            grid[:, DESVARS_NAMES.index(xname)] = XX.ravel()
+            grid[:, DESVARS_NAMES.index(yname)] = YY.ravel()
 
-            beta = surrogates[beta_name].predict(grid)
-            beta = beta.reshape(XX.shape)
+            # ----------------------------------------------------
+            # Surrogate prediction
+            # ----------------------------------------------------
+            prediction = surrogates[quantity_name].predict(grid)
+            prediction = prediction.reshape(XX.shape)
 
             ax = axes[irow, icol]
 
             cf = ax.contourf(
                 XX,
                 YY,
-                beta,
+                prediction,
                 levels=30,
             )
 
-            # Reliability target
-            cs = ax.contour(
-                XX,
-                YY,
-                beta,
-                levels=[3.0],
-                linewidths=2,
-            )
+            # ----------------------------------------------------
+            # Reliability target only for beta plots
+            # ----------------------------------------------------
+            if quantity_name != "msa_mass":
 
-            ax.clabel(
-                cs,
-                fmt={3.0: r"$\beta=3$"},
-            )
+                cs = ax.contour(
+                    XX,
+                    YY,
+                    prediction,
+                    levels=[3.0],
+                )
 
+                ax.clabel(
+                    cs,
+                    fmt={3.0: r"$\beta=3$"},
+                )
+
+            # ----------------------------------------------------
+            # Axis labels
+            # ----------------------------------------------------
             ax.set_xlabel(xname)
             ax.set_ylabel(yname)
 
-            if irow == 0:
-                ax.set_title(title)
+            # Row title on left
+            if icol == 0:
+                ax.text(
+                    -0.35,
+                    0.5,
+                    row_title,
+                    transform=ax.transAxes,
+                    rotation=90,
+                    va="center",
+                    ha="center",
+                    # fontsize=13,
+                )
 
-            fig.colorbar(
+            # ----------------------------------------------------
+            # Colorbar
+            # ----------------------------------------------------
+            if quantity_name == "msa_mass":
+                cbar_format = "%.0f"
+            else:
+                cbar_format = "%.2f"
+
+            cbar = fig.colorbar(
                 cf,
                 ax=ax,
-                label=r"$\beta$"
+                format=cbar_format,
             )
 
+            # ----------------------------------------------------
+            # DDO point
+            # ----------------------------------------------------
+            if plot_ref:
+
+                ax.scatter(
+                    desvars_ref_seperated[xname],
+                    desvars_ref_seperated[yname],
+                    color="magenta",
+                    edgecolor="k",
+                    marker="p",
+                    s=200,
+                    zorder=6,
+                )
+
+            # ----------------------------------------------------
+            # RBDO point
+            # ----------------------------------------------------
+            if plot_rbdo:
+
+                ax.scatter(
+                    desvars_rbdo_seperated[xname],
+                    desvars_rbdo_seperated[yname],
+                    color="lime",
+                    edgecolor="k",
+                    marker="*",
+                    s=420,
+                    zorder=6,
+                )
+
+    # ------------------------------------------------------------
+    # Figure title
+    # ------------------------------------------------------------
     fig.suptitle(
-        "Reliability-index surrogate landscapes",
-        fontsize=16,
+        "Surrogate-based FORM-reliability landscapes",
+        # fontsize=16,
     )
 
+    # ------------------------------------------------------------
+    # Legend
+    # ------------------------------------------------------------
+    handles = []
+    labels = []
+
+    if plot_ref:
+        handles.append(
+            plt.Line2D(
+                [0], [0],
+                marker="p",
+                color="w",
+                markerfacecolor="magenta",
+                markeredgecolor="k",
+                markersize=12,
+                label="DDO-optimal",
+            )
+        )
+        labels.append("DDO-optimal")
+
+    if plot_rbdo:
+        handles.append(
+            plt.Line2D(
+                [0], [0],
+                marker="*",
+                color="w",
+                markerfacecolor="lime",
+                markeredgecolor="k",
+                markersize=15,
+                label="RBDO-optimal",
+            )
+        )
+        labels.append("RBDO-optimal")
+
+    if handles:
+        fig.legend(
+            handles,
+            labels,
+            loc="upper center",
+            ncol=len(handles),
+            bbox_to_anchor=(0.83, 1.01),
+        )
+
     return fig, axes
+
+# %%
+fig_surr, axes_surr = plot_surrogate_beta_landscapes(
+    surrogates=surrogates,
+    reference_design=desvars_ref_seperated,
+    bounds=BOUNDS_DESVARS,
+    # figsize=(26,12),
+    plot_ref=True, plot_rbdo=True
+)
+
+if False: #flag_save_plot:
+    extn = ".png"
+
+    loc_plot_surr = os.path.join(
+        results_path,
+        f"DOE{suffix}_surrogate_betas-vs-{str_which_desvar}{str_form}_samples_{DOE_NUM_SAMPLES}{extn}")
+    
+    fig_surr.savefig( loc_plot_surr , dpi=300)
+
+# %%
