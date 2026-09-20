@@ -48,7 +48,7 @@ import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 # %%
 # ### Define flags
 suffix = "_sima_2SRBs"
-# 1. _sima
+# 1. _sima          # = CRB + TRB2
 # 2. _sima_2SRBs
 
 # Optimization flags
@@ -1428,11 +1428,13 @@ evaluator = MBSA_Evaluator(opts,loc_load_saved_data+".csv") # TODO: _gammaN_1p2
 om.n2(evaluator.prob, outfile=loc_n2, show_browser=True);
 
 # prob = load_data( loc_load_saved_data+".csv", prob )
+
+# ---- DDO-optim dict ----
 desvars_reference = {
-    "L_h1": prob["L_h1"], # 4.95916667
-    "L_12": prob["L_12"], # 5.56416667
-    "lss_diameter": prob["lss_diameter"], # [2.03333333, 2.56666667]
-    "lss_wall_thickness": prob["lss_wall_thickness"] # [0.28093333, 0.08253333]
+    "L_h1": prob["L_h1"],
+    "L_12": prob["L_12"],
+    "lss_diameter": prob["lss_diameter"],
+    "lss_wall_thickness": prob["lss_wall_thickness"]
 }
 
 #%%
@@ -1460,7 +1462,7 @@ print(f".= beta={betas}, \n.= pf={pfs}")
 response_name = "msa_mass"
 results_msa_mass = evaluator.evaluate(
     X=DIST_MEAN,
-    design_variables=desvars_reference
+    design_variables=desvars_reference 
 )
 print(f"{response_name}: { results_msa_mass[response_name] }")
 
@@ -1604,21 +1606,28 @@ reliability_results_dict_with_response_name = {
 }
 
 TITLES_BETA = {
-        "beta_vonmises":
-            r"$\beta_{LSS,\,von-Mises}$",
+    "msa_mass":
+        r"$m_{MBSA}$" + " [t]",
 
-        "beta_shaft_deflection":
-            r"$\beta_{LSS,\,deflection}$",
+    "beta_vonmises":
+        r"$\beta_{LSS,\,von-Mises}$",
 
-        "beta_shaft_angle":
-            r"$\beta_{LSS,\,angle}$",
+    "beta_shaft_deflection":
+        r"$\beta_{LSS,\,deflection}$",
 
-        "beta_mb1":
-            r"$\beta_{L10,\,MB1}$",
+    "beta_shaft_angle":
+        r"$\beta_{LSS,\,angle}$",
 
-        "beta_mb2":
-            r"$\beta_{L10,\,MB2}$",
-    }
+    "beta_mb1":
+        r"$\beta_{L10,\,MB1}$",
+
+    "beta_mb2":
+        r"$\beta_{L10,\,MB2}$",
+}
+
+# ----- Targets -----
+BETA_TARGET = 3.2 # Pf ~ 5 * 1e-4
+PF_TARGET = calculate_pf_using_beta( BETA_TARGET )
 
 threshold_importance = 0.001   # 0.1%
 
@@ -1633,6 +1642,8 @@ params_plot_rc = {
     }
 plt.rcParams.update( params_plot_rc )
 
+#%%
+# plot importance factors
 # -----
 if results_vm is not None: 
     fig, ax = plot_piechart_importance_factors(
@@ -1740,7 +1751,7 @@ ax.set_yticks(
 )
 
 ax.set_yticklabels(
-    list(TITLES_BETA.values())
+    list(TITLES_BETA.values())[1:]
 )
 
 cbar = fig.colorbar(
@@ -1769,7 +1780,7 @@ if False: #flag_save_plot:
     fig.savefig(loc_plot, dpi=300)
 
 #%%[markdown]
-# ------------------------------ `RBDO` ----------------------------------
+# # -------------- `RBDO` --------------
 #%%
 class ReliabilityComponent_new( om.ExplicitComponent ):
     """
@@ -1814,25 +1825,32 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
         self.add_input("lss_wall_thickness", val=np.zeros(2), units="m") #(v) a DV to be optim
 
         # -----------------------------------------
+        # Determinsitc outputs
+        # -----------------------------------------
+        self.add_output("msa_mass", val=0.0)
+        self.add_output("constr_lss_vonmises", val=0.0)
+        self.add_output("constr_shaft_deflection", val=0.0)
+        self.add_output("constr_shaft_angle", val=0.0)
+        self.add_output('constr_L10_mb1', val=0.0, desc='Safety factor MB1')
+        self.add_output('constr_L10_mb2', val=0.0, desc='Safety factor MB2')        
+        
+        # -----------------------------------------
         # Reliability outputs
         # -----------------------------------------
-        def_beta, def_pf = 3.0, 1.e-3
         # Beta
-        self.add_output( "beta_vonmises", val=def_beta )
-        self.add_output( "beta_shaft_deflection", val=def_beta )
-        self.add_output( "beta_shaft_angle", val=def_beta )
+        self.add_output( "beta_vonmises", val=BETA_TARGET )
+        self.add_output( "beta_shaft_deflection", val=BETA_TARGET )
+        self.add_output( "beta_shaft_angle", val=BETA_TARGET )
         if doMBfls:
-            self.add_output( "beta_mb1", val=def_beta )
-            self.add_output( "beta_mb2", val=def_beta )
+            self.add_output( "beta_mb1", val=BETA_TARGET )
+            self.add_output( "beta_mb2", val=BETA_TARGET )
         # Pf
-        self.add_output( "pf_vonmises", val=def_pf )
-        self.add_output( "pf_shaft_deflection", val=def_pf )
-        self.add_output( "pf_shaft_angle", val=def_pf )
+        self.add_output( "pf_vonmises", val=PF_TARGET )
+        self.add_output( "pf_shaft_deflection", val=PF_TARGET )
+        self.add_output( "pf_shaft_angle", val=PF_TARGET )
         if doMBfls:
-            self.add_output( "pf_mb1", val=def_pf )
-            self.add_output( "pf_mb2", val=def_pf )
-        # obj
-        self.add_output("msa_mass", val=0.0)
+            self.add_output( "pf_mb1", val=PF_TARGET )
+            self.add_output( "pf_mb2", val=PF_TARGET )
 
     def compute(self, inputs, outputs):
 
@@ -1842,16 +1860,6 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
             "lss_diameter": inputs["lss_diameter"],
             "lss_wall_thickness": inputs["lss_wall_thickness"]
         }
-
-        # Calculate the objective
-        obj_name = "msa_mass"
-        results_msa_mass = self.evaluator.evaluate(
-            X=self.dist_mean,
-            design_variables=design_variables
-        )
-        obj_val = results_msa_mass[obj_name]
-        print(f"{ obj_name }: { obj_val }") # test
-        outputs[obj_name] = obj_val
 
         constraints = [
             ("constr_lss_vonmises", "beta_vonmises", "pf_vonmises"),
@@ -1869,6 +1877,32 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
                 ("constr_L10_mb2", "beta_mb2", "pf_mb2")
             )
 
+        # -------------
+        # Calculate the objective and the deterministic constraints
+        # - X: assign from evaluator.prob (persistent MBSA problem)
+        X_DDO = np.concatenate((
+            self.evaluator.prob["F_aero_hub"].reshape((3,)),    # F_
+            self.evaluator.prob["M_aero_hub"].reshape((3,)),    # M_
+            self.evaluator.prob["lss_E"],                       # E
+            [1.0],                                              # X_Cr
+            [1.0]                                               # X_FLS
+        ))
+        results = self.evaluator.evaluate(
+                X=X_DDO,
+                design_variables=design_variables
+            )
+        print( "\tMBSA_Evaluator.evaluate() results: " ) # test
+        # ---- constraints
+        for name, _, _ in constraints:
+            val = results[ name ]
+            print(f"\t - { name }: { val }") # test
+            outputs[ name ] = val
+        # ---- objective
+        obj_name = "msa_mass"
+        outputs[ obj_name ] = results[ obj_name ]
+
+        # -------------
+        # Reliability evaluation
         for constr_name, beta_name, pf_name in constraints:
 
             beta, pf, result = compute_reliability(
@@ -1884,13 +1918,14 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
 
             outputs[beta_name] = beta
             outputs[pf_name] = pf
+        # -------------
 
         print("")
 
 # %%[markdown]
 # ### RBDO (reliability based design optimization)
 # %%
-max_calls = opts["WISDEM"]["DriveSE"]["reliability_max_calls"] = 1e3
+max_calls = opts["WISDEM"]["DriveSE"]["reliability_max_calls"] = 0
 
 BOUNDS_DESVARS = { # TODO unused
     "L_h1": (0.1, 2.0),
@@ -1905,16 +1940,16 @@ BOUNDS_DESVARS = { # TODO unused
 
 flag_opt_GBO = False
 flag_opt_GFO = False
-flag_DOE = True
+flag_DOE = False
 DOE_NUM_SAMPLES = 50 # for beta_est, 100 ; for FORM, 50.
 DOE_which_desvar = "" # _L, _D, _t, all = ""
 
 if not flag_DOE: DOE_which_desvar = ""
 str_form = "" if max_calls == 0 else "_FORM"
 
-record_cases = True    #TODO: add in final setup (full problem)
+record_cases = False    #TODO for DOE ( beta_est or FORM )
 flag_save_new_data = False
-flag_load_from_data = False
+flag_load_from_data = True
 flag_save_doe_data = False
 flag_save_plot = False
 
@@ -1984,26 +2019,26 @@ if flag_opt_GBO:
 elif flag_opt_GFO:
     print("=== running GFO ===\n")
     # GFO: gradient free optimizer
-    # ---- Simple GA (Genetic Alg.)
-    prob_rbdo.driver = om.SimpleGADriver()
-    prob_rbdo.driver.options["max_gen"] = 100
-    prob_rbdo.driver.options["pop_size"] = 100
-    prob_rbdo.driver.options["bits"] = {'xC': 12}
-    prob_rbdo.driver.options["run_parallel"] = False
-    prob_rbdo.driver.options["elitism"] = True
-    prob_rbdo.driver.options["procs_per_model"] = 1
-    # ---- Evolution
+    # ==== Simple GA (Genetic Alg.) ====
+    # prob_rbdo.driver = om.SimpleGADriver()
+    # prob_rbdo.driver.options["max_gen"] = 100
+    # prob_rbdo.driver.options["pop_size"] = 100
+    # prob_rbdo.driver.options["bits"] = {'xC': 12}
+    # prob_rbdo.driver.options["run_parallel"] = False
+    # prob_rbdo.driver.options["elitism"] = True
+    # prob_rbdo.driver.options["procs_per_model"] = 1
+    # ==== Evolution ====
     # prob_rbdo.driver = om.DifferentialEvolutionDriver()
     # prob_rbdo.driver.options['max_gen'] = 400
     # prob_rbdo.driver.options['Pc'] = 0.5
     # prob_rbdo.driver.options['F'] = 0.5
-    # ---- NSGA2
-    # from wisdem.optimization_drivers.nsga2_driver import NSGA2Driver
-    # prob_rbdo.driver = NSGA2Driver()
-    # prob_rbdo.driver.options["max_gen"] = 5 * 1
-    # prob_rbdo.driver.options["run_parallel"] = True
-    # prob_rbdo.driver.options["procs_per_model"] = 2
-    # ---- options
+    # ==== NSGA2 ====
+    from wisdem.optimization_drivers.nsga2_driver import NSGA2Driver
+    prob_rbdo.driver = NSGA2Driver()
+    prob_rbdo.driver.options["max_gen"] = 5 * 1
+    prob_rbdo.driver.options["run_parallel"] = True
+    prob_rbdo.driver.options["procs_per_model"] = 2
+    # ==== options ====
     prob_rbdo.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
 
 elif flag_DOE:
@@ -2031,6 +2066,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     print(" --- setting optimization obj, desvars, constrs --- \n")
     # Add objective
     prob_rbdo.model.add_objective("msa_mass", ref=1e6)
+
     # Add design variables
     if len(DOE_which_desvar) == 0:
         prob_rbdo.model.add_design_var("L_h1", lower=0.1, upper=2.0, ref=2.0, ref0=0.1)
@@ -2048,22 +2084,31 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
         ValueError(f"Unknown value for DOE_which_desvar = {DOE_which_desvar}. Possible = _L, _D, _t or empty string")
     
     # Add constraints
-    prob_rbdo.model.add_constraint("beta_vonmises", lower=3.0)
-    prob_rbdo.model.add_constraint("beta_shaft_deflection", lower=3.0)
-    prob_rbdo.model.add_constraint("beta_shaft_angle", lower=3.0)
+    # 1. deterministic ( more than 0.0; or in the safe region )
+    prob_rbdo.model.add_constraint("constr_lss_vonmises", lower=0.0)
+    prob_rbdo.model.add_constraint("constr_shaft_deflection", lower=0.0)
+    prob_rbdo.model.add_constraint("constr_shaft_angle", lower=0.0)
     if doMBfls:
-        prob_rbdo.model.add_constraint("beta_mb1", lower=3.0)
-        prob_rbdo.model.add_constraint("beta_mb2", lower=3.0)
+        prob_rbdo.model.add_constraint("constr_L10_mb1", lower=0.0)
+        prob_rbdo.model.add_constraint("constr_L10_mb2", lower=0.0)
+
+    # 2. reliability
+    prob_rbdo.model.add_constraint("beta_vonmises", lower=BETA_TARGET)
+    prob_rbdo.model.add_constraint("beta_shaft_deflection", lower=BETA_TARGET)
+    # prob_rbdo.model.add_constraint("beta_shaft_angle", lower=BETA_TARGET) # TODO: commented due to inactivity in almost all desvars (pairs)
+    if doMBfls:
+        prob_rbdo.model.add_constraint("beta_mb1", lower=BETA_TARGET)
+        prob_rbdo.model.add_constraint("beta_mb2", lower=BETA_TARGET)
 
 # Setup the problem
 prob_rbdo.setup()
 
 # Print objectives, design variables, and constraints in a concise readable form
-print("\n=== All needed inputs to the model ===\n")
-prob_rbdo.model.list_inputs();
-
-print("\n=== All outputs from the model ===\n")
-prob_rbdo.model.list_outputs();
+# -----
+# print("\n=== All needed inputs to the model ===\n")
+# prob_rbdo.model.list_inputs();
+# print("\n=== All outputs from the model ===\n")
+# prob_rbdo.model.list_outputs();
 
 # Set values of DVs
 if not flag_load_from_data:
@@ -2095,17 +2140,18 @@ else:
     prob_rbdo.run_model()
 
 t1 = time.time()
-print(" - WISDEM RBDO run completed in,", t1-t0, "seconds")
+print(" (:D) WISDEM RBDO run completed in,", t1-t0, "seconds")
 
 # %%[markdown]
 # # _____ Post-processing _____
+
 #%%
 # Print the results
 print("LSS desvars:")
 print(" ", prob_rbdo["L_h1"], prob_rbdo["L_12"], prob_rbdo["lss_diameter"], prob_rbdo["lss_wall_thickness"], "\n" )
 
 for name in lst_constrs: print( name, prob_rbdo[ name ])
-
+for name in RELIABILITY_RESPONSES.keys(): print( name, prob_rbdo[ name ])
 #
 print("--- obj: masses ---")
 print(f"MSA mass: {prob_rbdo["msa_mass"]}")
@@ -2114,7 +2160,7 @@ print(f"MSA mass: {prob_rbdo["msa_mass"]}")
 # ==========================================================
 #%%
 ### Recorded cases
-if False: #record_cases:
+if record_cases:
     print("\n=== Recorded cases from the optimization ===\n")
     results_dict = get_recorder_results( loc_cases, None, True )
     print(results_dict);
@@ -2130,12 +2176,6 @@ except:
 #%%
 if flag_save_new_data: save_data(loc_save_data_rbdo, prob_rbdo)
 # ===============================================================
-
-# %%
-if record_cases:
-    print("\n=== Recorded cases from the optimization ===\n")
-    results_dict = get_recorder_results( loc_cases, None, True )
-    print(results_dict);
 
 # %%
 # DOE post-processing
@@ -2223,24 +2263,31 @@ if flag_save_doe_data:
     df_doe.to_csv( loc_doe_csv_data, index=False )
 
 if flag_load_from_data:
-    # DOE samples
+
+    # ---- DOE samples ----
     df_doe = pd.read_csv( loc_doe_csv_data )
-    # RBDO saved data
+
+    # ---- RBDO saved data ----
+    load_this_rbdo = loc_load_saved_data_rbdo+".csv" # TODO: try out best
     dict_rbdo = var_df2dict(
-        pd.read_csv( loc_load_saved_data_rbdo+".csv" )
+        pd.read_csv( load_this_rbdo )
         )
+    print("- loading prob vars from saved csv ...")
+    prob_rbdo = load_data( load_this_rbdo, prob_rbdo )
 
 #%%
 # Plot DOE landscape function
 # - in a subplot (5,2) with lst_constr on rows and DOE_which_desvar on columns
 # - read results from the saved csv file `loc_doe_csv_data`
 
+# ---- PAIRS ----
 pairs_desvars = [ # based on the value on DOE_which_desvars
     ("L_h1", "L_12"),
     ("D_1", "D_2"),
     ("t_1", "t_2"),
 ]
 
+# ---- DDO-optim dict, seperated ----
 desvars_ref_seperated = {
     "L_h1": float(desvars_reference["L_h1"][0]),
     "L_12": float(desvars_reference["L_12"][0]),
@@ -2250,13 +2297,19 @@ desvars_ref_seperated = {
     "t_2" : float(desvars_reference["lss_wall_thickness"][1]),
 }
 
+# ---- RBDO-optim dict ----
+desvars_rbdo = {}
+for dv in desvars_reference.keys():
+    desvars_rbdo[ dv ] = prob_rbdo[ dv ]
+
+# ---- RBDO-optim dict, seperated ----
 desvars_rbdo_seperated = {
-    "L_h1": float(dict_rbdo["L_h1"]),
-    "L_12": float(dict_rbdo["L_12"]),
-    "D_1" : float(eval(dict_rbdo["lss_diameter"])[0]),
-    "D_2" : float(eval(dict_rbdo["lss_diameter"])[1]), 
-    "t_1" : float(eval(dict_rbdo["lss_wall_thickness"])[0]),
-    "t_2" : float(eval(dict_rbdo["lss_wall_thickness"])[1]),
+    "L_h1": float(desvars_rbdo["L_h1"][0]),
+    "L_12": float(desvars_rbdo["L_12"][0]),
+    "D_1" : float(desvars_rbdo["lss_diameter"][0]), 
+    "D_2" : float(desvars_rbdo["lss_diameter"][1]), 
+    "t_1" : float(desvars_rbdo["lss_wall_thickness"][0]),
+    "t_2" : float(desvars_rbdo["lss_wall_thickness"][1]),
 }
 
 if "L" in DOE_which_desvar:
@@ -2306,7 +2359,7 @@ def plot_DOE_landscape(
         wspace=0.10,
         hspace=0.12,
         nlevels=30,
-        beta_target=3.0,
+        beta_target=BETA_TARGET,
         ):
     """
     Plot 2-D DOE reliability landscapes.
@@ -2530,6 +2583,8 @@ def plot_DOE_landscape(
             dtype=float
         )
 
+        if constr == "msa_mass": beta = beta / 1e3 # kg to t
+
         # --------------------------------------------------------
         # Remove invalid values
         # --------------------------------------------------------
@@ -2648,7 +2703,7 @@ def plot_DOE_landscape(
 
                 colors="white",
 
-                # linewidths=2.0,
+                linewidths=4.0,
 
                 zorder=4,
             )
@@ -2691,7 +2746,7 @@ def plot_DOE_landscape(
             s=28,
             zorder=5,
 
-            label="DOE samples"
+            # label="DOE samples"
         )
 
         # ========================================================
@@ -2701,11 +2756,11 @@ def plot_DOE_landscape(
             ax.scatter(
                 dv_ref_x,
                 dv_ref_y,
-                color="blue",
+                color="magenta",
                 edgecolor="k",
-                marker="v",
+                marker=">",
                 # linewidth=0.4,
-                s=280,
+                s=360,
                 zorder=6,
                 label="DDO-optimal"
             )
@@ -2713,11 +2768,11 @@ def plot_DOE_landscape(
             ax.scatter(
                 dv_rbdo_x,
                 dv_rbdo_y,
-                color="red",
+                color="lime",
                 edgecolor="k",
-                marker="*",
+                marker="X",
                 # linewidth=0.4,
-                s=380,
+                s=360,
                 zorder=6,
                 label="RBDO-optimal"
             )
@@ -2760,7 +2815,7 @@ def plot_DOE_landscape(
             y=1.05
         )
 
-        if iter == 2: ax.legend(loc="upper right")
+        if iter == 0: ax.legend(loc="upper left")
 
         # ========================================================
         # Grid
@@ -2929,14 +2984,6 @@ def plot_surrogate_beta_landscapes(
     plot_rbdo=False,
 ):
 
-    beta_titles = [
-        r"$\beta_{LSS,\ von-Mises}$",
-        r"$\beta_{LSS,\ deflection}$",
-        r"$\beta_{LSS,\ angle}$",
-        r"$\beta_{L10,\ MB1}$",
-        r"$\beta_{L10,\ MB2}$",
-    ]
-
     # ------------------------------------------------------------
     # Rows:
     #   0 -> MSA mass
@@ -2944,10 +2991,7 @@ def plot_surrogate_beta_landscapes(
     # ------------------------------------------------------------
     row_names = BETA_NAMES
 
-    row_titles = (
-        [r"$m_{MSA}$"]
-        + beta_titles
-    )
+    row_titles = list(TITLES_BETA.values())
 
     # ------------------------------------------------------------
     # Columns:
@@ -3006,6 +3050,7 @@ def plot_surrogate_beta_landscapes(
             # ----------------------------------------------------
             prediction = surrogates[quantity_name].predict(grid)
             prediction = prediction.reshape(XX.shape)
+            if quantity_name=="msa_mass": prediction = prediction / 1e3 # kg to t
 
             ax = axes[irow, icol]
 
@@ -3079,6 +3124,7 @@ def plot_surrogate_beta_landscapes(
                     marker="p",
                     s=200,
                     zorder=6,
+                    label="DDO-optimal",
                 )
 
             # ----------------------------------------------------
@@ -3094,7 +3140,11 @@ def plot_surrogate_beta_landscapes(
                     marker="*",
                     s=420,
                     zorder=6,
+                    label="RBDO-optimal",
                 )
+
+            if (quantity_name == "beta_vonmises") and (icol==0):
+                ax.legend(loc="upper center")
 
     # ------------------------------------------------------------
     # Figure title
@@ -3138,7 +3188,7 @@ def plot_surrogate_beta_landscapes(
         )
         labels.append("RBDO-optimal")
 
-    if handles:
+    if False: #handles:
         fig.legend(
             handles,
             labels,
