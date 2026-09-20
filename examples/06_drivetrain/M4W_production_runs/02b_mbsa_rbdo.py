@@ -2069,17 +2069,17 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
 
     # Add design variables
     if len(DOE_which_desvar) == 0:
-        prob_rbdo.model.add_design_var("L_h1", lower=0.1, upper=2.0, ref=2.0, ref0=0.1)
-        prob_rbdo.model.add_design_var("L_12", lower=2.0, upper=5.0, ref=5.0, ref0=2.0)
-        prob_rbdo.model.add_design_var("lss_diameter", lower=1.0, upper=4.0, ref=4.0, ref0=1.0)
-        prob_rbdo.model.add_design_var("lss_wall_thickness", lower=1e-2, upper=0.5, ref=1.0, ref0=1e-2) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
+        prob_rbdo.model.add_design_var("L_h1", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
+        prob_rbdo.model.add_design_var("L_12", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
+        prob_rbdo.model.add_design_var("lss_diameter", lower=1.0, upper=5.0, ref=5.0, ref0=1.0)
+        prob_rbdo.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.5, ref=1.0, ref0=4e-3) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
     elif "L" in DOE_which_desvar:
-        prob_rbdo.model.add_design_var("L_h1", lower=0.1, upper=2.0, ref=2.0, ref0=0.1)
-        prob_rbdo.model.add_design_var("L_12", lower=2.0, upper=5.0, ref=5.0, ref0=2.0)
+        prob_rbdo.model.add_design_var("L_h1", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
+        prob_rbdo.model.add_design_var("L_12", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
     elif "D" in DOE_which_desvar:
-        prob_rbdo.model.add_design_var("lss_diameter", lower=1.0, upper=4.0, ref=4.0, ref0=1.0)
+        prob_rbdo.model.add_design_var("lss_diameter", lower=1.0, upper=5.0, ref=5.0, ref0=1.0)
     elif "t" in DOE_which_desvar:
-        prob_rbdo.model.add_design_var("lss_wall_thickness", lower=1e-2, upper=0.5, ref=1.0, ref0=1e-2)
+        prob_rbdo.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.5, ref=1.0, ref0=4e-3)
     else:
         ValueError(f"Unknown value for DOE_which_desvar = {DOE_which_desvar}. Possible = _L, _D, _t or empty string")
     
