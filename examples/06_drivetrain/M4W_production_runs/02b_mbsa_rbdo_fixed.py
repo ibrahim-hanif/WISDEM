@@ -1065,7 +1065,7 @@ def calculate_beta_from_pf( pf ):
     beta = -Phi ( pf )
     """
     normal = ot.Normal()
-    pf = float(np.clip(pf, np.finfo(float).tiny, 1.0 - np.finfo(float).eps))
+    pf = float(np.clip(pf, np.finfo(float).tiny, 1.0 - np.finfo(float).eps)) # Clamp between [0,1]: if too small, then very close to 0, if too large, then very close 1; for numerical stability
     beta = -normal.computeQuantile(pf)[0]
     # print(f" --- calculated beta (from pf) = {beta_calc}") # test
     return beta
@@ -1089,7 +1089,7 @@ def annualize_poisson_failure_probability(
 # FORM: first order reliability method
 # -----------------------------------------------------------------
 def run_FORM( starting_point, event,
-             max_calls=1e4, maxError = 1.0e-4, verbose=False ):
+             max_calls=1.E4, maxError = 1.E-3, verbose=False ):
     """
     Run a First-Order Reliability Method (FORM) analysis
         on a given `distribution` and a given `event`
@@ -1127,7 +1127,7 @@ def run_FORM( starting_point, event,
 
     if not np.isfinite(beta) or not np.isfinite(pf):
         raise RuntimeError(
-            f"FORM returned non-finite result: beta={beta}, pf={pf}"
+            f"FORM returned non-finite result: beta={beta:.2f}, pf={pf:.2e}"
         )
 
     # Keep beta/Pf mathematically consistent.
@@ -1138,7 +1138,8 @@ def run_FORM( starting_point, event,
     t_total = te-ts
 
     if verbose: print(
-        f"! Results (FORM) in {t_total}s : Beta = {beta}, Pf = {pf_calc}."
+        f" --- ! FORM in {t_total:.2f
+            } (s) : Beta = {beta:.2f}, Pf = {pf_calc:.2e}."
         )
 
     return beta, pf_calc, result, t_total
@@ -1146,7 +1147,7 @@ def run_FORM( starting_point, event,
 # -----------------------------------------------------------------
 # MCS: monte carlo simulations
 # -----------------------------------------------------------------
-def run_MCS( event, max_calls=1e5, verbose=False):
+def run_MCS( event, max_calls=1.E5, verbose=False):
     """
     Run a Monte-Carlo Simulation (MCS) experiment for a given `event`
     """
@@ -1168,7 +1169,8 @@ def run_MCS( event, max_calls=1e5, verbose=False):
     t_total = te-ts 
 
     if verbose: print(
-        f"! Results (FORM) in {t_total}s : Beta = {beta_calc}, Pf = {pf}."
+        f" --- ! MCS in {t_total} (s) : Beta = {
+            beta_calc:.2f}, Pf = { pf:.2e }."
         )
 
     return beta_calc, pf, result, t_total
@@ -1241,7 +1243,7 @@ def run_initial_screening_for_beta(model, dist_samples, response_name):
         beta_est[ ptp_le_tol | sigma_le_tol ] = 8.0
 
     if bool( np.any( beta_ge_8 ) ):
-        print(f"-- some inactive reliab constr: estimate beta {beta_est[beta_ge_8]} > 8.0; returning safe values.")
+        print(f"-- some inactive reliab constr: estimate beta {beta_est[beta_ge_8]:.2f} > 8.0; returning safe values.")
         beta_est[ beta_ge_8 ] = 8.0
 
     # --------------------------------------------------
@@ -1264,6 +1266,9 @@ def compute_reliability(
     design_variables,
     response_name=None,
     max_calls=1.E3,
+    max_error=1.E-3,
+    try_multi_form=False,
+    verbose=False
 ):
     """
     Reliability analysis
@@ -1275,6 +1280,9 @@ def compute_reliability(
         maximum calls for the reliability analysis algorithm (FORM or MCS).
         if `max_calls` == 0, the estimated (screened) beta is output.
     
+    max_error: float
+        maximum error for the reliability analysis algorithm.
+    
     Internal Progress
     _______
     1. DONE : implement working function
@@ -1284,6 +1292,7 @@ def compute_reliability(
     # init
     # -----------
     max_calls = int(max_calls)
+    max_error = float(max_error)
     num_reliab_resp = int(len(RELIABILITY_RESPONSES)) # TODO.2
 
     response_selected = response_name is not None
@@ -1367,9 +1376,7 @@ def compute_reliability(
     beta_est, pf_est = run_initial_screening_for_beta(
         model, dist_samples, response_name)
 
-    if (bool_alg == 0) or (
-        np.ndim(beta_est) == 0 and np.isclose(float(beta_est), 8.0)
-    ):
+    if (bool_alg == 0) or np.isclose(float(beta_est), 8.0): # (np.ndim(beta_est) == 0) and np.isclose(float(beta_est), 8.0)
         # --------------------------------------------------
         # Estimated beta
         # --------------------------------------------------
@@ -1382,44 +1389,52 @@ def compute_reliability(
         # --------------------------------------------------
         try:
             beta, pf, result, time_run = run_FORM(
-                dist_mean, event, max_calls
+                dist_mean, event, max_calls, max_error, verbose
             )
         except Exception as exc:
-            # Retry from several points. This is useful for nonlinear
-            # PythonFunction limit states where Cobyla from the mean stalls.
-            try:
-                starts = distribution.getSample(4)
-                multi = ot.MultiStart(ot.Cobyla(), starts)
-                multi.setMaximumCallsNumber(max_calls)
-                multi.setMaximumAbsoluteError(1.0e-4)
-                multi.setMaximumRelativeError(1.0e-4)
-                multi.setMaximumResidualError(1.0e-4)
-                multi.setMaximumConstraintError(1.0e-4)
+            print(
+                f"--- FORM failed, returning beta=0.0, with "
+                f"exception {type(exc).__name__}"
+            )
+            return FORM_FAILURE_BETA, 0.5, None
 
-                algo_retry = ot.FORM(multi, event, dist_mean)
-                algo_retry.run()
-                result = algo_retry.getResult()
-                beta = float(result.getHasoferReliabilityIndex())
-                pf = calculate_pf_using_beta(beta)
+            if try_multi_form:
+                # Retry from several points. This is useful for nonlinear
+                # PythonFunction limit states where Cobyla from the mean stalls.
+                print(" --- re-trying with MultiStart Cobyla for FORM...")
+                try:
+                    starts = dist_samples[:4]
+                    multi = ot.MultiStart(ot.Cobyla(), starts)
+                    multi.setMaximumCallsNumber(max_calls)
+                    multi.setMaximumAbsoluteError(max_error)
+                    multi.setMaximumRelativeError(max_error)
+                    multi.setMaximumResidualError(max_error)
+                    multi.setMaximumConstraintError(max_error)
 
-                if not np.isfinite(beta) or not np.isfinite(pf):
-                    raise RuntimeError(
-                        f"retry returned non-finite beta={beta}, pf={pf}"
+                    algo_retry = ot.FORM(multi, event)
+                    algo_retry.run()
+                    result = algo_retry.getResult()
+                    beta = float(result.getHasoferReliabilityIndex())
+                    pf = calculate_pf_using_beta(beta)
+
+                    if not np.isfinite(beta) or not np.isfinite(pf):
+                        raise RuntimeError(
+                            f"retry returned non-finite beta={beta}, pf={pf}"
+                        )
+
+                    print(
+                        f"--- FORM retry succeeded for {response_name} "
+                        f"after initial {type(exc).__name__}"
                     )
-
-                print(
-                    f"--- FORM retry succeeded for {response_name} "
-                    f"after initial {type(exc).__name__}"
-                )
-            except Exception as exc_retry:
-                # Never let one numerical FORM failure crash NSGA2.
-                # beta=0 is deliberately infeasible for beta >= BETA_TARGET.
-                print(
-                    f"!!! FORM failed for {response_name}; "
-                    f"initial={type(exc).__name__}; "
-                    f"retry={type(exc_retry).__name__}: {exc_retry}"
-                )
-                return FORM_FAILURE_BETA, 0.5, None
+                except Exception as exc_retry:
+                    # Never let one numerical FORM failure crash NSGA2.
+                    # beta=0 is deliberately infeasible for beta >= BETA_TARGET.
+                    print(
+                        f"!!! FORM failed for {response_name}; "
+                        f"initial={type(exc).__name__}; "
+                        f"retry={type(exc_retry).__name__}: {exc_retry}"
+                    )
+                    return FORM_FAILURE_BETA, 0.5, None
 
         # DLC 5.1 ULS: annualize the conditional Ve50 reliability
         if "L10" not in response_name:
@@ -1431,7 +1446,9 @@ def compute_reliability(
         err_beta_est = (
             ((beta_est-beta)/beta)*1e2 if abs(beta) > 1e-12 else np.inf
         )
-        print(f" --- comparing beta_est ({beta_est}) and beta ({beta}): % err = {err_beta_est}")
+        print(f" --- comparing beta_est ({
+            beta_est:.2f}) and beta ({beta:.2f}): % err = {
+            err_beta_est:.2f}")
 
         return beta, pf, result
 
@@ -1454,7 +1471,9 @@ def compute_reliability(
         err_beta_est = (
             ((beta_est-beta)/beta)*1e2 if abs(beta) > 1e-12 else np.inf
         )
-        print(f" --- comparing beta_est ({beta_est}) and beta ({beta}): % err = {err_beta_est}")
+        print(f" --- comparing beta_est ({
+            beta_est:.2f}) and beta ({beta:.2f}): % err = {
+            err_beta_est:.2f}")
 
         return beta, pf, result
 
@@ -1498,6 +1517,16 @@ N_samples = 2**5
 DIST_SAMPLES = DISTRIBUTION.getSample( N_samples )
 DIST_MEAN = DISTRIBUTION.getMean()
 
+# ---- (Fixed) uncertainties from deterministic 
+X_DDO = np.concatenate((
+    prob["F_aero_hub"].reshape((3,)),     # F_
+    prob["M_aero_hub"].reshape((3,)),     # M_
+    prob["lss_E"],                        # E
+    [1.0],                                          # X_Cr
+    [1.0]                                           # X_FLS
+))
+# ----
+
 #%%
 # Estimate the reliablity for all constraints,
 # using `beta_est` as a quick screening
@@ -1514,14 +1543,6 @@ print(f".= beta(s)= {betas}, \n.= pf(s)= {pfs}")
 # Calculate the reliablity for each constraint
 
 # ---- 
-X_DDO = np.concatenate((
-    prob["F_aero_hub"].reshape((3,)),     # F_
-    prob["M_aero_hub"].reshape((3,)),     # M_
-    prob["lss_E"],                        # E
-    [1.0],                                          # X_Cr
-    [1.0]                                           # X_FLS
-))
-
 response_name = "msa_mass"
 results_msa_mass = evaluator.evaluate(
     X=X_DDO,
@@ -1535,7 +1556,8 @@ beta_vm, pf_vm, results_vm = compute_reliability(
     DISTRIBUTION, DIST_SAMPLES, DIST_MEAN,
     evaluator,
     desvars_reference,
-    response_name
+    response_name,
+    verbose=True
 )
 print(f"{response_name}: beta={beta_vm}, pf={pf_vm}")
 
@@ -1545,7 +1567,8 @@ beta_shaft_defl, pf_shaft_defl, results_shaft_defl = compute_reliability(
     DISTRIBUTION, DIST_SAMPLES, DIST_MEAN,
     evaluator,
     desvars_reference,
-    response_name
+    response_name,
+    verbose=True
 )
 print(f"{response_name}: beta={beta_shaft_defl}, pf={pf_shaft_defl}")
 
@@ -1555,7 +1578,8 @@ beta_shaft_angle, pf_shaft_angle, results_shaft_angle = compute_reliability(
     DISTRIBUTION, DIST_SAMPLES, DIST_MEAN,
     evaluator,
     desvars_reference,
-    response_name
+    response_name,
+    verbose=True
 )
 print(f"{response_name}: beta={beta_shaft_angle}, pf={pf_shaft_angle}")
 
@@ -1567,7 +1591,8 @@ if doMBfls:
         DISTRIBUTION, DIST_SAMPLES, DIST_MEAN,
         evaluator,
         desvars_reference,
-        response_name
+        response_name,
+        verbose=True
     )
     print(f"{response_name}: beta={beta_mb1}, pf={pf_mb1}")
 
@@ -1577,7 +1602,8 @@ if doMBfls:
         DISTRIBUTION, DIST_SAMPLES, DIST_MEAN,
         evaluator,
         desvars_reference,
-        response_name
+        response_name,
+        verbose=True
     )
     print(f"{response_name}: beta={beta_mb2}, pf={pf_mb2}")
 
@@ -1660,14 +1686,6 @@ def plot_piechart_importance_factors(
 #%%
 # RESULTS: post-process from FORM
 
-reliability_results_dict_with_response_name = {
-    "constr_lss_vonmises": results_vm,
-    "constr_lss_deflection": results_shaft_defl,
-    "constr_lss_angle": results_shaft_angle,
-    "constr_mb1": results_mb1,
-    "constr_mb2": results_mb2,
-}
-
 TITLES_BETA = {
     "msa_mass":
         r"$m_{MBSA}$" + " [t]",
@@ -1707,6 +1725,15 @@ plt.rcParams.update( params_plot_rc )
 
 #%%
 # plot importance factors
+
+reliability_results_dict_with_response_name = {
+    "constr_lss_vonmises": results_vm,
+    "constr_lss_deflection": results_shaft_defl,
+    "constr_lss_angle": results_shaft_angle,
+    "constr_mb1": results_mb1,
+    "constr_mb2": results_mb2,
+}
+
 # -----
 if results_vm is not None: 
     fig, ax = plot_piechart_importance_factors(
@@ -1967,10 +1994,12 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
                 design_variables,
                 constr_name,
                 max_calls=self.max_calls,
+                max_error=1.E-3,
+                verbose=True
             )
 
             # test
-            print(f"{constr_name}: beta={beta}, pf={pf}")
+            print(f"{constr_name}: beta={beta:.2f}, pf={pf:.2e}")
 
             outputs[beta_name] = beta
             outputs[pf_name] = pf
@@ -1982,9 +2011,10 @@ class ReliabilityComponent_new( om.ExplicitComponent ):
 # ### RBDO (reliability based design optimization)
 # %%
 # Reliability settings used by the RBDO.
-# IMPORTANT: FORM_MAX_CALLS = 0 means "screening only", not FORM.
-# Use a positive value for a genuine FORM-based RBDO.
-max_calls = 5.e2 # try for FORM: 500 or 1e3
+# IMPORTANT:
+# 1. FORM_MAX_CALLS = 0 means "screening only", not FORM.
+# 2. Use a positive value for a genuine FORM-based RBDO; 5e2 or 1e3
+max_calls = 0
 
 opts["WISDEM"]["DriveSE"]["reliability_max_calls"] = max_calls
 
@@ -2012,7 +2042,7 @@ DOE_which_desvar = "" # _L, _D, _t, all = ""
 if not flag_DOE: DOE_which_desvar = ""
 str_form = "" if max_calls == 0 else "_FORM"
 
-record_cases = True    #TODO for DOE ( beta_est or FORM )
+record_cases = False    #TODO for DOE ( beta_est or FORM )
 flag_save_new_data = False
 flag_load_from_data = True
 flag_save_doe_data = False
@@ -2107,7 +2137,10 @@ elif flag_opt_GFO:
     prob_rbdo.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
 
 elif flag_DOE:
-    print(f"=== running DOE: {DOE_NUM_SAMPLES} samples ===\n")
+    print(f"=== running DOE {
+        str_form}: {DOE_NUM_SAMPLES} samples of {
+        DOE_which_desvar if len(DOE_which_desvar)>0 else ("all")
+        } ===\n")
 
     prob_rbdo.driver = om.DOEDriver(
         om.LatinHypercubeGenerator(
@@ -2216,7 +2249,7 @@ if not flag_load_from_data:
         prob_rbdo.set_val( desvar, val )
 else:
     print("- loading prob vars from saved csv ...")
-    prob_rbdo = load_data( loc_load_saved_data_rbdo+".csv", prob_rbdo )
+    prob_rbdo = load_data( loc_load_saved_data_rbdo+"_try2.csv", prob_rbdo )
 
 #%%
 # ### Run: Optimization / DOE / Analysis
@@ -2237,7 +2270,8 @@ else:
     prob_rbdo.run_model()
 
 t1 = time.time()
-print(" (:D) WISDEM RBDO run completed in,", t1-t0, "seconds")
+t_rbdo = t1-t0
+print(f" (:D) WISDEM RBDO run completed in {t_rbdo:.2f} seconds.")
 
 # %%[markdown]
 # # _____ Post-processing _____
@@ -2352,6 +2386,10 @@ if record_cases:
     print(df_doe)
 
 if flag_save_doe_data:
+    # ---- clip "beta_" column values more than 8.0 ----
+    for c in lst_constrs:
+        df_doe[c] = pd.to_numeric(
+            df_doe[c], errors="coerce").clip(upper=8.0)
     # Do NOT clip beta values before surrogate fitting.
     # A value of 8 may be a screening/censoring value, not an exact FORM result.
     # Preserve the stored value.
@@ -2364,7 +2402,7 @@ if flag_load_from_data:
     df_doe = pd.read_csv( loc_doe_csv_data )
 
     # ---- RBDO saved data ----
-    load_this_rbdo = loc_load_saved_data_rbdo+".csv" # TODO: try out best
+    load_this_rbdo = loc_load_saved_data_rbdo+"_try2.csv" # TODO: try out best
     dict_rbdo = var_df2dict(
         pd.read_csv( load_this_rbdo )
         )
@@ -2897,7 +2935,7 @@ def plot_DOE_landscape(
         if iter % 2:
             ax.set_ylabel("")
             loc_colorbar = "center left"
-            borderpad_colorbar = -4
+            borderpad_colorbar = -5
 
         # ========================================================
         # Title
@@ -3073,7 +3111,7 @@ for beta_name in BETA_NAMES:
 def plot_surrogate_beta_landscapes(
     surrogates,
     reference_design,
-    optional_design,
+    optimal_design,
     bounds,
     ngrid=60,
     figsize=(18, 24),
@@ -3232,8 +3270,8 @@ def plot_surrogate_beta_landscapes(
             if plot_rbdo:
 
                 ax.scatter(
-                    optional_design[xname],
-                    optional_design[yname],
+                    optimal_design[xname],
+                    optimal_design[yname],
                     color="lime",
                     edgecolor="k",
                     marker="*",
@@ -3242,7 +3280,7 @@ def plot_surrogate_beta_landscapes(
                     label="RBDO-optimal",
                 )
 
-            if (quantity_name == "beta_vonmises") and (icol==0):
+            if (irow == 0) and (icol==0):
                 ax.legend(loc="upper center")
 
     # ------------------------------------------------------------
@@ -3302,7 +3340,7 @@ def plot_surrogate_beta_landscapes(
 fig_surr, axes_surr = plot_surrogate_beta_landscapes(
     surrogates=surrogates,
     reference_design=desvars_ref_seperated,
-    optional_design=desvars_rbdo_seperated,
+    optimal_design=desvars_rbdo_seperated,
     bounds=BOUNDS_DESVARS,
     # figsize=(26,12),
     plot_ref=True, plot_rbdo=True
