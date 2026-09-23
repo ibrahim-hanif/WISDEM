@@ -15,7 +15,7 @@ from Drive4Wind.post_processing.color_schemes import loc_clr_scheme_m4w, read_co
 clrs_m4w = read_color_scheme( loc_clr_scheme_m4w )
 
 from wisdem.commonse.fileIO import var_df2dict
-from wisdem.commonse.utilities import load_all_mat_to_dict, pdf_norm_int_using_cdf
+# from wisdem.commonse.utilities import load_all_mat_to_dict, pdf_norm_int_using_cdf
 from windIO.yaml import load_yaml, write_yaml
 
 #%%
@@ -530,7 +530,7 @@ def define_modeling_options_dict_for_drivetrainSE(
     ws = S_all["mean_wind_speed"][0,:].tolist()
     # - Probabilities of the wind speeds
     # -- 1. calculate using own function
-    pdf_ws_calc = pdf_norm_int_using_cdf(ws).tolist()
+    # pdf_ws_calc = pdf_norm_int_using_cdf(ws).tolist()
     # -- 2. or, use seraj's vals (for consistent compr); cf. Data_collection.xlsx, tab: DLC_driver_UN
     pdf_ws = S_all["probabilities"][0,:].tolist()
     # - Time step
