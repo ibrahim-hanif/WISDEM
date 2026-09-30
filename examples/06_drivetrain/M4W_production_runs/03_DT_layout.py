@@ -716,6 +716,7 @@ if flag_save_RNAprops4tower:
 
 lst_constrs=[
     "constr_lss_vonmises",
+    "constr_hss_vonmises",
     "constr_bedplate_vonmises",
     "constr_shaft_deflection",
     "constr_shaft_angle",
@@ -738,6 +739,8 @@ fig, axes = utilsDT.plot_drivetrain_constraints(
 # change axes[0] plots line colors
 axes[0].lines[0].set_color("tab:blue")
 axes[0].lines[1].set_color("tab:red")
+axes[0].lines[2].set_color("tab:green")
+
 axes[0].legend()
 
 axes[1].legend(["1.0 limit"])
@@ -748,8 +751,11 @@ axes[1].patches[-1].set_color("tab:green")
 
 # save
 if False: #save_new_plot:
-    loc_save_img = os.path.join( results_path, "DT_utils"+suffix+".pdf" )
+    loc_save_img = os.path.join( results_path, "DT_utils"+suffix+".png" )
     fig.savefig( loc_save_img )
+
+# show
+fig
 
  #%%[markdown]
 # ### Convergence/parametric study setup
