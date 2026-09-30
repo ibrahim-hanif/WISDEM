@@ -688,9 +688,9 @@ if plot_cases:
     csv_iea15_dir = os.path.join( script_dir, os.path.pardir,
         "00_base_iea15mw","results" )
     if "sima" in suffix:
-        csv_iea15_case = "m4w_base_case_DT_sima_loads.csv"
+        csv_iea15_case = "iea_optim_DT_sima_loads.csv"
     else:
-        csv_iea15_case = "m4w_base_case_DT_old_loads.csv"
+        csv_iea15_case = "iea_optim_DT_old_loads.csv"
 
     csv_iea15_UN = os.path.join( csv_iea15_dir, csv_iea15_case)
     # save plot loc
@@ -710,6 +710,46 @@ if flag_save_RNAprops4tower:
     utilsDT.write_yaml_of_drivetrain_properties(
         prob, loc_save_RNAprops4tower )
 # ===============================================================
+
+#%%
+# Plot drivetrain constraint utilizations
+
+lst_constrs=[
+    "constr_lss_vonmises",
+    "constr_bedplate_vonmises",
+    "constr_shaft_deflection",
+    "constr_shaft_angle",
+    "constr_mb1_defl",
+    "constr_mb2_defl",
+    # "constr_stator_deflection",
+    "constr_stator_angle",
+    "constr_L10_mb1",
+    "constr_L10_mb2",
+]
+
+
+# plot
+fig, axes = utilsDT.plot_drivetrain_constraints(
+    csv_path=loc_save_data+".csv",
+    lst_constrs=lst_constrs
+)
+    
+# %%
+# change axes[0] plots line colors
+axes[0].lines[0].set_color("tab:blue")
+axes[0].lines[1].set_color("tab:red")
+axes[0].legend()
+
+axes[1].legend(["1.0 limit"])
+
+axes[1].patches[2].set_color("tab:green")
+axes[1].patches[-2].set_color("tab:green")
+axes[1].patches[-1].set_color("tab:green")
+
+# save
+if False: #save_new_plot:
+    loc_save_img = os.path.join( results_path, "DT_utils"+suffix+".pdf" )
+    fig.savefig( loc_save_img )
 
  #%%[markdown]
 # ### Convergence/parametric study setup
