@@ -952,11 +952,11 @@ components:
               transverse_drag: 1.6
               tangential_drag: 0.1
             - name: SteelTendon # API 5L grade pipe X80
-              diameter: 0.66040       # nominal line diameter (m)
               type: custom # TODO: what type of line is this? wire, chain, rope, etc
-              mass_density: 880.87989  # Dry Line Linear Density (kg/m) (7850 * 112214*1e-6) <- density * area
-              stiffness: 2.37893e10     # Extensional stiffness (N) (212e9 * 112214*1e-6) <- E (modulus) * area
-              breaking_load: 70134.e3 # min line break tension (N) (625*1e6 * 112214*1e-6) <- (min tensile str) * area
+              diameter: 0.51744       # nominal line diameter (m)
+              mass_density: 1650.7294  # Dry Line Linear Density (kg/m) = density * area -> (7850 * 210284*1e-6)
+              stiffness: 4.46E10     # Extensional stiffness (N) = E (modulus) * area -> (212e9 * 210284*1e-6)
+              breaking_load: 131.4275E6 # min line break tension (N) = (min tensile str) * area -> (625*1e6 * 210284*1e-6)
               cost: 3.8
               transverse_drag: 1.2    # Cdn (normal drag coeff)
               tangential_drag: 0.08   # Cdt (tangential drag coeff)
