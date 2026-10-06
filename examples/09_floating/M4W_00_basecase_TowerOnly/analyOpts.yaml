@@ -14,7 +14,7 @@ design_variables:
             lower_bound: 4e-3  # def. 4e-3 ; 15e-3
             upper_bound: 2e-1   # def. 2e-1 ; 1e-1
         E:
-            flag: True
+            flag: False
             upper_bound: 250.e9
 
 constraints:
@@ -30,16 +30,16 @@ constraints:
         shell_buckling:
             flag: True
         d_to_t: # slenderness ratio controls the global buckling (critical)
-            flag: True #False
+            flag: True # TODO 1
             lower_bound: 80.0 # def. 80.0 ; 120.0
             upper_bound: 1000.0 # def. 500.0 ; 1000.0
         taper:
-            flag: True # TODO 1
-            lower_bound: 0.2 # def. 0.2 ; 
+            flag: False # TODO 1
+            lower_bound: 0.2 # def. 0.5 ; 0.2 or 0.4
         slope:
-            flag: True # TODO 1
+            flag: True
         thickness_slope:
-            flag: True # TODO 1
+            flag: True
         frequency:
             flag: False # always for just tower
         frequency_1:
