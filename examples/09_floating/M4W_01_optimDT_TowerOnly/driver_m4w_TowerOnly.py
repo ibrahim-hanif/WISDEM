@@ -15,22 +15,15 @@ import os
 from wisdem import run_wisdem
 import numpy as np
 import matplotlib.pyplot as plt
-
-# plotting options and main colors
-from Drive4Wind.post_processing import color_schemes
-loc_clr_scheme_m4w = color_schemes.loc_clr_scheme_m4w
-clrs_m4w = color_schemes.read_color_scheme(loc_clr_scheme_m4w)
-
+from wisdem.inputs import load_yaml
 
 #%%
-wt_m4w = True # init geo of tower: True = acciona / False = iea report
-loads_m4w = True
+wt_innovative = True # init geo of tower: True = acciona / False = iea report
 
-flag_plot = True
-save_new_plot = False
-verbose = False
+flag_opt = False
 
-flag_opt_GBO = False
+flag_load_results_csv = False
+
 flag_scaling_show_browser = False
 
 flag_override_tower_init = False
@@ -48,33 +41,49 @@ dir_02_rwt_m4w = dir_02_ref_turbines +os.sep+"M4W_production_runs"
 # - m4w 15mw 
 # fname_wt_input = dir_02_rwt_m4w + os.sep + "M4W-15-VolturnUS-WT.yaml"
 
-# ---- wind turbine geometry (same init for both iea and m4w)
-file_geo_iea_tower = os.path.join(
-     os.path.dirname(mydir),
-     "M4W_00_basecase_TowerOnly",
-     "M4W-15-TLP-base_case-woRNA.yaml"
-)
-file_geo_m4w_tower = mydir + os.sep + "outputs\\optim.yaml"
-
-if wt_m4w:
-    fname_wt_input = file_geo_m4w_tower
-else:
-    fname_wt_input = file_geo_iea_tower
-
 # ---- modelling options
 fname_model_opts_m4w = mydir+os.sep+ "modelOpts_m4w.yaml"
 fname_model_opts_iea = mydir+os.sep+ "modelOpts_iea15.yaml"
 
-if loads_m4w:
+if True:
       fname_modeling_options = fname_model_opts_m4w
 else:
      fname_modeling_options = fname_model_opts_iea
 
 # ---- analysis/optimization options
-if flag_opt_GBO:
-     fname_analysis_options = mydir + os.sep + "analyOpts.yaml"
+loc_analy_opt = mydir + os.sep + "analyOpts.yaml"
+loc_analy_NOopt = mydir + os.sep + "analyOpts_NOopt.yaml"
+
+if flag_opt:
+     fname_analysis_options = loc_analy_opt
 else:
-     fname_analysis_options = mydir + os.sep + "analyOpts_NOopt.yaml"
+     fname_analysis_options = loc_analy_NOopt
+
+# ---- wind turbine geometry (same init for both iea and m4w)
+file_geo_iea_baseline = os.path.join(
+     os.path.dirname(mydir),
+     "M4W_00_basecase_TowerOnly",
+     "M4W-15-TLP-base_case-woRNA.yaml"
+)
+file_geo_iea_tower = os.path.join(
+     os.path.dirname(mydir),
+     "M4W_00_basecase_TowerOnly",
+     "outputs", "optim.yaml"
+)
+
+dict_analy_opt = load_yaml(loc_analy_opt)
+file_geo_m4w_tower = os.path.join(
+     mydir,
+     dict_analy_opt["general"]["folder_output"],
+     dict_analy_opt["general"]["fname_output"] + ".yaml"
+)
+
+if wt_innovative:
+    fname_wt_input = file_geo_m4w_tower
+    str_geo = "_m4w"
+else:
+    fname_wt_input = file_geo_iea_tower
+    str_geo = "_iea"
 
 ## File Management (outputs)
 loc_scaling_report = os.path.join(mydir,
@@ -98,6 +107,10 @@ wt_opt, analysis_options, opt_options = run_wisdem(
     overridden_values=overrides
 )
 
+print(f"{wt_opt.driver.get_exit_status()} WISDEM run. Check outputs in: {
+     opt_options["general"]["folder_output"]}"
+)
+
 # %%[markdown]
 # # _____ Post-processing _____
 
@@ -112,7 +125,7 @@ print(" ", freq_range_1P, " Hz" )
 print("3P (blade passing) freq ranges:")
 print(" ", freq_range_3P, " Hz" )
 freq_tower = wt_opt["floatingse.structural_frequencies"]
-print("Tower fore-aft/side-side freq range:")
+print("Floating tower fore-aft/side-side freq range:")
 print(" ", freq_tower[0:2], " Hz" )
 
 #
@@ -214,55 +227,86 @@ def print_tower_utilizations( dict_tower_utils ):
       print("Tower mass =", tower_mass)
 
 #%%
-# plot tower utilization
-z = 0.5 * (wt_opt["towerse.z_full"][:-1] + wt_opt["towerse.z_full"][1:])
-dict_tower_utils = get_tower_utilizations(wt_opt)
-if verbose: print_tower_utilizations( dict_tower_utils)
+# directories
+if not flag_load_results_csv: dict_analy = opt_options.copy()
+else: dict_analy = load_yaml(fname_analysis_options)
 
-if flag_plot:
-    stress = wt_opt["towerse.post.constr_stress"]
-    shellBuckle = wt_opt["towerse.post.constr_shell_buckling"]
-    globalBuckle = wt_opt["towerse.post.constr_global_buckling"]
+folder_results = dict_analy["general"]["folder_output"]
+fname_results = dict_analy["general"]["fname_output"]
+csv_file = os.path.join( mydir, folder_results, fname_results + ".csv" )
 
-    plt.figure(figsize=(5.0, 3.5))
-    plt.subplot2grid((3, 3), (0, 0), colspan=2, rowspan=3)
-    plt.plot(stress, z,
-      label="stress", color=clrs_m4w['Aqua'])
-#     plt.plot(stress[:, 1], z, label="stress 2")
-    plt.plot(shellBuckle, z,
-      label="shell buckling", color=clrs_m4w['Red'])
-#     plt.plot(shellBuckle[:, 1], z, label="shell buckling 2")
-    plt.plot(globalBuckle, z,
-      label="global buckling", color=clrs_m4w['Dark_Green'])
-#     plt.plot(globalBuckle[:, 1], z, label="global buckling 2")
-    plt.axvline(1.0, color='k', linestyle='--', linewidth=1, label='1.0 limit')
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc=2)
-    plt.xlabel("utilization")
-    plt.ylabel("height along tower (m)")
-    plt.tight_layout()
-    if save_new_plot:
-        loc_save_img = mydir + os.sep + "outputs" + os.sep + (
-            "utils_tower_m4w.png" # iea or m4w
-        )
-        plt.savefig(loc_save_img, dpi=300, bbox_inches='tight')
-    plt.show()
+from Drive4Wind.post_processing.color_schemes import read_color_scheme, loc_clr_scheme_m4w
+clrs_m4w = read_color_scheme(loc_clr_scheme_m4w)
+
+# plt.rcParams.update( plot_rcParams_update )
+linewidth = 3
+params_plot_rc = {
+        "font.size": 24,
+        "axes.labelsize": 24,
+        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+        "lines.linewidth": linewidth,
+        "lines.markersize": 10, #linewidth*3,
+    }
+plt.rcParams.update( params_plot_rc )
+
+#%%
+# Tower constraints
+from Drive4Wind.utilities.plot_tower_data import plot_tower_constraints_stress_utils
+
+fig_TowerConstrs, ax = plot_tower_constraints_stress_utils(
+    csv_file,
+    figsize=(5.0,10.0),
+    colors=["tab:blue","tab:green","tab:orange"]
+)
+
+if False: #flag_save_plots: 
+    path_plot_tower_constr = os.path.join(
+            mydir, folder_results, f"utils_tower{str_geo}.png" )
+    fig_TowerConstrs.savefig(
+        path_plot_tower_constr,
+        bbox_inches="tight",
+        dpi=300
+    )
+
+# fig_TowerConstrs
 
 #%%[markdown]
 # ### Tower geometry
 #%%
-if flag_plot:
-    from Drive4Wind.utilities.plot_tower_data import plot_tower_geo_comparison
-    # loc save img
-    if save_new_plot:
-        loc_save_img = mydir +os.sep+ "outputs" +os.sep+ (
-                    "geometry_tower_m4w&iea.png"
-                )
-    else: loc_save_img = None
-    # plot
-    plot_tower_geo_comparison(
-        file_geo_m4w_tower,
-        file_geo_iea_tower,
-        loc_save_img=loc_save_img
+from Drive4Wind.utilities.plot_tower_data import plot_tower_geo_comparison
+
+# plot
+fig_TowerGeo, ax_TowerGeo = plot_tower_geo_comparison(
+    m4w_yaml=file_geo_m4w_tower, m4w_label="Made4Wind",
+    iea15_yaml=file_geo_iea_tower, iea_label="IEA 15MW (UN)",
+    colors=[
+        "grey", "tab:blue", "darkgreen"
+    ]
+)
+
+fig_TowerGeo.set_size_inches([13,8])
+# 
+for iplot in range(2):
+    for iline in range(3):
+        ax_TowerGeo[ iplot ].lines[ iline ].set_linewidth( linewidth )
+        # if iline != 0: ax_TowerGeo[ iplot ].lines[ iline ].set_marker(".")
+        # if iline == 1: ax_TowerGeo[ iplot ].lines[ iline ].set_linestyle("--")
+# #
+ax_TowerGeo[0].legend(loc="upper right")
+# ax_TowerGeo[0].legend_.set_bbox_to_anchor((0.75, 0.1))
+#
+ax_TowerGeo[0].set_ylabel("Height along tower [m]")
+# fig_TowerGeo.suptitle("Made4Wind tower optimization",y=1.0)
+
+if False: #flag_save_plots: 
+    path_plot_tower_geo = os.path.join(
+            mydir, folder_results, "geometry_tower_m4w&iea.png" )
+    fig_TowerGeo.savefig(
+        path_plot_tower_geo,
+        bbox_inches="tight",
+        dpi=300
     )
+
+# fig_TowerGeo
 
 #%%
