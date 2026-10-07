@@ -18,7 +18,13 @@ import matplotlib.pyplot as plt
 from wisdem.inputs import load_yaml
 
 #%%
-wt_innovative = True # init geo of tower: True = acciona / False = iea report
+types_wt_lst = [
+    "_basecase_iea",
+    "_towerOpt_iea",
+    "_m4w"
+    ]
+
+wt_type = types_wt_lst[2]
 
 flag_opt = False
 
@@ -78,12 +84,17 @@ file_geo_m4w_tower = os.path.join(
      dict_analy_opt["general"]["fname_output"] + ".yaml"
 )
 
-if wt_innovative:
+if wt_type == "_m4w":
     fname_wt_input = file_geo_m4w_tower
-    str_geo = "_m4w"
-else:
+
+elif wt_type == "_towerOpt_iea":
     fname_wt_input = file_geo_iea_tower
-    str_geo = "_iea"
+    
+elif wt_type == "_basecase_iea":
+    fname_wt_input = file_geo_iea_tower
+
+else:
+    print(f"ValueError: `wt_type` can only be {types_wt_lst}")
 
 ## File Management (outputs)
 loc_scaling_report = os.path.join(mydir,
@@ -256,12 +267,12 @@ from Drive4Wind.utilities.plot_tower_data import plot_tower_constraints_stress_u
 fig_TowerConstrs, ax = plot_tower_constraints_stress_utils(
     csv_file,
     figsize=(5.0,10.0),
-    colors=["tab:blue","tab:green","tab:orange"]
+    # colors=["tab:blue","tab:green","tab:orange"]
 )
 
 if False: #flag_save_plots: 
     path_plot_tower_constr = os.path.join(
-            mydir, folder_results, f"utils_tower{str_geo}.png" )
+            mydir, folder_results, f"utils_tower{wt_type}.png" )
     fig_TowerConstrs.savefig(
         path_plot_tower_constr,
         bbox_inches="tight",
@@ -279,9 +290,7 @@ from Drive4Wind.utilities.plot_tower_data import plot_tower_geo_comparison
 fig_TowerGeo, ax_TowerGeo = plot_tower_geo_comparison(
     m4w_yaml=file_geo_m4w_tower, m4w_label="Made4Wind",
     iea15_yaml=file_geo_iea_tower, iea_label="IEA 15MW (UN)",
-    colors=[
-        "grey", "tab:blue", "darkgreen"
-    ]
+    # colors=[ "grey", "tab:blue", "darkgreen" ]
 )
 
 fig_TowerGeo.set_size_inches([13,8])
@@ -292,15 +301,15 @@ for iplot in range(2):
         # if iline != 0: ax_TowerGeo[ iplot ].lines[ iline ].set_marker(".")
         # if iline == 1: ax_TowerGeo[ iplot ].lines[ iline ].set_linestyle("--")
 # #
-ax_TowerGeo[0].legend(loc="upper right")
-# ax_TowerGeo[0].legend_.set_bbox_to_anchor((0.75, 0.1))
+ax_TowerGeo[0].legend(fontsize=22)#loc="upper right")
+ax_TowerGeo[0].legend_.set_bbox_to_anchor((0.75, 0.1))
 #
 ax_TowerGeo[0].set_ylabel("Height along tower [m]")
-# fig_TowerGeo.suptitle("Made4Wind tower optimization",y=1.0)
+fig_TowerGeo.suptitle("MADE4WIND 15MW tower optimization",y=1.0)
 
 if False: #flag_save_plots: 
     path_plot_tower_geo = os.path.join(
-            mydir, folder_results, "geometry_tower_m4w&iea.png" )
+            mydir, folder_results, "geometry_tower_m4w&iea.pdf" )
     fig_TowerGeo.savefig(
         path_plot_tower_geo,
         bbox_inches="tight",
