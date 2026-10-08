@@ -8,6 +8,7 @@
 # %%
 # imports
 import os
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 # import scipy.io as sio # --- not used in here, but within imports
@@ -267,11 +268,17 @@ lam = (k_torsional*L_12)/(3*EI); print(f" -- lam = {lam}")
 lamL = lam*L_12; print(f" -- lamL = {lamL}")
 LonePlusLam = L_12*(1+lam); print(f" -- L_12(1+lam) = {LonePlusLam}")
 
+# --- time it :)
+t0_beam = time.time()
 F_mb1_beam, F_mb2_beam, M_mb2_beam = ds.analytical_MBforces_EBbeam(
     Fx,Fy,Fz, Mx,My,Mz, m_carrier, delta, tilt_rad, L_h1, L_12,
     EI, k_torsional, return_M=True
 )
 M_mb2_beam_norm = np.hypot(M_mb2_beam[0,0,:], M_mb2_beam[1,0,:])
+# --- 
+t1_beam = time.time()
+
+print(f"Beam analysis for {numTS:.0e} time steps: {t1_beam - t0_beam:.3e} seconds")
 
 #%%
 # compare with Hub_* (NOTE: below is 1 / 1e6)
@@ -306,6 +313,7 @@ F_mb1_beam_uls, F_mb2_beam_uls = ds.analytical_MBforces_EBbeam(
     EI, k_torsional
 )
 M_mb2_beam_uls = lam*L_12*F_mb1_beam_uls
+
 #%%
 print("F_mb1_beam_uls: ", F_mb1_beam_uls/1e6)
 print("F_mb2_beam_uls: ", F_mb2_beam_uls/1e6)
@@ -393,11 +401,15 @@ prob['shaft_deflection_allowable'] = eval( var_dict['shaft_deflection_allowable'
 prob['shaft_angle_allowable'] = eval( var_dict['shaft_angle_allowable'] )
 
 #%%
-# Init outputs: loads on MBs
+# using prob from wisdem.Hub_* : calculate MB loads
+
+# Init outputs
 F_mb1_frame = np.zeros((4,numTS)) # x,y,z,rad
 F_mb2_frame = np.zeros((4,numTS))
 # M_mb1_frame = np.zeros((4,numTS)) # == 0
 M_mb2_frame = np.zeros((4,numTS))
+# --- time it:)
+t0_hub = time.time()
 # Loop over hub loads
 for iF in range(numTS):
     # loads
@@ -408,7 +420,7 @@ for iF in range(numTS):
         Mx[0,iF], My[0,iF], Mz[0,iF]
     ))
     # analyse
-    prob.run_model()
+    # prob.run_model() # TODO iff needed
     # outputs
     # - mb1
     F_mb1_frame[:3,iF] = prob['F_mb1'][:,0]
@@ -421,6 +433,10 @@ F_mb1_frame[3,:] = np.hypot(F_mb1_frame[1,:], F_mb1_frame[2,:])
 F_mb2_frame[3,:] = np.hypot(F_mb2_frame[1,:], F_mb2_frame[2,:])
 # - M_norm
 M_mb2_frame[3,:] = np.hypot(M_mb2_frame[1,:], M_mb2_frame[2,:])
+# --- 
+t1_hub = time.time()
+
+print(f"Hub Frame analysis for {numTS:.0e} time steps: {t1_hub - t0_hub:.3e} seconds")
 
 #%%
 # build_lss_pyframe3dd
@@ -554,11 +570,15 @@ def build_lss_pyframe3dd(
     return reactions
 
 #%%
-# Init outputs: loads on MBs
+# using my func `build_lss_pyframe3dd`: calculate MB loads
+
+# Init outputs
 F_mb1_myframe = np.zeros((4,numTS)) # x,y,z,rad
 F_mb2_myframe = np.zeros((4,numTS))
 # M_mb1_myframe = np.zeros((4,numTS)) # == 0
 M_mb2_myframe = np.zeros((4,numTS))
+# --- time it :)
+t0_frame = time.time()
 # Loop over hub loads
 for iF in range(numTS):
     # loads
@@ -583,6 +603,109 @@ F_mb1_myframe[3,:] = np.hypot(F_mb1_myframe[1,:], F_mb1_myframe[2,:])
 F_mb2_myframe[3,:] = np.hypot(F_mb2_myframe[1,:], F_mb2_myframe[2,:])
 # - M_norm
 M_mb2_myframe[3,:] = np.hypot(M_mb2_myframe[1,:], M_mb2_myframe[2,:])
+# --- 
+t1_frame = time.time()
+
+print(f"Frame analysis for {numTS:.0e} time steps: {t1_frame - t0_frame:.3e} seconds")
+
+#%%
+num_timesteps = np.array([1e0, 1e1, 1e2, 1e3, 1e4, 7.2e4])
+eps = float(np.finfo(np.float64).eps)
+time_beam = np.array([0.0, 0.0, 0.0, 1.054e-3, 0.003, 0.01])
+time_frame = np.array([0.023, 0.047, 0.245, 1.8275, 19.528, 149.395])
+time_hub = np.array([0.056, 0.197, 1.744, 18.214, 208.951, 1500.0])
+
+# Plot computational time against the number of timesteps
+fig, axs = plt.subplots(2,1,figsize=(10, 8))
+
+# 1. linear - log plot
+ax1 = axs[0]
+ax1.plot(
+    num_timesteps,
+    time_frame,
+    marker="o",
+    color="k",
+    linestyle="--",
+    linewidth=3,
+    markersize=10,
+    label="structural solver (pyFrame)"
+)
+ax1.plot(
+    num_timesteps,
+    time_beam,
+    marker="o",
+    color="#00D400",
+    linewidth=4,
+    markersize=10,
+    alpha=0.7, # transparent
+    label="proposed analytical eqs. (EB-beam)"
+)
+
+ax1.set_xscale("log")
+ax1.set_ylabel("Computational time [s]")
+# ax1.set_title("Computational time vs. number of time steps")
+ax1.grid(True, which="both", alpha=0.3)
+ax1.legend(loc="upper left")
+
+# 2. log - log plot
+ax2 = axs[1]
+ax2.plot(
+    num_timesteps,
+    time_frame,
+    marker="o",
+    color="k",
+    linestyle="--",
+    linewidth=3,
+    markersize=10,
+    label="structural solver (pyFrame)"
+)
+# time_beam[time_beam == 0.0] = eps
+ax2.plot(
+    num_timesteps,
+    time_beam,
+    marker="o",
+    color="#00D400",
+    linewidth=4,
+    markersize=10,
+    alpha=0.7, # transparent
+    label="proposed analytical eqs. (EB-beam)"
+)
+
+ax2.set_xscale("log")
+ax2.set_yscale("log")
+ax2.set_xlabel("Length (of unsteady loads)")
+ax2.set_ylabel("Computational time [s]")
+ax2.grid(True, which="both", alpha=0.3)
+# ax2.legend(loc="upper left")
+
+# add text above each point
+"""
+for n_steps, t_beam, t_frame in zip(num_timesteps, time_beam, time_frame):
+    ax.annotate(
+        f"{t_frame:.3f} s",
+        (n_steps, t_frame),
+        xytext=(0, 8),
+        textcoords="offset points",
+        ha="center",
+        va="bottom",
+        # fontsize=9,
+    )
+    ax.annotate(
+        f"{t_beam:.3f} s",
+        (n_steps, t_beam),
+        xytext=(0, 8),
+        textcoords="offset points",
+        ha="center",
+        va="bottom",
+        # fontsize=9,
+    )
+"""
+plt.tight_layout()
+
+plot_path = os.path.join(results_path,
+                         "compu_times_analy_&_frame.png")
+# plt.savefig(plot_path) # NOTE: saved, so don't change now 
+
 
 #%%
 # plot options
