@@ -43,7 +43,7 @@ plt.rcParams.update( params_plot_rc )
 
 #%%
 
-suffix = "_sima"
+suffix = "_m4w" # NOTE ! use "_m4w" loads for WES 2026 paper 
 # 1. "_m4w"
 # 2. "_sima"
 
@@ -93,14 +93,14 @@ else: # define paths
 
 # %%
 # Plot hub load statistics
-loc_hub_loads_stats = os.path.join(dir_loads, "hub_loads_M4W_stats.pdf")
+loc_hub_loads_stats = os.path.join(dir_loads, "hub_loads_M4W_stats")
 if "sima" in suffix:
     loc_hub_loads_stats = os.path.join(results_path,
-            "hub_loads" + suffix.upper() + "_stats.png")
+            "hub_loads" + suffix.upper() + "_stats")
 
 analyseWTLoads.plot_ms_load_statistics(
-    S_all,"blue","red", (15,15),
-    # loc_save_plot=loc_hub_loads_stats
+    S_all,"tab:blue","tab:red", (15,15),
+    # loc_save_plot=loc_hub_loads_stats+".pdf"
     ) 
 
 #%%
@@ -161,7 +161,7 @@ opt_DLC = opts["DLC_driver"]["DLCs"][0]
 flag_loads_simple = False
 iWSrated = 4 # index @ rated wind speed (10-11 m/s)
 # iWSrated = [0,1,2] # prev
-startTS = 1000
+startTS = 1000 # NOTE: orig. 1000 ; low err: 70000
 numTS = 100 # TODO
 
 f = S_all['Fx'][startTS:startTS+numTS,iWSrated]
@@ -209,8 +209,8 @@ else:
 #%%
 # TODO: uncomment the desired analysis type
 # anaString = "MomentReactingFrame_nonAnalyBeam"; analysis = 1
-# anaString = "MomentReacting"; analysis = 2
-anaString = "nonMomentReacting"; analysis = 3
+anaString = "MomentReacting"; analysis = 2
+# anaString = "nonMomentReacting"; analysis = 3
 
 #%%[markdown]
 # ### Compare mb* loads (F,M) btw analy_*(s) (and Hub_* `pyFrame3DD`)
@@ -598,16 +598,16 @@ label_analyMB = " analytical: "
 label_Frame = " structural solver: "
 # ---- based on analysis: [ analyMB, pyFrame ]
 if analysis == 1:
-    lstAnaType = ["non-MR", "MR"]
-    clr_Beam = "#0000FF" #clrs_m4w['Aqua']
+    lstAnaType = ["conventional non-MR", "MR"]
+    clr_Beam = "#0066FF" #clrs_m4w['Aqua']
 
 elif analysis == 2:
-    lstAnaType = ["MR"]*2
-    clr_Beam = "#00FF00" #clrs_m4w['Red']
+    lstAnaType = ["proposed MR", "MR"]
+    clr_Beam = "#00D400" #clrs_m4w['Red']
 
 elif analysis == 3:
-    lstAnaType = ["MR "+r"$(k_{\theta}=0)$","non-MR"]
-    clr_Beam = "#7FFF00" #clrs_m4w['Red']
+    lstAnaType = ["proposed MR "+r"$(k_{\theta}=0)$","non-MR"]
+    clr_Beam = "#00D400" #clrs_m4w['Red']
 # -------------------------
 # options: Journal polish
 # plot rc params
@@ -615,7 +615,7 @@ params_plot_rc = {
         "font.size": 20,
         "axes.labelsize": 20,
         "legend.fontsize": 20, # 16 for pdf of `var_with_iter` plot
-        "lines.linewidth": 4.5,
+        "lines.linewidth": 6,
         "lines.markersize": 6,
     }
 plt.rcParams.update( params_plot_rc )
@@ -759,6 +759,328 @@ plot_path = os.path.join(results_path,
 plt.show()
 
 #%%
+# ============================================================
+# PUBLICATION PLOT
+# Main-bearing reactions + instantaneous percentage error
+#
+# rows:
+#   MB1: Fax | Fy | Fz
+#   MB2: Fax | Fy | Fz | Frad | Mnorm
+#
+# col 0 = analytical vs solver reactions
+# col 1 = instantaneous % error
+# ============================================================
+
+fig, axs = plt.subplots(
+    8, 2,
+    figsize=(11, 16),
+    sharex="col",
+    gridspec_kw={
+        "hspace": 0.35,
+        "wspace": 0.30
+    }
+)
+
+# ------------------------------------------------------------
+# Helper function for instantaneous percentage error
+# ------------------------------------------------------------
+def instantaneous_error(analy, solver, threshold=1e-12):
+    """
+    Pointwise absolute relative error [%],
+    using solver result as reference.
+
+    NaN is returned where the solver value is effectively zero
+    to avoid artificial error spikes.
+    """
+    analy = np.asarray(analy)
+    solver = np.asarray(solver)
+
+    # Ignore denominator values smaller than
+    # 0.1% of the maximum solver magnitude
+    eps = threshold * np.max(np.abs(solver))
+
+    err = np.full_like(solver, np.nan, dtype=float)
+
+    mask = np.abs(solver) > eps
+
+    err[mask] = (
+        100.0
+        * np.abs(analy[mask] - solver[mask])
+        / np.abs(solver[mask])
+    )
+
+    return err
+
+
+def error(analy, solver, threshold=1e-3):
+    analy = np.asarray(np.abs(analy))
+    solver = np.asarray(np.abs(solver))
+
+    err = np.abs((analy - solver) / solver) * 1e2
+    return err
+
+
+# ------------------------------------------------------------
+# Data to plot
+# ------------------------------------------------------------
+maxFrame = 1e6
+
+plot_background = "#FFFEDD"
+
+reaction_data = [
+
+    # ---------- MB1 ----------
+
+    {
+        "bearing": "MB1",
+        "name": r"$F_y$",
+        "label_color": "grey",
+        "plot_background": "white",
+
+        "analy": F_mb1_beam[1, 0, :],
+        "solver": F_mb1_myframe[1, :],
+        "scale": maxFrame
+    },
+
+    {
+        "bearing": "MB1",
+        "name": r"$F_z$",
+        "label_color": "grey",
+        "plot_background": "white",
+
+        "analy": F_mb1_beam[2, 0, :],
+        "solver": F_mb1_myframe[2, :],
+        "scale": maxFrame
+    },
+
+    {
+        "bearing": "MB1",
+        "name": r"$F_{rad}$",
+        "label_color": "k",
+        "plot_background": plot_background,
+
+        "analy": F_mb1_beam[3, 0, :],
+        "solver": F_mb1_myframe[3, :],
+        "scale": maxFrame
+    },
+
+
+    # ---------- MB2 ----------
+    {
+        "bearing": "MB2",
+        "name": r"$F_{ax}$",
+        "label_color": "k",
+        "plot_background": plot_background,
+
+        "analy": F_mb2_beam[0, 0, :],
+        "solver": F_mb2_myframe[0, :],
+        "scale": maxFrame
+    },
+
+    {
+        "bearing": "MB2",
+        "name": r"$F_y$",
+        "label_color": "grey",
+        "plot_background": "white",
+
+        "analy": F_mb2_beam[1, 0, :],
+        "solver": F_mb2_myframe[1, :],
+        "scale": maxFrame
+    },
+
+    {
+        "bearing": "MB2",
+        "name": r"$F_z$",
+        "label_color": "grey",
+        "plot_background": "white",
+
+        "analy": F_mb2_beam[2, 0, :],
+        "solver": F_mb2_myframe[2, :],
+        "scale": maxFrame
+    },
+
+    {
+        "bearing": "MB2",
+        "name": r"$F_{rad}$",
+        "label_color": "k",
+        "plot_background": plot_background,
+
+        "analy": F_mb2_beam[3, 0, :],
+        "solver": F_mb2_myframe[3, :],
+        "scale": maxFrame
+    },
+
+    {
+        "bearing": "MB2",
+        "name": r"$M_{norm}$",
+        "label_color": "k",
+        "plot_background": plot_background,
+
+        "analy": M_mb2_beam_norm,
+        "solver": M_mb2_myframe[3, :],
+        "scale": maxFrame
+    },
+]
+
+
+# ============================================================
+# Plot all 8 reactions
+# ============================================================
+
+for j, data in enumerate(reaction_data):
+
+    analy = data["analy"]
+    solver = data["solver"]
+    scale = data["scale"]
+
+    # --------------------------------------------------------
+    # COLUMN 1: reaction comparison
+    # --------------------------------------------------------
+    ax = axs[j, 0]
+
+    ax.plot(
+        analy / scale,
+        color=clr_Beam,
+        label=label_analyMB + lstAnaType[0]
+    )
+
+    ax.plot(
+        solver / scale,
+        color=clr_Frame,
+        linestyle=lineStyle_Frame,
+        linewidth=lineWidth_Frame,
+        label=label_Frame + lstAnaType[1]
+    )
+
+    ax.set_ylabel(
+        f'{data["bearing"]} | {data["name"]}',
+        color=data["label_color"]
+    )
+    ax.set_facecolor( data["plot_background"] )
+
+    # --------------------------------------------------------
+    # COLUMN 2: instantaneous percentage error
+    # --------------------------------------------------------
+    err = instantaneous_error(analy, solver)
+
+    ax_err = axs[j, 1]
+
+    ax_err.plot(
+        err,
+        color="black",
+        linewidth=2.0,
+        label = f"avg.: {np.mean(err):.2f}"
+    )
+
+    # 0 % line
+    ax_err.axhline(
+        0.0,
+        color="tab:green",
+        linestyle="--",
+        linewidth=1.5
+    )
+
+    # 100 % line
+    if np.any(err > 50.0):
+        ax_err.axhline(
+            100.0,
+            color="tab:red",
+            linestyle="--",
+            linewidth=1.5
+        )
+
+    ax_err.set_facecolor( data["plot_background"] )
+    # ax_err.set_yticks( np.linspace(0.0,np.max(err),3) )
+    ax_err.yaxis.set_major_formatter(
+        plt.FormatStrFormatter("%.2f")
+    )
+    # ax_err.legend(loc="upper right",fontsize=16)
+
+# ============================================================
+# Axis labels
+# ============================================================
+
+# Since quantities are now arranged vertically,
+# use labels on each row
+axs[0, 0].set_title(
+    r"Reactions $(\times 10^6)$"
+)
+
+axs[0, 1].set_title(
+    "Errors [%]"
+)
+
+# x labels only on bottom row
+axs[-1, 0].set_xlabel("t [s]")
+axs[-1, 1].set_xlabel("t [s]")
+
+
+# ============================================================
+# One common legend
+# ============================================================
+
+handles, labels = axs[0, 0].get_legend_handles_labels()
+
+fig.legend(
+    handles,
+    labels,
+    loc="upper center",
+    bbox_to_anchor=(0.5, 1.02),
+    ncol=2,
+    frameon=False
+)
+
+
+# ============================================================
+# Optional separator between MB1 and MB2
+#
+# MB1 = rows 0-2
+# MB2 = rows 3-7
+# ============================================================
+
+fig.add_artist(
+    plt.Line2D(
+        [0.001, 0.97],
+        [0.625, 0.625],
+        transform=fig.transFigure,
+        color="#473B3BFF",
+        linewidth=1.2,
+        linestyle="-"
+    )
+)
+
+
+# ============================================================
+# Layout
+# ============================================================
+
+fig.subplots_adjust(
+    top=0.96,
+    bottom=0.05,
+    left=0.10,
+    right=0.97
+)
+
+
+# ============================================================
+# Save
+# ============================================================
+
+if 0:
+    plot_path = os.path.join(
+        results_path,
+        "mbReacts_withErr_" + anaString + ".png"
+    )
+
+    fig.savefig(
+        plot_path,
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+plt.show()
+
+#%%
 # Error analysis (analy_MB_EBbeam & `pyFrame3DD`)
 # (https://towardsdatascience.com/time-series-forecast-error-metrics-you-should-know-cc88b8c67f27/)
 
@@ -766,31 +1088,44 @@ plt.show()
 # F_mb1_rad
 err_Fmb1_rad = F_mb1_beam[3,0,:] - F_mb1_myframe[3,:] # - 95600
 mape_Fmb1_rad = funcs_errors.mapError( F_mb1_beam[3,0,:], F_mb1_myframe[3,:] )
+std_err_Fmb1_rad = (
+    np.std(F_mb1_beam[3,0,:]) - np.array(np.std(F_mb1_myframe[3,:]))
+) / np.array(np.std(F_mb1_myframe[3,:])) * 1e2
 print(
-    f"F_mb1_rad | Error: max= {np.max( err_Fmb1_rad )}; map= {mape_Fmb1_rad}"
+    f"F_mb1_rad | Error %: map= {mape_Fmb1_rad}; std= {std_err_Fmb1_rad}"
 )
 
 # F_mb2_ax
 err_Fmb2_ax = F_mb2_beam[0,0,:] - F_mb2_myframe[0,:] # = 78546 (due to gravity loads each ele)
 mape_Fmb2_ax = funcs_errors.mapError( F_mb2_beam[0,0,:], F_mb2_myframe[0,:] )
+std_err_Fmb2_ax = (
+    np.std(F_mb2_beam[0,0,:]) - np.array(np.std(F_mb2_myframe[0,:]))
+) / np.array(np.std(F_mb2_myframe[0,:])) * 1e2
 print(
-    f"F_mb2_ax | Error: max= {np.max( err_Fmb2_ax )}; map= {mape_Fmb2_ax}"
+    f"F_mb2_ax | Error %: map= {mape_Fmb2_ax}; std= {std_err_Fmb2_ax}"
 )
 
 # F_mb2_rad
 err_Fmb2_rad = F_mb2_beam[3,0,:] - F_mb2_myframe[3,:] # = -1.0 * 1e6
 mape_Fmb2_rad = funcs_errors.mapError( F_mb2_beam[3,0,:], F_mb2_myframe[3,:] )
+std_err_Fmb2_rad = (
+    np.std(F_mb2_beam[3,0,:]) - np.array(np.std(F_mb2_myframe[3,:]))
+) / np.array(np.std(F_mb2_myframe[3,:])) * 1e2
 print(
-    f"F_mb2_rad | Error: max= {np.max( err_Fmb2_rad )}; map= {mape_Fmb2_rad}"
+    f"F_mb2_rad | Error %: map= {mape_Fmb2_rad}; std= {std_err_Fmb2_rad}"
 )
 
 # M_mb2_norm
 if mb2_Reactions[-1] > 0.0:
     err_Mmb2_rad = M_mb2_beam_norm - M_mb2_myframe[3,:]
     mape_Mmb2_rad = funcs_errors.mapError( M_mb2_beam_norm, M_mb2_myframe[3,:] )
+    std_err_Mmb2_rad = (
+        np.std(M_mb2_beam_norm) - np.array(np.std(M_mb2_myframe[3,:]))
+    ) / np.array(np.std( M_mb2_myframe[3,:] )) * 1e2
     print(
-        f"M_mb2_rad | Error: max= {np.max( err_Mmb2_rad )}; map= {mape_Mmb2_rad}"
+        f"M_mb2_rad | Error %: map= {mape_Mmb2_rad}; std= {std_err_Mmb2_rad}"
     )
+
 # %%[markdown]
 # ===========================================
 # ===========================================
