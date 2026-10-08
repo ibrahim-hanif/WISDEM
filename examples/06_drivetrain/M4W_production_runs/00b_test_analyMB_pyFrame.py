@@ -608,11 +608,16 @@ t1_frame = time.time()
 
 print(f"Frame analysis for {numTS:.0e} time steps: {t1_frame - t0_frame:.3e} seconds")
 
+#%%[markdown]
+# ## Compare computational times for MB reaction models: analy & pyframe
+
 #%%
-num_timesteps = np.array([1e0, 1e1, 1e2, 1e3, 1e4, 7.2e4])
+# Compare computational time for different number of timesteps
+
+num_timesteps = np.array([1e0, 1e1, 1e2, 1e3, 1e4, 7.2e4, 1e5, 3.6e5])
 eps = float(np.finfo(np.float64).eps)
-time_beam = np.array([0.0, 0.0, 0.0, 1.054e-3, 0.003, 0.01])
-time_frame = np.array([0.023, 0.047, 0.245, 1.8275, 19.528, 149.395])
+time_beam = np.array([0.0, 0.0, 0.0, 1.054e-3, 0.003, 0.01, 0.012, 0.028])
+time_frame = np.array([0.023, 0.047, 0.245, 1.8275, 19.528, 149.395, 224.399, 830.967])
 time_hub = np.array([0.056, 0.197, 1.744, 18.214, 208.951, 1500.0])
 
 # Plot computational time against the number of timesteps
@@ -642,13 +647,93 @@ ax1.plot(
 )
 
 ax1.set_xscale("log")
-ax1.set_ylabel("Computational time [s]")
-# ax1.set_title("Computational time vs. number of time steps")
+ax1.set_ylabel("Comput. time, " +r"$t$"+ " [s]")
+ax1.set_title(
+    "Computational time vs. Number of timesteps",
+    y=1.02
+)
 ax1.grid(True, which="both", alpha=0.3)
 ax1.legend(loc="upper left")
 
-# 2. log - log plot
+# ============================================================
+# Log-log interpolation
+# ============================================================
+
+def loglog_interp(x, y, x_new):
+    """
+    Piecewise-linear interpolation in log10(x)-log10(y) space.
+
+    Only positive x and y values are used.
+    Interpolation is performed only within the range of
+    available positive data.
+    """
+
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    x_new = np.asarray(x_new, dtype=float)
+
+    # Only positive values are valid for log-log interpolation
+    mask = (x > 0.0) & (y > 0.0)
+
+    x_valid = x[mask]
+    y_valid = y[mask]
+
+    # Sort in case input is not ordered
+    idx = np.argsort(x_valid)
+    x_valid = x_valid[idx]
+    y_valid = y_valid[idx]
+
+    # Only interpolate inside available data range
+    valid_new = (
+        (x_new >= x_valid.min())
+        & (x_new <= x_valid.max())
+    )
+
+    y_new = np.full_like(
+        x_new,
+        np.nan,
+        dtype=float
+    )
+
+    y_new[valid_new] = 10.0 ** np.interp(
+        np.log10(x_new[valid_new]),
+        np.log10(x_valid),
+        np.log10(y_valid)
+    )
+
+    return y_new
+
+
+# ------------------------------------------------------------
+# Dense interpolation grid
+# ------------------------------------------------------------
+
+num_interp = np.logspace(
+    np.log10(num_timesteps.min()),
+    np.log10(num_timesteps.max()),
+    300
+)
+
+time_frame_interp = loglog_interp(
+    num_timesteps,
+    time_frame,
+    num_interp
+)
+
+time_beam_interp = loglog_interp(
+    num_timesteps,
+    time_beam,
+    num_interp
+)
+
+
+# ============================================================
+# Bottom: log-log plot
+# ============================================================
+
 ax2 = axs[1]
+
+# Original data
 ax2.plot(
     num_timesteps,
     time_frame,
@@ -659,7 +744,7 @@ ax2.plot(
     markersize=10,
     label="structural solver (pyFrame)"
 )
-# time_beam[time_beam == 0.0] = eps
+
 ax2.plot(
     num_timesteps,
     time_beam,
@@ -667,45 +752,220 @@ ax2.plot(
     color="#00D400",
     linewidth=4,
     markersize=10,
-    alpha=0.7, # transparent
+    alpha=0.7,
     label="proposed analytical eqs. (EB-beam)"
 )
 
+
+# ------------------------------------------------------------
+# Log-log interpolated trends
+# ------------------------------------------------------------
+""
+ax2.plot(
+    num_interp,
+    time_frame_interp,
+    color="grey",
+    linestyle="-",
+    linewidth=2.5,
+    alpha=0.55,
+    label="pyFrame log-log interpolation"
+)
+
+ax2.plot(
+    num_interp,
+    time_beam_interp,
+    color="grey",
+    linestyle="-",
+    linewidth=2.5,
+    alpha=0.55,
+    label="EB-beam log-log interpolation"
+)
+""
+# ============================================================
+# Computational scaling exponent
+#
+# t ~ N^p
+# ============================================================
+
+def loglog_slope(x1, x2, y1, y2):
+    return (
+        np.log10(y2 / y1)
+        / np.log10(x2 / x1)
+    )
+
+
+# Use the final positive interval
+p_frame = loglog_slope(
+    x1=num_timesteps[-4],
+    x2=num_timesteps[-1],
+    y1=time_frame[-4],
+    y2=time_frame[-1]
+)
+
+p_beam = loglog_slope(
+    x1=num_timesteps[-4],
+    x2=num_timesteps[-1],
+    y1=time_beam[-4],
+    y2=time_beam[-1]
+)
+
+
+print(
+    f"pyFrame scaling exponent = {p_frame:.2f}"
+)
+
+print(
+    f"EB-beam scaling exponent = {p_beam:.2f}"
+)
+
+
+# ============================================================
+# Right-triangle showing computational scaling
+# ============================================================
+
+def add_scaling_triangle(
+    ax,
+    x0,
+    x1,
+    y0,
+    p,
+    color,
+    linewidth_tri=2.0,
+    label=None,
+):
+    """
+    Show t ~ N^p on a log-log plot.
+
+    Horizontal leg:
+        increase in N
+
+    Vertical leg:
+        corresponding increase in computational time
+
+    Hypotenuse:
+        power-law scaling trend
+    """
+
+    # Computational time corresponding to N = x1
+    y1 = y0 * (x1 / x0) ** p
+
+    # --------------------------------------------------------
+    # Horizontal leg: increase in N
+    # --------------------------------------------------------
+    ax.plot(
+        [x0, x1],
+        [y0, y0],
+        color=color,
+        linewidth=linewidth_tri,
+    )
+
+    # --------------------------------------------------------
+    # Vertical leg: increase in computational time
+    # --------------------------------------------------------
+    ax.plot(
+        [x1, x1],
+        [y0, y1],
+        color=color,
+        linewidth=linewidth_tri,
+    )
+
+    # --------------------------------------------------------
+    # Hypotenuse: scaling trend
+    # --------------------------------------------------------
+    ax.plot(
+        [x0, x1],
+        [y0, y1],
+        color=color,
+        linewidth=linewidth_tri,
+    )
+
+    # --------------------------------------------------------
+    # "1" = increase in N
+    # --------------------------------------------------------
+    ax.text(
+        x0 + (x0+x1)/10,
+        y0 / 1.5,
+        r"$1$",
+        color=color,
+        ha="center",
+        va="top",
+    )
+
+    # --------------------------------------------------------
+    # p = computational-cost scaling
+    # --------------------------------------------------------
+    ax.text(
+        x1 * 1.25,
+        np.sqrt(y0 * y1),
+        rf"${p:.2f}$",
+        color=color,
+        ha="left",
+        va="center",
+    )
+
+    # --------------------------------------------------------
+    # Optional label
+    # --------------------------------------------------------
+    if label:
+        ax.text(
+            np.sqrt(x0 * x1),
+            np.sqrt(y0 * y1) * 1.15,
+            label,
+            color=color,
+            ha="center",
+            va="bottom",
+        )
+
+
+# ============================================================
+# pyFrame scaling triangle
+# ============================================================
+
+add_scaling_triangle(
+    ax2,
+    x0=1.2e3,
+    x1=3.6e5,
+    y0=1.0,
+    p=p_frame,
+    color="grey",
+)
+
+
+# ============================================================
+# EB-beam scaling triangle
+# ============================================================
+
+add_scaling_triangle(
+    ax2,
+    x0=1.2e4,
+    x1=3.6e5,
+    y0=1.4e-3,
+    p=p_beam,
+    color="#00A500",
+)
+
+
 ax2.set_xscale("log")
 ax2.set_yscale("log")
-ax2.set_xlabel("Length (of unsteady loads)")
-ax2.set_ylabel("Computational time [s]")
-ax2.grid(True, which="both", alpha=0.3)
+ax2.set_title(
+    "Log-log trend and scaling exponent" + r" ($t \sim N^p$)",
+    y=1.02
+)
+ax2.set_xlabel("Number of timesteps, $N$")
+ax2.set_ylabel("Comput. time, " +r"$t$"+ " [s]")
+
+ax2.grid(
+    True,
+    which="both",
+    alpha=0.3
+)
 # ax2.legend(loc="upper left")
 
-# add text above each point
-"""
-for n_steps, t_beam, t_frame in zip(num_timesteps, time_beam, time_frame):
-    ax.annotate(
-        f"{t_frame:.3f} s",
-        (n_steps, t_frame),
-        xytext=(0, 8),
-        textcoords="offset points",
-        ha="center",
-        va="bottom",
-        # fontsize=9,
-    )
-    ax.annotate(
-        f"{t_beam:.3f} s",
-        (n_steps, t_beam),
-        xytext=(0, 8),
-        textcoords="offset points",
-        ha="center",
-        va="bottom",
-        # fontsize=9,
-    )
-"""
 plt.tight_layout()
 
 plot_path = os.path.join(results_path,
                          "compu_times_analy_&_frame.png")
 # plt.savefig(plot_path) # NOTE: saved, so don't change now 
-
 
 #%%
 # plot options
