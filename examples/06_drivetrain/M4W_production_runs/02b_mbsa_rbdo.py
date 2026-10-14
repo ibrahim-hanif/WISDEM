@@ -2038,6 +2038,11 @@ elif flag_opt_GFO:
     prob_rbdo.driver.options["max_gen"] = 5 * 1
     prob_rbdo.driver.options["run_parallel"] = True
     prob_rbdo.driver.options["procs_per_model"] = 2
+    # ==== NLopt COBYLA ==== TODO
+    print("! TODO: use LN_COBYLA")
+    # from wisdem.optimization_drivers.nlopt_driver import NLoptDriver
+    # prob.driver = NLoptDriver()
+    # prob.driver.options["optimizer"] = "LN_COBYLA"
     # ==== options ====
     prob_rbdo.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
 

@@ -53,8 +53,9 @@ import Drive4Wind.utilities.utilities_drivetrain as utilsDT
 suffix = "_sima" # _noMBfls
 # 1. "_m4w"
 # 2. "_m4w_noMBfls"
-# 3. "_sima"
-# 4. "_sima_gfo"
+# 3. "_sima"            # NOTE: GRADIENT BASED (SLSQP)
+# 4. "_sima_gfo"        # NOTE: GRADIENT FREE  (LN_COBYLA)
+# 5. "_sima_noMBfls"
 
 # post-processing results
 make_xdsm, xdsm_type = False, "html"       # html-show or detailed pdf
@@ -83,7 +84,7 @@ flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 
 # Parametric study
-flag_study_parametric = True
+flag_study_parametric = False
 param_for_study = "MB".lower() # "MB" (types) / "LDD" (MS' L_*)
 meth_Peq = "DEL".lower()        # Method: "LRD" or "DEL"
 
@@ -136,9 +137,15 @@ else: # define paths
 from utilities_drivetrain import define_modeling_options_dict_for_drivetrainSE as defModelOpts
 opts = defModelOpts(loc_all_loads_mat_file)
 
+gamma_f = opts["WISDEM"]["DriveSE"]["gamma_f"]
+gamma_m = opts["WISDEM"]["DriveSE"]["gamma_m"]
+gamma_n = opts["WISDEM"]["DriveSE"]["gamma_n"]
+gamma = gamma_f * gamma_m * gamma_n
+
 doMBfls = opts["flags"]["mb_fls"]
 dohub = opts["flags"]["hub"]
 dogen = opts["flags"]["generator"]
+
 # %% [markdown]
 # ### Defining the model `problem class`:
 #%%
@@ -372,14 +379,22 @@ elif flag_opt_GFO:
     # prob.driver.options['Pc'] = 0.5
     # prob.driver.options['F'] = 0.5
     # ---- NSGA2
-    from wisdem.optimization_drivers.nsga2_driver import NSGA2Driver
-    prob.driver = NSGA2Driver()
-    prob.driver.options["max_gen"] = 200
-    prob.driver.options["run_parallel"] = True
-    prob.driver.options["procs_per_model"] = 2 # TODO
-
+    # from wisdem.optimization_drivers.nsga2_driver import NSGA2Driver
+    # prob.driver = NSGA2Driver()
+    # prob.driver.options["max_gen"] = 200
+    # prob.driver.options["run_parallel"] = True
+    # prob.driver.options["procs_per_model"] = 2 # TODO
+    # ---- NLopt COBYLA
+    from wisdem.optimization_drivers.nlopt_driver import NLoptDriver
+    prob.driver = NLoptDriver()
+    prob.driver.options["optimizer"] = "LN_COBYLA"
+    # ---- options
     prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
     # OSError: 'lss' <class Hub_Rotor_LSS_Frame>: Error calling compute(), exception: access violation reading 0x000001CB530B5FB0
+
+    if record_cases:
+        recorder = om.SqliteRecorder( loc_cases )
+        prob.driver.add_recorder( recorder=recorder )
 
 elif flag_DOE: #NOTE: running 194 mins! on my PC for 10 levels x 4 DVs (khayr insha'Allah)
                # TAKES HOUR(S), with just 10 levels !!!!!!!!!!!! why?
@@ -684,6 +699,7 @@ if flag_opt_GBO or flag_DOE:
 elif flag_opt_GFO:
     # Run the GFO
     prob.run_driver()
+    print( f" . NLopt LN_COBYLA iter count: {prob.driver.iter_count}" )
 
 else:
     # Run the analysis
@@ -701,16 +717,37 @@ print(" ", prob["F_aero_hub"] )
 print("M_aero_hub:")
 print(" ", prob["M_aero_hub"], "\n" )
 
-print("LSS desvars:")
+print("--- desvars ---")
+print("LSS:")
 print(" ", prob["L_h1"], prob["L_12"], prob["lss_diameter"], prob["lss_wall_thickness"], "\n" )
 # [3.48132032] [1.] [4. 4.] [0.32635334 0.29289825]
 
-print("--- constr_ max ---")
-print("- lss: ",
-      np.max(prob["constr_lss_vonmises"])
-      )
+def calc_constr_violation(constr_val, constr_type="upper"):
+    if constr_type == "upper":
+        if constr_val > 1.0:
+            return constr_val - 1.0
+        else:
+            return 0.0
+    elif constr_type == "lower":
+        if constr_val < 1.0:
+            return 1.0 - constr_val
+        else:
+            return 0.0
+    else:
+        raise ValueError("Invalid constraint type. Use 'upper' or 'lower'.")
+
+print("--- constr ---")
+constr_sigma_lss_max = np.max(prob["constr_lss_vonmises"])
+sigma_lss_max = (prob["Xy_mat"][1] * constr_sigma_lss_max) / gamma
+print("lss, sigma constr: ", constr_sigma_lss_max)
+print(" - violation: ", calc_constr_violation(constr_sigma_lss_max, "upper"))
+print(" - actual sigma val [MPa]: ", sigma_lss_max / 1e6)
+
 if doMBfls:
-    print("constr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"], "\n" )
+    print("\nconstr_L10_mb(1,2):", prob["constr_L10_mb1"], prob["constr_L10_mb2"] )
+    print(f" - violation:  MB1 = { calc_constr_violation(prob['constr_L10_mb1'], 'lower') }, MB2 = { calc_constr_violation(prob['constr_L10_mb2'], 'lower') }")
+    print(" - in hrs, L10h_mb(1,2):", prob["mb_fls.L10h_mb1"], prob["mb_fls.L10h_mb2"] )
+    print(" - (must be > 219150.0 hrs.) \n")    
 #
 print("--- obj: masses ---")
 print(f"MSA mass: {prob["msa_mass"]}")
@@ -792,7 +829,7 @@ if record_cases and plot_cases:
             label=r'$m_{msa}$')
     ax1.set_ylabel(r'Mass [$\cdot 10^2$ t]')
     # ax1.set_xlabel('Iteration')
-    ax1.set_xticks(iters)
+    if flag_opt_GBO: ax1.set_xticks(iters)
     ax1.grid(True)
     ax1.legend()
 
@@ -842,7 +879,7 @@ if record_cases and plot_cases:
     ax4.axhline(1.0, color='k', linestyle='--', linewidth=1)
     ax4.set_ylabel(r'$ g\_L_{10} $ [-]')
     ax4.set_xlabel('Optimizer function evaluations')
-    ax4.set_xticks(iters)
+    if flag_opt_GBO: ax4.set_xticks(iters)
     ax4.grid(True)
     ax4.legend(loc='upper right')#,bbox_to_anchor=(1,0.5))
 
@@ -1641,8 +1678,8 @@ for i, cfg in enumerate(configs):
 
 # Labels
 ax4.set_xlabel("Total mass [t]")
-ax4.set_ylabel("Max constraint utilization [-]")
-ax4.set_title("Pareto-style trade-off")
+ax4.set_ylabel("Max fatigue-life constraint [-]")
+# ax4.set_title("Trade-off")
 
 # Legend (clean, no overlap)
 ax4.legend(loc="best")
