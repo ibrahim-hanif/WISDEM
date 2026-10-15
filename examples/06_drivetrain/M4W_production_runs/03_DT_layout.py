@@ -765,6 +765,106 @@ fig
 #
 # -- so varied= `gear_ratio`, `gearbox_mass_user`, `generator_mass_user`
 
+# %%
+# Analyse GB-gen masses across GRs
+import pandas as pd
+
+params_plot_rc = {
+        "font.size": 24,
+        "axes.labelsize": 24,
+        "legend.fontsize": 24, # 16 for pdf of `var_with_iter` plot
+        "lines.linewidth": 3,
+        "lines.markersize": 7,
+    }
+plt.rcParams.update( params_plot_rc )
+
+cases = pd.read_csv( loc_DOEcsv_GBgen )
+
+# === extract values
+gear_ratios = np.array(cases["gear_ratio"])
+nGRs = len(gear_ratios)
+# --- 1. mass
+gb_mass = np.array(cases["gearbox_mass_user"])
+gen_mass = np.array(cases["generator_mass_user"] / 1e3)
+total_mass= gb_mass+gen_mass
+# --- 2. length
+gb_length = np.array(cases["gearbox_length_user"])
+gen_length = np.array(cases["L_generator"])
+total_length = gb_length + gen_length
+# --- 3. radius
+gb_radius = np.array(cases["gearbox_radius_user"])
+gen_radius = np.ones((nGRs,))*1.4
+total_radius = gb_radius + gen_radius
+
+# === plot
+clrs_GBgen = [
+    "tab:blue",
+    "tab:green",
+    "tab:red"
+]
+
+fig, axs = plt.subplots(3,1,figsize=(12,12))
+# --- 1. mass 
+ax1 = axs[0]
+ax1.plot( gear_ratios,gb_mass,label="Gearbox",
+        marker="o", color=clrs_GBgen[0]    
+    )
+ax1.plot( gear_ratios, gen_mass, label="Generator",
+        marker="o", color=clrs_GBgen[1]
+    )
+ax1.plot( gear_ratios, total_mass, label="Total",
+        marker="o", color=clrs_GBgen[2]
+    )
+ax1.set_ylabel("Mass [t]")
+ax1.set_yticks( np.linspace( min(gen_mass), max(total_mass), 6  ) )
+ax1.set_xticks(gear_ratios)
+ax1.legend()
+ax1.grid()
+
+# --- 2. length
+ax2 = axs[1]
+ax2.plot( gear_ratios,gb_length,label="Gearbox",
+        marker="o", color=clrs_GBgen[0]    
+    )
+ax2.plot( gear_ratios, gen_length, label="Generator",
+        marker="o", color=clrs_GBgen[1]
+    )
+ax2.plot( gear_ratios, total_length, label="Total",
+        marker="o", color=clrs_GBgen[2]
+    )
+ax2.set_ylabel("Length [m]")
+ax2.set_yticks( np.linspace( min(gen_length), max(total_length), 6  ) )
+ax2.set_xticks(gear_ratios)
+# ax2.legend()
+ax2.grid()
+
+# --- 3. radius
+ax3 = axs[2]
+ax3.plot( gear_ratios,gb_radius,label="Gearbox",
+        marker="o", color=clrs_GBgen[0]    
+    )
+ax3.plot( gear_ratios, gen_radius, label="Generator",
+        marker="o", color=clrs_GBgen[1]
+    )
+ax3.plot( gear_ratios, total_radius, label="Total",
+        marker="o", color=clrs_GBgen[2]
+    )
+ax3.set_ylabel("Radius [m]")
+ax3.set_yticks( np.linspace( min(gen_radius), max(total_radius), 6  ) )
+# ax3.legend()
+ax3.grid()
+
+ax3.set_xlabel("Gear ratio [-]")
+ax3.set_xticks(gear_ratios)
+
+# ---
+fig.tight_layout()
+
+loc_plot_GBgenMass = os.path.join(
+    results_path, "compr_GB_gen"+suffix+".png"
+)
+# fig.savefig( loc_plot_GBgenMass )
+
 #%%
 if flag_study_parametric and flag_opt_GBO:
     print("===== parametric study =====")
