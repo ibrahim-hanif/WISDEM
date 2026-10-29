@@ -137,12 +137,15 @@ else: # define paths
 from utilities_drivetrain import define_modeling_options_dict_for_drivetrainSE as defModelOpts
 opts = defModelOpts(loc_all_loads_mat_file)
 
+probabs = opts["DLC_driver"]["DLCs"][0]["probabilities"]
+
 gamma_f = opts["WISDEM"]["DriveSE"]["gamma_f"]
 gamma_m = opts["WISDEM"]["DriveSE"]["gamma_m"]
 gamma_n = opts["WISDEM"]["DriveSE"]["gamma_n"]
 gamma = gamma_f * gamma_m * gamma_n
 
 doMBfls = opts["flags"]["mb_fls"]
+if "nombfls" in suffix.lower(): doMBfls = opts["flags"]["mb_fls"] = False
 dohub = opts["flags"]["hub"]
 dogen = opts["flags"]["generator"]
 
