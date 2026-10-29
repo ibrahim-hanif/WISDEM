@@ -450,6 +450,15 @@ def build_lss_pyframe3dd(
         E,G,rho, mb1_Reactions,mb2_Reactions, RIGID=1
     ):
     """
+    Beam configuration
+    _____
+
+    0          1          2          3  --- nodes
+          0         1           2       --- elements
+    |----------|----------|----------|
+    0   L_h1      L_12       delta      --- lengths of elements
+
+
     Inputs
     _____
     tilt : rad
@@ -575,7 +584,7 @@ def build_lss_pyframe3dd(
 # Init outputs
 F_mb1_myframe = np.zeros((4,numTS)) # x,y,z,rad
 F_mb2_myframe = np.zeros((4,numTS))
-# M_mb1_myframe = np.zeros((4,numTS)) # == 0
+# M_mb1_myframe = np.zeros((4,numTS)) # == 0 (confirmed with pyFrame)
 M_mb2_myframe = np.zeros((4,numTS))
 # --- time it :)
 t0_frame = time.time()
@@ -594,7 +603,7 @@ for iF in range(numTS):
     k=0
     # - mb1
     F_mb1_myframe[:3,iF] = np.array([np.abs(reactions.Fx[k,0]), reactions.Fy[k, 0], reactions.Fz[k, 0]])
-    # M_mb1_frame[:,iF] = prob['M_mb1'][:,0] # == 0
+    # M_mb1_myframe[:,iF] = np.array([reactions.Mxx[k, 0], reactions.Myy[k, 0], reactions.Mzz[k, 0]]) # == 0 (confirmed with pyFrame)
     # - mb2
     F_mb2_myframe[:3,iF] = np.array([np.abs(reactions.Fx[k, 1]), reactions.Fy[k, 1], reactions.Fz[k, 1]])
     M_mb2_myframe[:3,iF] = np.array([reactions.Mxx[k, 1], reactions.Myy[k, 1], reactions.Mzz[k, 1]])
