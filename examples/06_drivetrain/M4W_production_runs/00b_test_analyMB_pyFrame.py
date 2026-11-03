@@ -1025,17 +1025,10 @@ gs = fig.add_gridspec(5, 2, hspace=0.35, wspace=0.25)
 #               M_norm ]
 # ==== axial ====
 # 0,0 = mb1
-ax = fig.add_subplot(gs[0,0])
-ax.plot(0, 0,
-        label=label_analyMB+lstAnaType[0],
-        color=clr_Beam )
-ax.plot(0, 0,
-        label=label_Frame+lstAnaType[1],
-        color=clr_Frame, linestyle=lineStyle_Frame, linewidth=lineWidth_Frame)
+ax = fig.add_subplot(gs[0,0], frameon=False)
 ax.set_title("MB1 " + r"$(\times 10^6)$")
 ax.set_xticks([])
 ax.set_yticks([])
-ax.set_ylabel(r'$ F, ax $')
 ax.legend(loc="center")
 
 # 0,1 = mb2
@@ -1048,6 +1041,7 @@ ax.plot( F_mb2_myframe[0,:] / maxFrame,
 # ax.legend()
 ax.set_title("MB2 "+ r"$(\times 10^6)$")
 ax.set_xticks([])
+ax.set_ylabel(r'$ F_{ax} $', fontsize=24)
 # ax.set_xlabel(r'$t$')
 
 # ==== y ====
@@ -1058,7 +1052,7 @@ ax.plot( F_mb1_beam[1,0,:] / maxFrame,
          color=clr_Beam )
 ax.plot( F_mb1_myframe[1,:] / maxFrame,
          color=clr_Frame, linestyle=lineStyle_Frame, linewidth=lineWidth_Frame )
-ax.set_ylabel(r"$ F, y $")
+ax.set_ylabel(r"$ F_y $", fontsize=24)
 ax.set_xticks([])
 
 # 1,1 = mb2
@@ -1082,7 +1076,7 @@ ax.plot( F_mb1_beam[2,0,:] / maxFrame,
 ax.plot( F_mb1_myframe[2,:] / maxFrame,
          color=clr_Frame, linestyle=lineStyle_Frame, linewidth=lineWidth_Frame )
 # ax3.legend()
-ax.set_ylabel(r"$ F, z$")
+ax.set_ylabel(r"$ F_z $", fontsize=24)
 # ax.set_xlabel(r"$t$")
 ax.set_xticks([])
 
@@ -1107,9 +1101,9 @@ ax1.plot( F_mb1_beam[3,0,:] / maxFrame,
 ax1.plot( F_mb1_myframe[3,:] / maxFrame,
          color=clr_Frame, linestyle=lineStyle_Frame, linewidth=lineWidth_Frame )
 # ax1.legend()
-ax1.set_ylabel(r"$ F, rad$")
+ax1.set_ylabel(r"$ F_{rad} $", fontsize=24)
 ax1.set_xticks([])
-# ax1.set_xlabel(r'$t$')
+ax1.set_xlabel("t [s]")
 
 # 3,1 = mb2
 # maxFrame = np.max(F_mb2_myframe[3,:])
@@ -1123,13 +1117,7 @@ ax1.plot( F_mb2_myframe[3,:] / maxFrame,
 ax1.set_xticks([])
 
 # ==== M_norm ====
-# 4,0 = mb1
-ax = fig.add_subplot(gs[4,0])
-# ax.set_title("MB1")
-ax.set_xticks([])
-ax.set_yticks([])
-ax.set_ylabel(r'$ M, norm $')
-ax.set_xlabel(r"$t$")
+# 4,0 = mb1 == ZERO
 
 # 4,1 = mb2
 # maxFrame = np.max(M_mb2_myframe[3,:])
@@ -1138,10 +1126,22 @@ ax.plot( M_mb2_beam_norm / maxFrame,
          label="EBbeam", color=clr_Beam )
 ax.plot( M_mb2_myframe[3,:] / maxFrame,
          label="Frame", color=clr_Frame, linestyle=lineStyle_Frame, linewidth=lineWidth_Frame )
-ax.set_xlabel(r"$t$")
+ax.set_xlabel("t [s]")
 ax.set_xticks([])
+ax.set_ylabel(r'$ M_{norm} $', fontsize=24)
 
 # ----------
+fig.legend(
+    [
+        label_analyMB+lstAnaType[0],
+        label_Frame+lstAnaType[1]
+    ],
+    loc="upper center",
+    bbox_to_anchor=(0.5, 0.97),
+    ncol=2,
+    frameon=False
+)
+
 fig.tight_layout()
 
 plot_path = os.path.join(results_path,
@@ -1346,7 +1346,7 @@ for j, data in enumerate(reaction_data):
 
     ax.set_ylabel(
         f'{data["bearing"]} | {data["name"]}',
-        color=data["label_color"]
+        color=data["label_color"], fontsize=22
     )
     ax.set_facecolor( data["plot_background"] )
 
@@ -1403,8 +1403,12 @@ axs[0, 1].set_title(
 )
 
 # x labels only on bottom row
+# -- 1. column
 axs[-1, 0].set_xlabel("t [s]")
+axs[-1, 0].set_xticks([])
+# -- 2. column
 axs[-1, 1].set_xlabel("t [s]")
+axs[-1, 1].set_xticks([])
 
 
 # ============================================================
