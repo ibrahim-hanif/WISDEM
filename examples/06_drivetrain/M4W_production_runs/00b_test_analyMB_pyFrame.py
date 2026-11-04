@@ -1163,16 +1163,6 @@ plt.show()
 # col 1 = instantaneous % error
 # ============================================================
 
-fig, axs = plt.subplots(
-    8, 2,
-    figsize=(11, 16),
-    sharex="col",
-    gridspec_kw={
-        "hspace": 0.35,
-        "wspace": 0.30
-    }
-)
-
 # ------------------------------------------------------------
 # Helper function for instantaneous percentage error
 # ------------------------------------------------------------
@@ -1217,8 +1207,6 @@ def error(analy, solver, threshold=1e-3):
 # ------------------------------------------------------------
 maxFrame = 1e6
 
-plot_background = "#FFFEDD"
-
 reaction_data = [
 
     # ---------- MB1 ----------
@@ -1227,7 +1215,6 @@ reaction_data = [
         "bearing": "MB1",
         "name": r"$F_y$",
         "label_color": "grey",
-        "plot_background": "white",
 
         "analy": F_mb1_beam[1, 0, :],
         "solver": F_mb1_myframe[1, :],
@@ -1238,7 +1225,6 @@ reaction_data = [
         "bearing": "MB1",
         "name": r"$F_z$",
         "label_color": "grey",
-        "plot_background": "white",
 
         "analy": F_mb1_beam[2, 0, :],
         "solver": F_mb1_myframe[2, :],
@@ -1249,7 +1235,6 @@ reaction_data = [
         "bearing": "MB1",
         "name": r"$F_{rad}$",
         "label_color": "k",
-        "plot_background": plot_background,
 
         "analy": F_mb1_beam[3, 0, :],
         "solver": F_mb1_myframe[3, :],
@@ -1262,7 +1247,6 @@ reaction_data = [
         "bearing": "MB2",
         "name": r"$F_{ax}$",
         "label_color": "k",
-        "plot_background": plot_background,
 
         "analy": F_mb2_beam[0, 0, :],
         "solver": F_mb2_myframe[0, :],
@@ -1273,7 +1257,6 @@ reaction_data = [
         "bearing": "MB2",
         "name": r"$F_y$",
         "label_color": "grey",
-        "plot_background": "white",
 
         "analy": F_mb2_beam[1, 0, :],
         "solver": F_mb2_myframe[1, :],
@@ -1284,7 +1267,6 @@ reaction_data = [
         "bearing": "MB2",
         "name": r"$F_z$",
         "label_color": "grey",
-        "plot_background": "white",
 
         "analy": F_mb2_beam[2, 0, :],
         "solver": F_mb2_myframe[2, :],
@@ -1295,7 +1277,6 @@ reaction_data = [
         "bearing": "MB2",
         "name": r"$F_{rad}$",
         "label_color": "k",
-        "plot_background": plot_background,
 
         "analy": F_mb2_beam[3, 0, :],
         "solver": F_mb2_myframe[3, :],
@@ -1306,7 +1287,6 @@ reaction_data = [
         "bearing": "MB2",
         "name": r"$M_{norm}$",
         "label_color": "k",
-        "plot_background": plot_background,
 
         "analy": M_mb2_beam_norm,
         "solver": M_mb2_myframe[3, :],
@@ -1314,12 +1294,42 @@ reaction_data = [
     },
 ]
 
+imp_react_data = reaction_data[2:4]
+imp_react_data.extend(reaction_data[6:])
+
+# =======================================================
+# TODO: user choses which reaction to plot
+# = "full" or "important"
+STR_REACTIONS_TO_PLOT = "important"
+
+# -----
+if STR_REACTIONS_TO_PLOT == "full":
+    TO_PLOT_REACTION_DATA = reaction_data
+    box_legend = (0.5, 1.02)
+    plot_background = "#FFFEDD"
+
+elif STR_REACTIONS_TO_PLOT == "important":
+    TO_PLOT_REACTION_DATA = imp_react_data
+    box_legend = (0.5, 1.1)
+    plot_background = "white"
+    
+LEN_reaction_data = int(len(TO_PLOT_REACTION_DATA))
 
 # ============================================================
-# Plot all 8 reactions
+# Plot all reactions
 # ============================================================
 
-for j, data in enumerate(reaction_data):
+fig, axs = plt.subplots(
+    LEN_reaction_data, 2,
+    figsize=(11, 2*LEN_reaction_data),
+    sharex="col",
+    gridspec_kw={
+        "hspace": 0.35,
+        "wspace": 0.30
+    }
+)
+
+for j, data in enumerate( TO_PLOT_REACTION_DATA ):
 
     analy = data["analy"]
     solver = data["solver"]
@@ -1348,7 +1358,11 @@ for j, data in enumerate(reaction_data):
         f'{data["bearing"]} | {data["name"]}',
         color=data["label_color"], fontsize=22
     )
-    ax.set_facecolor( data["plot_background"] )
+
+    bool_plot_bckgrd = False
+    if any(term in data["name"] for term in ("ax", "rad", "norm")):
+        bool_plot_bckgrd = True
+        ax.set_facecolor(plot_background)
 
     # --------------------------------------------------------
     # COLUMN 2: instantaneous percentage error
@@ -1381,7 +1395,7 @@ for j, data in enumerate(reaction_data):
             linewidth=1.5
         )
 
-    ax_err.set_facecolor( data["plot_background"] )
+    if bool_plot_bckgrd: ax_err.set_facecolor( plot_background )
     # ax_err.set_yticks( np.linspace(0.0,np.max(err),3) )
     ax_err.yaxis.set_major_formatter(
         plt.FormatStrFormatter("%.2f")
@@ -1421,7 +1435,7 @@ fig.legend(
     handles,
     labels,
     loc="upper center",
-    bbox_to_anchor=(0.5, 1.02),
+    bbox_to_anchor=box_legend,
     ncol=2,
     frameon=False
 )
@@ -1433,17 +1447,17 @@ fig.legend(
 # MB1 = rows 0-2
 # MB2 = rows 3-7
 # ============================================================
-
-fig.add_artist(
-    plt.Line2D(
-        [0.001, 0.97],
-        [0.625, 0.625],
-        transform=fig.transFigure,
-        color="#473B3BFF",
-        linewidth=1.2,
-        linestyle="-"
+if STR_REACTIONS_TO_PLOT == "full":
+    fig.add_artist(
+        plt.Line2D(
+            [0.001, 0.97],
+            [0.625, 0.625],
+            transform=fig.transFigure,
+            color="#473B3BFF",
+            linewidth=1.2,
+            linestyle="-"
+        )
     )
-)
 
 
 # ============================================================
@@ -1463,9 +1477,11 @@ fig.subplots_adjust(
 # ============================================================
 
 if 0:
+    str_extn = ".png"
+
     plot_path = os.path.join(
         results_path,
-        "mbReacts_withErr_" + anaString + ".png"
+        f"mbReacts_withErr_{anaString}_{STR_REACTIONS_TO_PLOT}{str_extn}"
     )
 
     fig.savefig(
