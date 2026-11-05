@@ -48,6 +48,7 @@ from wisdem.commonse.utilities import get_recorder_results, mainshaft_loads_from
 from wisdem.commonse.fileIO import save_data, load_data, var_df2dict
 from wisdem.commonse.cross_sections import Tube
 import Drive4Wind.utilities.utilities_drivetrain as utilsDT
+
 # %%
 # ### Define flags
 suffix = "_sima" # _noMBfls
@@ -65,6 +66,19 @@ flag_scaling_show_browser = False
 flag_save_new_data = False
 flag_load_from_data = True
 
+# Optimization flags
+flag_opt_GBO = False     # GBO: gradient based optimizer
+flag_DOE = False        # DOE: design of experiments
+flag_opt_GFO = False    # GFO: gradient free optimizer
+
+# Parametric study
+flag_study_parametric = False
+param_for_study = "MB".lower() # "MB" (types) / "LDD" (MS' L_*)
+meth_Peq = "DEL".lower()        # Method: "LRD" or "DEL"
+
+if param_for_study.lower()=="ldd": MaxIter=5 * 5
+else: MaxIter=5 * 4
+
 # Loading `openFAST` hub loads from a saved file
 # TODO: dont even need to do this now, coz `Load_Own_Hub_Loads` component does it internally and outputs the needed loads for the DT component. So, can just set `own_hub_loads=True` in `modelling_options` and not worry about loading the loads here in the script. JazakumAllahu khayr.
 part_loads = True 
@@ -77,16 +91,6 @@ if "sima" in suffix:
     loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat"
 loc_FLS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_FLS_full.mat")
 loc_ULS_loads_mat_file = os.path.join(dir_loads, "mainshaft_loads_ULS.mat")
-
-# Optimization flags
-flag_opt_GBO = True     # GBO: gradient based optimizer
-flag_DOE = False        # DOE: design of experiments
-flag_opt_GFO = False    # GFO: gradient free optimizer
-
-# Parametric study
-flag_study_parametric = False
-param_for_study = "MB".lower() # "MB" (types) / "LDD" (MS' L_*)
-meth_Peq = "DEL".lower()        # Method: "LRD" or "DEL"
 
 #%%
 # ### Defining results directory and files
@@ -129,6 +133,7 @@ else: # define paths
     if load_fls_loads: # load from paths
         Snew, keys_new = mainshaft_loads_from_mat_to_dict(
             loc_FLS_loads_mat_file, loc_ULS_loads_mat_file)
+
 # %% [markdown]
 # ### Defining options (`modelling_options`), flags
 #%%
@@ -361,7 +366,7 @@ if flag_opt_GBO:
     prob.driver = om.ScipyOptimizeDriver()
     prob.driver.options["optimizer"] = "SLSQP"
     prob.driver.options["tol"] = 1e-6 # comment to default (1e-6?)
-    prob.driver.options["maxiter"] = 5 * 4
+    prob.driver.options["maxiter"] = MaxIter
     prob.driver.options["disp"] = True
     prob.driver.options["debug_print"] = ["desvars", "objs", "nl_cons", "ln_cons"]
     # prob.driver.options # disp for debugging
@@ -411,18 +416,36 @@ else:
 
 #%%
 # setup optimization: objs, desvars, cons
-# - TODO: scaling (is better).
+BOUNDS_DESVARS = { # TODO user defined
+    "L_h1": (0.1, 1.0),
+    "L_12": (1.0, 5.0),
+    "lss_diameter": (1.0, 5.0),
+    "lss_wall_thickness": (4e-3, 0.6),
+}
+
 if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     # Add objective
     prob.model.add_objective("msa_mass", ref=1e6)               #DONE: 'msa_mass' minimization
     # - NOTE: effectively 'lss_mass' minimization
     
     # Add design variables
-    prob.model.add_design_var("L_h1", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
-    prob.model.add_design_var("L_12", lower=0.1, upper=8.0, ref=8.0, ref0=0.1)
+    prob.model.add_design_var("L_h1",
+        lower=BOUNDS_DESVARS["L_h1"][0], upper=BOUNDS_DESVARS["L_h1"][1],
+        ref=BOUNDS_DESVARS["L_h1"][1], ref0=BOUNDS_DESVARS["L_h1"][0]
+    )
+    prob.model.add_design_var("L_12",
+        lower=BOUNDS_DESVARS["L_12"][0], upper=BOUNDS_DESVARS["L_12"][1],
+        ref=BOUNDS_DESVARS["L_12"][1], ref0=BOUNDS_DESVARS["L_12"][0]
+    )
     # prob.model.add_design_var("delta", lower=0.1, upper=5.0, ref=5.0, ref0=0.1)
-    prob.model.add_design_var("lss_diameter", lower=1.0, upper=5.0, ref=5.0, ref0=1.0)
-    prob.model.add_design_var("lss_wall_thickness", lower=4e-3, upper=0.5, ref=1.0, ref0=4e-3) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
+    prob.model.add_design_var("lss_diameter",
+        lower=BOUNDS_DESVARS["lss_diameter"][0], upper=BOUNDS_DESVARS["lss_diameter"][1],
+        ref=BOUNDS_DESVARS["lss_diameter"][1], ref0=BOUNDS_DESVARS["lss_diameter"][0]
+    )
+    prob.model.add_design_var("lss_wall_thickness",
+        lower=BOUNDS_DESVARS["lss_wall_thickness"][0], upper=BOUNDS_DESVARS["lss_wall_thickness"][1],
+        ref=1.0, ref0=BOUNDS_DESVARS["lss_wall_thickness"][0]
+    ) #DONE: scaled so driver sees lb=0, ub=1 (why? 0.05 causes probs)
 
     if flag_DOE: pass # DOE: no constraints
     
@@ -906,6 +929,16 @@ if record_cases and plot_cases:
 # 2. for MB types / layout optimization
 # - vary DVs over a grid, and record outputs
 #%%
+s_Lh1 = BOUNDS_DESVARS["L_h1"][1] / 4
+s_L12 = BOUNDS_DESVARS["L_12"][1] / 4
+
+steps_L = [# L_h1, L_12
+            (s_Lh1,     s_L12),
+            (s_Lh1*3,   s_L12),
+            (s_Lh1,     s_L12*3),
+            (s_Lh1*3,   s_L12*3)
+]
+
 if flag_study_parametric and flag_opt_GBO:
     print("===== parametric study =====")
 
@@ -932,12 +965,6 @@ if flag_study_parametric and flag_opt_GBO:
         # steps_lss_diameter = np.array([[1.0,4.0],[1.0,4.0]])
         # steps_lss_wall_thickness = np.array([[0.1,0.3],[0.1,0.3]])
 
-        steps_L = [
-            (1.25, 2.0),
-            (3.75, 2.0),
-            (1.25, 6.0),
-            (3.75, 6.0)
-        ]
         print("- L values: ", steps_L);
         # length: total num of param varying steps
         len_steps = len(steps_L)
@@ -1203,7 +1230,7 @@ if (param_for_study.lower() == "ldd") and (
     # -------------------------
     # Figure
     # -------------------------
-    fig, ax = plt.subplots(figsize=(8, 8))
+    fig, ax = plt.subplots(figsize=(7,7))
 
     for i, res in enumerate(results_list_of_dicts):
 
@@ -1332,7 +1359,7 @@ if (param_for_study.lower() == "ldd") and (
             L_12[0],
             m_msa[0],
             f'{i+1}',
-            fontsize=16,
+            # fontsize=16,
             color='k'
         )
 
@@ -1352,9 +1379,15 @@ if (param_for_study.lower() == "ldd") and (
     # -------------------------
     # Axes formatting
     # -------------------------
-    ax.set_xlabel(r'$L_{h1}\ \mathrm{[m]}$', labelpad=14)
-    ax.set_ylabel(r'$L_{12}\ \mathrm{[m]}$', labelpad=10)
-    ax.set_zlabel(r'$m_{\mathrm{MSA}}\ \cdot 10 ~\mathrm{[t]}$', labelpad=10)
+    ax.set_xlabel(
+        r'$L_{h1}\ \mathrm{[m]}$', labelpad=20
+        )
+    ax.set_ylabel(
+        r'$L_{12}\ \mathrm{[m]}$', labelpad=16
+        )
+    ax.set_zlabel(
+        r'$m_{\mathrm{MSA}}\ \cdot 10 ~\mathrm{[t]}$', labelpad=10
+        )
 
     # ax.set_title('3D optimization convergence path')
     ax.legend(loc='best')
@@ -1366,7 +1399,7 @@ if (param_for_study.lower() == "ldd") and (
     # rotate view (via camera angles)
     # def: (30,-60), print(ax.elev, ax.azim)
     # lrd: (40,-60)
-    if meth_Peq=="del": ax.view_init(elev=40, azim=40)
+    if meth_Peq=="del": ax.view_init(elev=20, azim=-30)
     # plt.ion() # interactive
     # ------------------------
     # Save plot
@@ -1454,11 +1487,12 @@ if make_xdsm:
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
 #%%
 # ---------------------------
 # LOAD DATA
 # ---------------------------
-df = pd.read_csv( loc_DOEcsv_MBtype )
+df = pd.read_csv( loc_DOEcsv_MBtype ) # casesOut.copy() 
 df["config"] = df["bear1.bearing_type"] + "-" + df["bear2.bearing_type"]
 
 # Convert to tonnes
@@ -1466,23 +1500,67 @@ for col in ["mb1_mass", "mb2_mass", "lss_mass", "msa_mass"]:
     df[col] = df[col] / 1000.0
 
 configs = df["config"]
+
+# Color mapping for each configuration
+COLORS_MBS = {
+    "CRB-TRB2": "tab:green", #clrs_m4w["Aqua"],
+    "CARB-TRB2": "darkgreen", #clrs_m4w["Teal"],
+    "SRB_NL-TRB2": "lime", #clrs_m4w["Green"],
+    "CARB-SRB": "darkblue", #clrs_m4w["Light_Red"],
+    "SRB_NL-SRB": "aqua", #clrs_m4w["Light_Purple"],
+}
+
 #%%
 # ---------------------------
 # FIGURE 1: MASS DISTRIBUTION
 # ---------------------------
-fig, axs = plt.subplots(1, 2, figsize=(16, 8))
+fig, axs = plt.subplots(1, 2, figsize=(16, 10))
+
+mb1_clrs = 3 * ["darkgreen"] + 2 * ["darkblue"]
+mb2_clrs = 3 * ["tab:green"] + 2 * ["tab:blue"]
+lss_clrs = 3 * ["lime"] + 2 * ["aqua"]
 
 # --- (0,0) absolute stacked ---
 axs[0].bar(configs, df["mb1_mass"],
-            label="MB1" )#, color=clrs_m4w["Aqua"])
+            label="MB1", color=mb1_clrs)
 axs[0].bar(configs, df["mb2_mass"], bottom=df["mb1_mass"],
-            label="MB2" )#, color=clrs_m4w["Green"])
+            label="MB2", color=mb2_clrs)
 axs[0].bar(configs, df["lss_mass"], bottom=df["mb1_mass"] + df["mb2_mass"],
-            label="LSS" )#, color=clrs_m4w["Light_Red"])
+            label="LSS", color=lss_clrs)
 axs[0].set_ylabel("Mass [t]")
+axs[0].set_yticks(np.linspace(0,250,11))
 axs[0].set_title("Mass distribution (absolute)")
-axs[0].legend(loc="upper right")
 axs[0].set_xticklabels(configs, rotation=30)
+
+# ---- legend
+from matplotlib.patches import Patch
+# Component legend
+comp_handles = [
+    Patch(facecolor='gray', label='MB1'),
+    Patch(facecolor='lightgray', label='MB2'),
+    Patch(facecolor='white', edgecolor='k', label='LSS')
+]
+
+# Support type legend
+family_handles = [
+    Patch(facecolor='tab:green', label='MR'),
+    Patch(facecolor='tab:blue',  label='non-MR')
+]
+
+leg1 = axs[0].legend(
+    handles=comp_handles,
+    title="Component",
+    loc='upper right'
+)
+
+axs[0].add_artist(leg1)
+
+axs[0].legend(
+    handles=family_handles,
+    title="Configuration",
+    loc='upper left'
+)
+# ----
 
 # --- (0,1) normalized stacked ---
 total = df["msa_mass"]
@@ -1492,20 +1570,21 @@ mb2_norm = df["mb2_mass"] / total
 lss_norm = df["lss_mass"] / total
 
 axs[1].bar(configs, mb1_norm,
-            label="MB1" )#, color=clrs_m4w["Aqua"])
+            label="MB1", color=mb1_clrs)
 axs[1].bar(configs, mb2_norm, bottom=mb1_norm,
-            label="MB2" )#, color=clrs_m4w["Green"])
+            label="MB2", color=mb2_clrs)
 axs[1].bar(configs, lss_norm, bottom=mb1_norm + mb2_norm,
-            label="LSS" )#, color=clrs_m4w["Light_Red"])
+            label="LSS", color=lss_clrs)
 
 axs[1].set_ylabel("Mass fraction [-]")
 axs[1].set_title("Mass distribution (normalized)")
 axs[1].set_ylim(0, 1)
 axs[1].set_xticklabels(configs, rotation=30)
 plt.tight_layout()
+
 # Save plot
 plot_path = os.path.join(results_path,
-    meth_Peq+"_msa_mass_distribution"+suffix+".pdf")
+    meth_Peq+"_msa_mass_distribution"+suffix+".png")
 # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 plt.show()
 
@@ -1568,7 +1647,7 @@ ax2.set_yticklabels([
     r"$ {\delta}_{defl} $",
     r"$ {L_{10}^{mb1}} $",
     r"$ {L_{10}^{mb2}} $"
-])
+], fontsize=30)
 
 cbar = plt.colorbar(im)
 cbar.set_label("Constraint utilization (-)")
@@ -1584,7 +1663,7 @@ plt.title("Constraint "+r"$(g)$"+" utilization heatmap")
 plt.tight_layout()
 # Save plot
 plot_path = os.path.join(results_path,
-    meth_Peq+"_heatmap_constr_util"+suffix+".pdf")
+    meth_Peq+"_heatmap_constr_util"+suffix+".png")
 # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 plt.show()
 
@@ -1592,18 +1671,10 @@ plt.show()
 # ---------------------------
 # FIGURE 3: DESIGN VARIABLES COMPARISON
 # ---------------------------
-fig, axs = plt.subplots(2, 2, figsize=(16, 12))
+fig, axs = plt.subplots(2, 2, figsize=(17, 12))
+fontsize_labels = 28
 
-# Color mapping for each configuration
-colors = {
-    "CRB-TRB2": "tab:blue", #clrs_m4w["Aqua"],
-    "CARB-TRB2": "tab:orange", #clrs_m4w["Teal"],
-    "CRB-SRB": "tab:green", #clrs_m4w["Green"],
-    "CARB-SRB": "tab:red", #clrs_m4w["Light_Red"],
-    "SRB_NL-SRB": "tab:purple", #clrs_m4w["Light_Purple"],
-}
-
-configs = df["config"]
+# configs = df["config"]
 
 # helper: mean if array
 def mean_if_array(x):
@@ -1615,26 +1686,86 @@ def mean_if_array(x):
 # Extract variables
 Lh1 = df["L_h1"]
 L12 = df["L_12"]
-D   = df["lss_diameter"].apply(mean_if_array)
-t   = df["lss_wall_thickness"].apply(mean_if_array)
+# D   = df["lss_diameter"].apply(mean_if_array)
+# t   = df["lss_wall_thickness"].apply(mean_if_array)
 
-vars_data = [Lh1, L12, D, t]
-titles = ["$L_{h1}$ [m]", "$L_{12}$ [m]", "$D^*$ [m]", "$t^*$ [m]"]
+vars_data = [Lh1, L12]
+titles = ["$L_{h1}$ [m]", "$L_{12}$ [m]"]
 
+# ---- Top 2 plots: actual shaft segment lengths
 # Plot loop
-for ax, data, title in zip(axs.flatten(), vars_data, titles):
+for ax, data, title in zip(axs.flatten()[:2], vars_data, titles):
     for i, cfg in enumerate(configs):
-        ax.bar(i, data.iloc[i] )#, color=colors[cfg])
+        ax.bar(i, data.iloc[i] , color=COLORS_MBS[cfg])
     # ax.set_title(title)
     ax.set_xticks([])
     # ax.set_xticklabels(configs, rotation=30)
-    ax.set_ylabel( title )
+    ax.set_ylabel( title, fontsize=fontsize_labels )
+
+
+linewidths_ = 10
+# ---- Bottom-left: actual shaft diameter
+ax_D = axs[1,0]
+
+for i, cfg in enumerate(configs):
+
+    D_arr = np.array(eval(df["lss_diameter"].iloc[i]))
+
+    x = [
+        0,
+        1 #df["L_h1"].iloc[i] + df["L_12"].iloc[i]
+    ]
+
+    ax_D.plot(
+        x,
+        D_arr,
+        '-o',
+        linewidth=linewidths_,
+        markersize=linewidths_*1.5,
+        color=COLORS_MBS[cfg],
+        label=cfg
+    )
+
+ax_D.set_ylabel(r"$D$ [m]", fontsize=fontsize_labels)
+bounds_D = BOUNDS_DESVARS["lss_diameter"]
+ax_D.set_yticks(
+    np.linspace(bounds_D[0],bounds_D[1],6)
+)
+ax_D.set_xlabel("Normalized shaft position", fontsize=fontsize_labels)
+ax_D.set_xticks([0, 1])
+ax_D.grid()
+# ---- Bottom-right : Actual wall thickness distribution
+ax_t = axs[1,1]
+
+for i, cfg in enumerate(configs):
+
+    t_arr = np.array(eval(df["lss_wall_thickness"].iloc[i]))
+
+    x = [
+        0,
+        1 #df["L_h1"].iloc[i] + df["L_12"].iloc[i]
+    ]
+
+    ax_t.plot(
+        x,
+        t_arr,
+        '-o',
+        linewidth=linewidths_,
+        markersize=linewidths_*1.5,
+        color=COLORS_MBS[cfg]
+    )
+
+ax_t.set_ylabel(r"$t$ [m]", fontsize=fontsize_labels)
+ax_t.set_yticks(np.linspace(0.0,0.5,6))
+ax_t.set_xlabel("Normalized shaft position", fontsize=fontsize_labels)
+ax_t.set_xticks([0, 1])
+ax_t.grid()
 
 # ---------------------------
 # Shared legend (clean!)
 # ---------------------------
-handles = [plt.Rectangle((0,0),1,1,color=colors[k]) for k in colors]
-labels = list(colors.keys())
+handles = [plt.Rectangle((0,0),1,1,color=COLORS_MBS[k]) for k in COLORS_MBS]
+labels = list(COLORS_MBS.keys())
 
 fig.legend(
     handles, labels,
@@ -1653,7 +1784,7 @@ plt.tight_layout(rect=[0, 0, 1, 0.88])
 plt.tight_layout()
 # Save plot
 plot_path = os.path.join(results_path,
-    meth_Peq+"_bar_compr_desvars"+suffix+".pdf")
+    meth_Peq+"_bar_compr_desvars"+suffix+".png")
 # plt.savefig(plot_path) # NOTE: saved, so don't change now 
 plt.show()
 
@@ -1672,8 +1803,8 @@ for i, cfg in enumerate(configs):
     ax4.scatter(
         df["msa_mass"].iloc[i],
         max_constraint.iloc[i],
-        color=colors[cfg],
-        s=300,                 # larger markers
+        color=COLORS_MBS[cfg],
+        s=350,                 # larger markers
         edgecolors='black',    # improves visibility
         linewidths=1.0,
         label=cfg
@@ -1685,12 +1816,17 @@ ax4.set_ylabel("Max fatigue-life constraint [-]")
 # ax4.set_title("Trade-off")
 
 # Legend (clean, no overlap)
-ax4.legend(loc="best")
+# ax4.legend(loc="best")
+ax4.legend(
+    loc="upper left",
+    ncol=1,
+    fontsize=20,
+)
 
 plt.tight_layout()
 # Save plot
 plot_path = os.path.join(results_path,
-    meth_Peq+"_tradeOff_maxConstr_totalMass"+suffix+".pdf")
+    meth_Peq+"_tradeOff_maxConstr_totalMass"+suffix+".png")
 # plt.savefig(plot_path) # NOTE: saved, so don't change now
 plt.show()
 
