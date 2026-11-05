@@ -999,7 +999,7 @@ elif analysis == 2:
 
 elif analysis == 3:
     lstAnaType = ["proposed MR "+r"$(k_{\theta}=0)$","non-MR"]
-    clr_Beam = "#00D400" #clrs_m4w['Red']
+    clr_Beam = "#00CDD4" #clrs_m4w['Red']
 # -------------------------
 # options: Journal polish
 # plot rc params
