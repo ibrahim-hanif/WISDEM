@@ -1073,7 +1073,7 @@ def load_all_mat_to_dict( loc_all_loads_mat_file ):
                 Snew[ key ] = val.T    
             # Snew[ key ] = np.zeros(( n_timeSteps,n_ws  ))    
             # print( Snew[key].shape ) # for debugging
-            else: Snew[ key ].shape = val
+            else: Snew[ key ] = val
 
     # print(' --- Success: converted .mat all-loads to dict (returning).\n') #debug
     return Snew, keys_all
