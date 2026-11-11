@@ -395,18 +395,19 @@ class Hub_Rotor_LSS_Frame(om.ExplicitComponent):
         # - 2. shifted carrier weight from mb2 to DW end (itorq)
         # - 3. removed hub self-weight loads from UW end (already in F_aero_hub, from openFAST)
             one0 = np.zeros(1).tolist()
+            two0 = np.zeros(2).tolist()
             myframe.changeExtraNodeMass(    #(v) NOTE: mb_mass added on bedplate, NOT LSS
-                np.r_[itorq],               #(v) DONE: realistic to add itorq (weight of GB-carrier) on shaft DW end? removed.
-                [m_add],                    #(v) DONE: check if rotor (blades+hub) mass should be added or not (incl in F_aero_hub), removed
-                [I_add[0]],
-                [I_add[1]],
-                [I_add[2]],
-                one0,
-                one0,
-                one0,
-                [0.0],
-                one0,
-                one0,
+                np.r_[inode[-1],itorq],               #(v) DONE: realistic to add itorq (weight of GB-carrier) on shaft DW end? removed.
+                [m_blades_hub, m_add],                    #(v) DONE: check if rotor (blades+hub) mass should be added or not (incl in F_aero_hub), removed
+                [I_blades_hub[0],I_add[0]],
+                [I_blades_hub[1], I_add[1]],
+                [I_blades_hub[2], I_add[2]],
+                two0,
+                two0,
+                two0,
+                [cm_blades_hub, 0.0],
+                two0,
+                two0,
                 True,
             )
         # ------------------------------------
