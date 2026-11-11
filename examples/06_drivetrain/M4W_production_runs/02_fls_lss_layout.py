@@ -67,7 +67,7 @@ flag_save_new_data = False
 flag_load_from_data = True
 
 # Optimization flags
-flag_opt_GBO = False     # GBO: gradient based optimizer
+flag_opt_GBO = True     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 
@@ -636,6 +636,7 @@ if not flag_load_from_data:
     # prob["L_gearbox"] = 1.5 #(v) calc in gearbox.py
     # prob["gear_configuration"] = "eee"
     # prob["planet_numbers"] = np.array([5, 3, 0]) #ref.1
+    # TODO: update (GR, m, L, R) from D5.1 R3 = 51.7541, 102.3*1.1?, 3.3418, 2.1296
     prob["gear_ratio"] = (375 / rated_rpm)
     prob["gearbox_mass_user"] = 138.73*1e3 # 138.728645e3: incl housing (from DOE_GBgen_updated.csv)
     # prob["gearbox_torque_density"] = 200.0 # (cf. line 210, gearbox.py)

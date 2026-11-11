@@ -456,6 +456,7 @@ prob["lss_diameter"] = np.array([3.4, 3.2]) #(def:1.0), [3.440, 3.204]
 prob["lss_wall_thickness"] = np.array([0.09, 0.09]) #(def:0.1), [0.087, 0.082]
 
 # Gearbox inputs
+# TODO: update (GR, m, L, R) from D5.1 R3 = 51.7541, 102.3*1.1?, 3.3418, 2.1296
 prob["gear_ratio"] = (375 / rated_rpm)
 prob["gearbox_mass_user"] = 138.7286451*1e3 # incl housing (from DOE_GBgen_updated.csv)
 widths_flanks = np.array([400,260,240])/1e3 # 0.9 sum of PLC lengths/flank widths (tab.6, D5.1 R2)
