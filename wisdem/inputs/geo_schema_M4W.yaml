@@ -172,13 +172,13 @@ properties:
                             mb1Type:
                                 type: string
                                 description: Type of bearing for first main bearing
-                                default: CRB                        #(v) (def: CARB)
-                                enum: [CARB, CRB, SRB, TRB, TRB2]   #(v) extended w/ TRB2
+                                default: CRB                                #(v) (def: CARB)
+                                enum: [CARB, CRB, SRB, SRB_NL, TRB, TRB2]   #(v) added SRB_NL, TRB2
                             mb2Type:
                                 type: string
                                 description: Type of bearing for second main bearing
-                                default: TRB2                       #(v) (def: SRB)
-                                enum: [CARB, CRB, SRB, TRB, TRB2]   #(v) extended w/ TRB2
+                                default: TRB2                               #(v) (def: SRB)
+                                enum: [CARB, CRB, SRB, SRB_NL, TRB, TRB2]   #(v) added SRB_NL, TRB2
                             mb1_e:              #(v) new
                                 type: number
                                 default: 0.0
