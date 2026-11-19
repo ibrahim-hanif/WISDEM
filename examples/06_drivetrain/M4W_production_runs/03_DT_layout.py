@@ -758,6 +758,40 @@ if False: #save_new_plot:
 # show
 fig
 
+#%%
+# Nacelle CM comparison
+nacCM_m4w = eval(
+        var_df2dict(
+            pd.read_csv(loc_save_data+".csv")
+        )["nacelle_cm"])
+nacCM_iea = eval(
+        var_df2dict(
+            pd.read_csv(csv_iea15_UN)
+        )["nacelle_cm"])
+arr_NacCM = np.array( (nacCM_iea, nacCM_m4w) )
+
+# plot
+figCM, axCM = utilsDT.plot_nacelle_cm_comparison(
+    NacCM_array=arr_NacCM,
+    labels=["IEA 15MW (UN)", "MADE4WIND (UN)"],
+    colors=["lime", "magenta"],
+    markers=["v", "^"],
+    markersize=200,
+    figsize=(12,7),
+    title=""
+)
+
+# save
+if 0:
+    str_extn = ".png"
+
+    loc_nacCM = os.path.join( results_path, "DT_utils"+suffix+str_extn )
+    figCM.savefig(
+        loc_nacCM,
+        bbox_inches="tight",
+        dpi=300
+    )
+
  #%%[markdown]
 # ### Convergence/parametric study setup
 # 1. vary chosen GRs (and rspt. GB and gen weights)
