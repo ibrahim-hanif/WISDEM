@@ -385,6 +385,8 @@ if flag_save_RNAprops4tower:
 # ===============================================================
 #%%
 # Plot drivetrain/nacelle mass comparison btw iea orig and optim
+csv_iea_report = os.path.join(results_path, "iea_report_DT.csv")
+
 if plot_cases:
     # save plot loc
     loc_save_img = None
@@ -393,7 +395,7 @@ if plot_cases:
                         "iea15DD_compare_mass"+suffix+".pdf" )
     # plot via func
     utilsDT.plot_drivetrain_mass_comparison(
-        loc_save_data+".csv", os.path.join(results_path, "iea_report_DT.csv"),
+        loc_save_data+".csv", csv_iea_report,
         m4w_label="IEA 15MW (UN)", iea_label="IEA 15MW (report)",
         flag_WTnamespace=False, loc_save_img=loc_save_img )
 
@@ -414,31 +416,62 @@ lst_constrs=[
 ]
 
 if plot_cases:
-    # save plot loc
-    loc_save_img = None
-    if save_new_plot:
-        loc_save_img = os.path.join( results_path,
-                        wt_prefix+"_DT_utils"+suffix+".png" )
     # plot
     fig, axes = utilsDT.plot_drivetrain_constraints(
         csv_path=loc_save_data+".csv",
         lst_constrs=lst_constrs,
-        loc_save_img=loc_save_img
+        markers=["o", "*", "p"]
     )
-    
-# %%
+
 # change axes[0] plots line colors
-axes[0].lines[0].set_color("tab:blue")
-axes[0].lines[1].set_color("tab:red")
+# axes[0].lines[0].set_color("tab:blue")
+axes[0].lines[0].set_markersize(10)
+# axes[0].lines[1].set_color("tab:red")
+axes[0].lines[1].set_markersize(10)
+
 axes[0].legend()
 
 axes[1].legend(["1.0 limit"])
 
 # save
-if save_new_plot:
+if 0:
     loc_save_img = os.path.join( results_path,
-                    wt_prefix+"_DT_utils"+suffix+".pdf" )
+                    wt_prefix+"_DT_utils"+suffix+".png" )
     fig.savefig( loc_save_img )
 
 # show the changed plot
 fig
+
+#%%
+# Nacelle CM comparison
+nacCM_UN = eval(
+        var_df2dict(
+            pd.read_csv(loc_save_data+".csv")
+        )["nacelle_cm"])
+nacCM_iea = eval(
+        var_df2dict(
+            pd.read_csv(csv_iea_report)
+        )["nacelle_cm"])
+arr_NacCM = np.array( (nacCM_iea, nacCM_UN) )
+
+# plot
+figCM, axCM = utilsDT.plot_nacelle_cm_comparison(
+    NacCM_array=arr_NacCM,
+    labels=["IEA 15MW (report)", "IEA 15MW (UN)"],
+    colors=["blue", "lime"],
+    markers=["v", "^"],
+    markersize=200,
+    figsize=(12,7),
+    title=""
+)
+
+# save
+if 0:
+    str_extn = ".png"
+
+    loc_nacCM = os.path.join( results_path, "nacCM"+suffix+str_extn )
+    figCM.savefig(
+        loc_nacCM,
+        bbox_inches="tight",
+        dpi=300
+    )

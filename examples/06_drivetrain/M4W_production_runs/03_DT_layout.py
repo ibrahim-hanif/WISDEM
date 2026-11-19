@@ -733,14 +733,18 @@ lst_constrs=[
 # plot
 fig, axes = utilsDT.plot_drivetrain_constraints(
     csv_path=loc_save_data+".csv",
-    lst_constrs=lst_constrs
+    lst_constrs=lst_constrs,
+    markers=["o", "*", "p"]
 )
     
 # %%
 # change axes[0] plots line colors
-axes[0].lines[0].set_color("tab:blue")
-axes[0].lines[1].set_color("tab:red")
-axes[0].lines[2].set_color("tab:green")
+# axes[0].lines[0].set_color("tab:blue")
+axes[0].lines[0].set_markersize(10)
+# axes[0].lines[1].set_color("tab:red")
+axes[0].lines[1].set_markersize(10)
+# axes[0].lines[2].set_color("tab:green")
+axes[0].lines[2].set_markersize(10)
 
 axes[0].legend()
 
@@ -751,7 +755,7 @@ axes[1].patches[-2].set_color("tab:green")
 axes[1].patches[-1].set_color("tab:green")
 
 # save
-if False: #save_new_plot:
+if 0: #save_new_plot:
     loc_save_img = os.path.join( results_path, "DT_utils"+suffix+".png" )
     fig.savefig( loc_save_img )
 
@@ -785,7 +789,7 @@ figCM, axCM = utilsDT.plot_nacelle_cm_comparison(
 if 0:
     str_extn = ".png"
 
-    loc_nacCM = os.path.join( results_path, "DT_utils"+suffix+str_extn )
+    loc_nacCM = os.path.join( results_path, "nacCM"+suffix+str_extn )
     figCM.savefig(
         loc_nacCM,
         bbox_inches="tight",
