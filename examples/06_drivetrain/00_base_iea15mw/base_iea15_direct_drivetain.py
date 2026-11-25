@@ -134,7 +134,7 @@ if opt_flag:
     prob.model.add_constraint("constr_mb2_defl", upper=1.0)
     prob.model.add_constraint("constr_shaft_deflection", upper=1.0)
     prob.model.add_constraint("constr_shaft_angle", upper=1.0)
-    # prob.model.add_constraint("constr_stator_deflection", upper=1.0) #TODO: add
+    prob.model.add_constraint("constr_stator_deflection", upper=1.0) #DONE: add
     prob.model.add_constraint("constr_stator_angle", upper=1.0)
     if doMBfls:
         prob.model.add_constraint("constr_L10_mb1", lower=1.0)
@@ -387,17 +387,17 @@ if flag_save_RNAprops4tower:
 # Plot drivetrain/nacelle mass comparison btw iea orig and optim
 csv_iea_report = os.path.join(results_path, "iea_report_DT.csv")
 
-if plot_cases:
-    # save plot loc
-    loc_save_img = None
-    if save_new_plot:
-        loc_save_img = os.path.join( results_path,
-                        "iea15DD_compare_mass"+suffix+".pdf" )
-    # plot via func
-    utilsDT.plot_drivetrain_mass_comparison(
-        loc_save_data+".csv", csv_iea_report,
-        m4w_label="IEA 15MW (UN)", iea_label="IEA 15MW (report)",
-        flag_WTnamespace=False, loc_save_img=loc_save_img )
+# plot via func
+fig_DTmass, ax_DTmass = utilsDT.plot_drivetrain_mass_comparison(
+    loc_save_data+".csv", csv_iea_report,
+    m4w_label="IEA 15MW (UN)", iea_label="IEA 15MW (report)",
+    flag_WTnamespace=False )
+
+# save
+if 0:
+    loc_save_img = os.path.join( results_path,
+                    "iea15DD_compare_mass"+suffix+".png" )
+    fig_DTmass.savefig( loc_save_img )    
 
 #%%
 # Plot drivetrain constraint utilizations
@@ -409,7 +409,7 @@ lst_constrs=[
     "constr_shaft_angle",
     "constr_mb1_defl",
     "constr_mb2_defl",
-    # "constr_stator_deflection",
+    "constr_stator_deflection",
     "constr_stator_angle",
     "constr_L10_mb1",
     "constr_L10_mb2",
@@ -432,6 +432,7 @@ axes[0].lines[1].set_markersize(10)
 axes[0].legend()
 
 axes[1].legend(["1.0 limit"])
+axes[1].patches[0].set_color("tab:green")
 
 # save
 if 0:
