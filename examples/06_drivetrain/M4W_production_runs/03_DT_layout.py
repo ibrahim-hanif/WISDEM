@@ -67,7 +67,7 @@ if "sima" in suffix:
     loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
 
 # Optimization flags
-flag_opt_GBO = False     # GBO: gradient based optimizer
+flag_opt_GBO = True     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 flag_debug_print = True
@@ -266,7 +266,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     prob.model.add_constraint("constr_mb1_defl", upper=1.0)                 #DONE: add next
     prob.model.add_constraint("constr_mb2_defl", upper=1.0)                 #DONE: add next
     # --- bedplate # TODO: add later if needed (gen stator / max bedplate end defl)
-    # prob.model.add_constraint("constr_stator_deflection", upper=1.0)      #TODO: add next -> results saved in `03newULS_wConstrStatorDefl`: nacelle_mass=684 t.
+    prob.model.add_constraint("constr_stator_deflection", upper=1.0)      #TODO: add next -> results saved in `03newULS_wConstrStatorDefl`: nacelle_mass=684 t.
     prob.model.add_constraint("constr_stator_angle", upper=1.0)
 
     # 3. length: target overhang, hub height and LSS wrt. MBs
@@ -535,7 +535,7 @@ prob["bedplate_web_thickness"] = 0.01 #0.029
 prob["shaft_deflection_allowable"] = 1e-4 # within Hub_Rotor_LSS_Frame (below): Deflections and rotations at GB attachment
 prob["shaft_angle_allowable"] = 1e-3
 # `Bedplate_IBeam_Frame` requires:
-prob["stator_deflection_allowable"] = 1e-2 #(def: 1e-4 m; 1e-2)
+prob["stator_deflection_allowable"] = 1e-1 #(def: 1e-4 m; 1e-2)
 prob["stator_angle_allowable"] = 1e-1 #(def: 1e-3 deg; 1e-1)
 
 # %%
@@ -685,25 +685,26 @@ if flag_save_new_data: save_data(loc_save_data, prob)
 #%%[markdown]
 # ### Drivetrain mass comparison (IEA and M4W)
 #%%
-if plot_cases:
-    csv_iea15_dir = os.path.join( script_dir, os.path.pardir,
-        "00_base_iea15mw","results" )
-    if "sima" in suffix:
-        csv_iea15_case = "iea_optim_DT_sima_loads.csv"
-    else:
-        csv_iea15_case = "iea_optim_DT_old_loads.csv"
+# if plot_cases:
+csv_iea15_dir = os.path.join( script_dir, os.path.pardir,
+    "00_base_iea15mw","results" )
+if "sima" in suffix:
+    csv_iea15_case = "iea_optim_DT_sima_loads.csv"
+else:
+    csv_iea15_case = "iea_optim_DT_old_loads.csv"
 
-    csv_iea15_UN = os.path.join( csv_iea15_dir, csv_iea15_case)
-    # save plot loc
-    loc_save_img = None
-    if save_new_plot:
-        loc_save_img = os.path.join( results_path,
+csv_iea15_UN = os.path.join( csv_iea15_dir, csv_iea15_case)
+    
+# plot via func
+fig_DTmass, ax_DTmass = utilsDT.plot_drivetrain_mass_comparison(
+    loc_save_data+".csv", csv_iea15_UN,
+    m4w_label="Made4Wind (UN)", iea_label="IEA 15MW (UN)",
+    flag_WTnamespace=False )
+
+if 0:
+    loc_save_img = os.path.join( results_path,
                         "compare_mass"+suffix+".png" )
-    # plot via func
-    utilsDT.plot_drivetrain_mass_comparison(
-        loc_save_data+".csv", csv_iea15_UN,
-        m4w_label="Made4Wind (UN)", iea_label="IEA 15MW (UN)",
-        flag_WTnamespace=False, loc_save_img=loc_save_img )
+    fig_DTmass.savefig( loc_save_img )  
 
 #%%
 # Save rna properties into `yaml` file for next tower optimization
@@ -723,7 +724,7 @@ lst_constrs=[
     "constr_shaft_angle",
     "constr_mb1_defl",
     "constr_mb2_defl",
-    # "constr_stator_deflection",
+    "constr_stator_deflection",
     "constr_stator_angle",
     "constr_L10_mb1",
     "constr_L10_mb2",
@@ -754,6 +755,11 @@ axes[1].patches[2].set_color("tab:green")
 axes[1].patches[-2].set_color("tab:green")
 axes[1].patches[-1].set_color("tab:green")
 
+xtick_labels = [label.get_text() for label in axes[1].get_xticklabels()]
+xtick_labels[4] = "bedplate_deflection"
+xtick_labels[5] = "bedplate_angle"
+axes[1].set_xticklabels(xtick_labels)
+
 # save
 if 0: #save_new_plot:
     loc_save_img = os.path.join( results_path, "DT_utils"+suffix+".png" )
@@ -761,6 +767,41 @@ if 0: #save_new_plot:
 
 # show
 fig
+
+#%%
+# # Compare optimized MADE4WIND with IEA 15MW
+from Drive4Wind.utilities.raft_helpers import parse_variables_from_csv_to_dict
+#%%
+lst_csv_outputs = [
+    loc_save_data+".csv",   # MADE4WIND
+    csv_iea15_UN,           # IEA 15MW    
+]
+
+lst_variables_to_compare = [
+    "nacelle_mass",
+    "nacelle_cm",
+    "rna_mass", 
+    "rna_cm",
+    "base_F",
+    "base_M",
+]
+
+outputs_df, outputs_dict = parse_variables_from_csv_to_dict(
+    lst_csv_outputs=lst_csv_outputs,
+    lst_variables=lst_variables_to_compare
+)
+
+csv_results = os.path.join(
+    results_path, f"compr_m4w_iea_optim.csv"
+)
+# save
+if 0:
+    outputs_df.to_csv( csv_results, index=False )
+
+# plotting options
+labels_compr = ["IEA 15MW (UN)", "MADE4WIND (UN)"]
+clrs_compr = ["lime", "magenta"]
+markers_compr = ["v", "^"]
 
 #%%
 # Nacelle CM comparison
@@ -777,9 +818,9 @@ arr_NacCM = np.array( (nacCM_iea, nacCM_m4w) )
 # plot
 figCM, axCM = utilsDT.plot_nacelle_cm_comparison(
     NacCM_array=arr_NacCM,
-    labels=["IEA 15MW (UN)", "MADE4WIND (UN)"],
-    colors=["lime", "magenta"],
-    markers=["v", "^"],
+    labels=labels_compr,
+    colors=clrs_compr,
+    markers=markers_compr,
     markersize=200,
     figsize=(12,7),
     title=""
@@ -796,6 +837,43 @@ if 0:
         dpi=300
     )
 
+#%%
+# Plot tower-top loads comparison
+from Drive4Wind.utilities.raft_helpers import plot_bars_force_moment_loads
+
+#%%
+fig_TT, axs_TT, F_TT, M_TT = plot_bars_force_moment_loads(
+    path_csv_of_all_outputs=csv_results,
+    var_force="base_F",
+    var_moment="base_M",
+
+    design_labels=labels_compr,
+
+    reference_index=0,
+
+    colors= clrs_compr,
+
+    figsize=(14,7),
+    show_percent=True,
+    percent_decimals=0,
+    title="Tower-Top Loads Comparison"
+)
+
+axs_TT[0].legend(loc="upper left")
+
+# save
+if 0:
+    str_extn = ".png"
+
+    path_twrTopLoads_compr = os.path.join(
+        results_path,
+        f"compr_twrTopLoads{str_extn}"
+    )
+    fig_TT.savefig(
+        path_twrTopLoads_compr,
+        bbox_inches="tight",
+        dpi=300 )
+    
  #%%[markdown]
 # ### Convergence/parametric study setup
 # 1. vary chosen GRs (and rspt. GB and gen weights)
