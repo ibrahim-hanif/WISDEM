@@ -67,7 +67,7 @@ if "sima" in suffix:
     loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
 
 # Optimization flags
-flag_opt_GBO = True     # GBO: gradient based optimizer
+flag_opt_GBO = False     # GBO: gradient based optimizer
 flag_DOE = False        # DOE: design of experiments
 flag_opt_GFO = False    # GFO: gradient free optimizer
 flag_debug_print = True
@@ -266,7 +266,7 @@ if flag_opt_GBO or flag_opt_GFO or flag_DOE:
     prob.model.add_constraint("constr_mb1_defl", upper=1.0)                 #DONE: add next
     prob.model.add_constraint("constr_mb2_defl", upper=1.0)                 #DONE: add next
     # --- bedplate # TODO: add later if needed (gen stator / max bedplate end defl)
-    prob.model.add_constraint("constr_stator_deflection", upper=1.0)      #TODO: add next -> results saved in `03newULS_wConstrStatorDefl`: nacelle_mass=684 t.
+    prob.model.add_constraint("constr_stator_deflection", upper=1.0)      #DONE: add next
     prob.model.add_constraint("constr_stator_angle", upper=1.0)
 
     # 3. length: target overhang, hub height and LSS wrt. MBs
