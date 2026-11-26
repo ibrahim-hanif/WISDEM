@@ -32,10 +32,16 @@ wt_prefix = "iea_optim"
 # 1. "iea_orig"
 # 2. "iea_optim"
 
-suffix = "_sima_loads"
-# information
-# 1. '_old_loads':  old hub loads from felix' openfast (wrong) model
-# 2. '_sima_loads': sima loads from seraj's sima (correct) model
+suffices = [
+    '_old_loads',           # old hub loads from felix' openfast (wrong) model
+                            # used: 
+    '_sima_loads',          # sima loads from seraj's sima (correct) model
+                            # used: WES-26 paper, CWD-26 paper
+    '_new_loads_4_tower'    # sima loads (more correct) model, dated 11-2026
+                            # used: for tower design (D 2.2)
+]
+
+suffix = suffices[1]    # NOTE: user choice
 
 opt_flag = False
 opt_hub = False # (def: False) if to optimize hub, its Compn incl if dohub
@@ -54,6 +60,9 @@ dir_loads = "M:\\Vasudev_Gupta\\outputs_mainshaft_loads"
 loc_all_loads_mat_file = os.path.join(dir_loads, "hub_loads_M4w.mat")
 if "sima" in suffix:
     loc_all_loads_mat_file = "C://SIMA_M4W_loads//all_main_shaft_loads.mat" # TODO: sima loads
+
+if "tower" in suffix:
+    loc_all_loads_mat_file = "C://SIMA_NEW_M4W_loads//extreme_hub_loads.mat"
 
 # - results main dir
 results_dir = "results"
@@ -316,10 +325,10 @@ print(" ---------------------------------------------------")
 
 #%%
 # Print the results
-print("F_aero_hub:")
-print(" ", prob["F_aero_hub"] )
-print("M_aero_hub:")
-print(" ", prob["M_aero_hub"], "\n" )
+print("F_aero_hub [MN]:")
+print(" ", prob["F_aero_hub"] / 1e6 )
+print("M_aero_hub [MNm]:")
+print(" ", prob["M_aero_hub"] / 1e6, "\n" )
 
 print("LSS desvars:")
 print(" ", prob["L_h1"], prob["L_12"], prob["lss_diameter"], prob["lss_wall_thickness"] )
